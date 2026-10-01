@@ -321,6 +321,7 @@ domino-ai-plugin/
 ├── assets/logo.svg              # OpenAI listing icon (square)
 ├── skills/                      # Shared, provider-neutral skills (30)
 ├── mcp-servers/domino_mcp_server/
+├── evals/                       # claude plugin eval cases (not shipped to OpenAI)
 ├── agents/                      # Claude-only subagents
 ├── output-styles/               # Claude-only output styles
 ├── hooks/                       # Example Claude Code hooks (docs only)
@@ -349,6 +350,21 @@ domino-ai-plugin/
   (for example, Claude as a model name, or a table that covers both Claude Code and Codex).
 
 Run it locally with `uv run --with pyyaml python scripts/lint-skills.py`.
+
+## Evals
+
+`evals/` holds behaviour tests for [`claude plugin eval`](https://code.claude.com/docs/en/plugins/evals):
+realistic prompts plus graders that check the right skill fired and the result is correct. They
+cover the converted commands, the provider-neutral `domino-ui-bootstrap` wording, the "no MCP
+server" fallback, and a negative case. Each run is a model call billed to your account:
+
+```bash
+claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --ablation none --no-publish  # quick
+claude plugin eval . --scaffold --allow-tools Write Edit --no-publish                           # 3 runs + baseline
+```
+
+`--scaffold` runs each case's `fixture.sh`, which writes the files the prompt refers to. Results
+go to `evals/results/`, which is git-ignored. `evals/` is not part of the OpenAI package.
 
 ---
 

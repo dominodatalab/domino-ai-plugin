@@ -417,9 +417,10 @@ layout in place, and the DSE paragraph above needs updating.
 Before submitting:
 
 1. Run `scripts/build-openai.sh`; it checks manifests, front matter, links, and Claude mentions
-2. Test skills trigger correctly in Claude Code, and in Codex or ChatGPT when the wording of a
-   trigger-sensitive description changed
-3. Smoke-test every API payload documented in a skill against a live Domino
+2. Run the evals that cover what you changed (README "Evals"), and add a case for a new skill
+3. Test skills trigger correctly in Codex or ChatGPT when the wording of a trigger-sensitive
+   description changed
+4. Smoke-test every API payload documented in a skill against a live Domino
    instance and record the result in the PR description (see
    [Skill Authoring Standards #5](#5-smoke-test-payloads-against-the-live-api))
 

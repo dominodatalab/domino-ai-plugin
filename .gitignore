@@ -32,3 +32,6 @@ Thumbs.db
 
 # Build output from scripts/build-openai.sh
 dist/
+
+# claude plugin eval output
+evals/results/

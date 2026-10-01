@@ -112,8 +112,15 @@ claude --plugin-dir .                                 # load this checkout in pl
 /reload-plugins                                       # inside a session, after editing a skill
 ```
 
-Triggering test until this repo has `evals/` cases for `claude plugin eval .`: three prompts
-that should load the skill and one neighbouring prompt that should not; check which activates.
+Behaviour tests live in `evals/` (one directory per case) and run with `claude plugin eval`.
+Each run is a real model call on your account, so iterate with one arm and one run:
+
+```bash
+claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --ablation none --no-publish
+```
+
+Drop `--runs 1 --ablation none` for the default three runs plus the no-plugin baseline before
+trusting a change. When adding a skill, add a case whose prompt should trigger it.
 
 ## Pull requests
 
@@ -135,6 +142,10 @@ that should load the skill and one neighbouring prompt that should not; check wh
   pin advances; it reaches Workspaces only after the image turns auto-update on or runs
   `plugin update` at launch.
 - `SKILL_AUDIT.md` is from May 2026 and stale; do not treat it as current.
+- Claude Code invokes a plugin skill by its **directory** name (`dominodatalab:jobs` for
+  `skills/jobs/`), not its frontmatter `name` (`domino-jobs`). Twenty skills still differ, so
+  eval `skill-fired` graders accept both forms, and "use the `domino-jobs` skill" in a skill
+  body names a skill Claude Code calls `jobs`.
 
 ## Domino API, SDK, and platform skills
 
