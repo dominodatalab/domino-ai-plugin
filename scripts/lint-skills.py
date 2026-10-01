@@ -30,6 +30,7 @@ def main() -> int:
     plugin = json.loads((ROOT / "plugin.json").read_text())["name"]
     allowed = load_allowlist()
     seen: dict[str, Path] = {}
+    cross_links = 0
 
     for skill_dir in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
         rel = skill_dir.relative_to(ROOT)
@@ -71,15 +72,17 @@ def main() -> int:
         for doc in sorted(skill_dir.rglob("*.md")):
             text = doc.read_text(encoding="utf-8")
             doc_rel = doc.relative_to(ROOT).as_posix()
-            # Skills ship on their own in the OpenAI package, so links must stay inside the skill.
+            # The OpenAI package ships skills/ without the rest of the repo, so links must stay in it.
             for target in LINK.findall(text):
                 if re.match(r"[a-z][a-z0-9+.-]*:", target, re.I):
                     continue
                 resolved = (doc.parent / target).resolve()
-                if not resolved.is_relative_to(skill_dir.resolve()):
-                    errors.append(f"{doc_rel}: link '{target}' points outside the skill")
+                if not resolved.is_relative_to(SKILLS.resolve()):
+                    errors.append(f"{doc_rel}: link '{target}' points outside skills/")
                 elif not resolved.exists():
                     errors.append(f"{doc_rel}: link '{target}' does not exist")
+                elif not resolved.is_relative_to(skill_dir.resolve()):
+                    cross_links += 1
             if CLAUDE.search(text) and doc_rel not in allowed:
                 errors.append(f"{doc_rel}: mentions Claude; use provider-neutral wording or add "
                               f"the file to {ALLOW_FILE.relative_to(ROOT)} with a reason")
@@ -94,7 +97,7 @@ def main() -> int:
     if errors:
         print(f"{len(errors)} problem(s) in skills/", file=sys.stderr)
         return 1
-    print(f"ok: {len(seen)} skills valid")
+    print(f"ok: {len(seen)} skills valid ({cross_links} links between skills)")
     return 0
 
 

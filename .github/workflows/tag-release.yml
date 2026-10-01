@@ -16,8 +16,15 @@ on:
       - "mcp-servers/**"
       - "output-styles/**"
       - "assets/**"
+      - "hooks/**"
+      - "bin/**"
+      - "workflows/**"
+      - "themes/**"
+      - "monitors/**"
       - ".mcp.json"
       - "mcp.json"
+      - ".lsp.json"
+      - "settings.json"
       - "plugin.json"
 
 permissions:

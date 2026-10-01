@@ -23,7 +23,7 @@ The plugin helps AI assistants with all aspects of Domino Data Lab, including:
 
 | Component | Claude Code | ChatGPT / Codex |
 | --- | --- | --- |
-| `skills/` (27 skills) | ✅ | ✅ |
+| `skills/` (30 skills) | ✅ | ✅ |
 | Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) |
 | Subagents (`agents/`) | ✅ | ❌ Claude-only |
 | Output styles (`output-styles/`) | ✅ | ❌ Claude-only |
@@ -244,7 +244,7 @@ DFS-based projects.
 
 Requires `uv`.
 
-### Skills (27 total)
+### Skills (30 total)
 
 | Skill | Description |
 | --- | --- |
@@ -259,11 +259,13 @@ Requires `uv`.
 | `domino-debug-proxy` | Diagnose reverse-proxy and routing issues in apps |
 | `domino-ui-design` | Domino UI styling for integrated app design |
 | `domino-ui-bootstrap` | Bootstrap a Vite + React project on the Domino design system |
+| `domino-extensions` | Build and operate Domino UI Extensions |
 | `domino-experiment-tracking` | MLflow experiment tracking and model registry |
 | `domino-experiment-setup` | Generate MLflow experiment setup code for a project |
 | `domino-genai-tracing` | `@add_tracing` decorator and `DominoRun` |
 | `domino-trace-setup` | Add GenAI tracing helpers and wiring to an agent project |
 | `domino-model-endpoints` | Deploy and call model APIs |
+| `domino-model-serving` | Model API and registered-model lifecycle over REST |
 | `domino-model-monitoring` | Drift detection and model quality tracking |
 | `domino-governance` | Policies, bundles, and evidence for model risk governance |
 | `domino-flows` | Flyte-based workflow orchestration |
@@ -272,6 +274,7 @@ Requires `uv`.
 | `domino-launchers` | Parameterized web forms for self-service |
 | `domino-modeling-assistant` | MCP server for AI-assisted model development |
 | `domino-data-connectivity` | S3 Mountpoint, AWS IRSA, Azure credentials |
+| `domino-api-intro` | Start here for Domino APIs: auth, hosts, pagination, errors |
 | `domino-python-sdk` | Python SDK (python-domino) and REST API |
 | `domino-data-sdk` | Data SDK (domino-data) for data sources, datasets, training sets |
 | `tags-and-properties` | Taxonomy API for tags, namespaces, and typed properties |
@@ -308,7 +311,7 @@ domino-ai-plugin/
 ├── .mcp.json                    # Claude MCP config (stdio)
 ├── mcp.json                     # Portable MCP config (stdio) for Codex local installs
 ├── assets/logo.svg              # OpenAI listing icon (square)
-├── skills/                      # Shared, provider-neutral skills (27)
+├── skills/                      # Shared, provider-neutral skills (30)
 ├── mcp-servers/domino_mcp_server/
 ├── agents/                      # Claude-only subagents
 ├── output-styles/               # Claude-only output styles
@@ -332,8 +335,8 @@ domino-ai-plugin/
 - Every `skills/<dir>/SKILL.md` has valid YAML front matter with a unique `name` and a
   `description` of at most 1,024 characters, and a non-empty body.
 - `dominodatalab:<skill-name>` is at most 64 characters.
-- Relative links stay inside the skill's own directory and resolve; the OpenAI package ships
-  skills without the rest of the repo.
+- Relative links resolve and stay inside `skills/`; the OpenAI package ships `skills/` without
+  the rest of the repo. Links between skills are fine.
 - Skill files don't mention Claude unless listed in `scripts/claude-mentions.allow` with a reason
   (for example, Claude as a model name, or a table that covers both Claude Code and Codex).
 
