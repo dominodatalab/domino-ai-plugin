@@ -40,9 +40,7 @@ Activate this skill when the user wants to:
 
 ## Configuration
 
-Auth via the local access-token endpoint per the
-[Skill Authoring Standards](../../CONTRIBUTING.md#skill-authoring-standards).
-Never use `DOMINO_USER_API_KEY`.
+Auth via the local access-token endpoint. Never use `DOMINO_USER_API_KEY`.
 
 ```bash
 TOKEN=$(curl -s http://localhost:8899/access-token)
@@ -444,7 +442,6 @@ curl -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/taxonomy/swagger/do
 
 **Public docs (workflow context and field explanations):**
 - [Taxonomy API guide](https://docs.dominodatalab.com/en/cloud/api_guide/fc6b7c/taxonomy-api/)
-- [Skill Authoring Standards](../../CONTRIBUTING.md#skill-authoring-standards)
 - [PROPERTIES.md](./PROPERTIES.md) — property definitions (typed metadata fields)
 - [PROPERTY-VALUES.md](./PROPERTY-VALUES.md) — setting property values on entities
 - [BULK-OPS.md](./BULK-OPS.md) — bulk-delete + merge-tags + migration patterns

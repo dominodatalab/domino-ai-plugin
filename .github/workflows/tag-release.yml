@@ -12,12 +12,13 @@ on:
     paths:
       - ".claude-plugin/plugin.json"
       - "skills/**"
-      - "commands/**"
       - "agents/**"
-      - "templates/**"
       - "mcp-servers/**"
       - "output-styles/**"
+      - "assets/**"
       - ".mcp.json"
+      - "mcp.json"
+      - "plugin.json"
 
 permissions:
   contents: write
@@ -57,6 +58,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "domino-claude-plugin $VERSION (${GITHUB_REF_NAME})" "$GITHUB_SHA"
+          git tag -a "$TAG" -m "domino-ai-plugin $VERSION (${GITHUB_REF_NAME})" "$GITHUB_SHA"
           git push origin "refs/tags/$TAG"
           echo "created $TAG at $GITHUB_SHA"

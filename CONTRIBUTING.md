@@ -1,6 +1,7 @@
 # Contributing to Domino Data Lab Plugin
 
-Thank you for your interest in contributing to the Domino Data Lab Plugin for Claude Code!
+Thank you for your interest in contributing to the Domino Data Lab Plugin for Claude Code,
+ChatGPT, and Codex! One source tree serves both platforms; see README "What ships where".
 
 ## Getting Started
 
@@ -9,8 +10,8 @@ Thank you for your interest in contributing to the Domino Data Lab Plugin for Cl
 3. Create a feature branch
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/domino-data-lab-plugin.git
-cd domino-data-lab-plugin
+git clone https://github.com/YOUR_USERNAME/domino-ai-plugin.git
+cd domino-ai-plugin
 git checkout -b feature/your-feature-name
 ```
 
@@ -19,21 +20,33 @@ git checkout -b feature/your-feature-name
 Test the plugin locally with Claude Code:
 
 ```bash
-claude --plugin-dir /path/to/domino-data-lab-plugin
+claude --plugin-dir /path/to/domino-ai-plugin
+```
+
+Test it with Codex or the ChatGPT desktop app from a local marketplace (README "Installation:
+Codex and the ChatGPT desktop app"), and check the OpenAI package builds:
+
+```bash
+scripts/build-openai.sh   # runs the manifest sync check and the skill linter first
 ```
 
 ## Plugin Structure
 
 ```
-domino-data-lab-plugin/
-├── .claude-plugin/plugin.json   # Plugin manifest (required)
-├── skills/                      # Agent skills
-├── commands/                    # Slash commands
-├── agents/                      # Subagents
-├── output-styles/               # Custom output styles
-├── templates/                   # Code templates
-└── hooks/                       # Example hooks
+domino-ai-plugin/
+├── .claude-plugin/plugin.json   # Claude manifest; source of truth for name and version
+├── plugin.json                  # Portable manifest + OpenAI listing (synced by script)
+├── .mcp.json / mcp.json         # MCP config for Claude Code / for Codex (portable)
+├── skills/                      # Shared skills; ship to every platform
+├── mcp-servers/                 # Vendored Domino MCP server
+├── agents/                      # Subagents (Claude Code only)
+├── output-styles/               # Custom output styles (Claude Code only)
+├── hooks/                       # Example hooks (docs only)
+└── scripts/                     # Build, lint, sync, and version checks
 ```
+
+There is no `commands/` or `templates/` directory: OpenAI plugins can't load slash commands,
+so user-invoked workflows are skills, and their templates live in the skill's `assets/`.
 
 ## Contribution Guidelines
 
@@ -60,28 +73,20 @@ Detailed description of the skill...
 The directory name **must equal** `name` (agentskills.io rule; Codex and OpenCode key on
 `name`, Antigravity on the folder).
 
-3. Add the skill to `plugin.json`
-4. Keep SKILL.md under 500 lines; use supporting files for details
-5. Follow the [Skill Authoring Standards](#skill-authoring-standards) — auth
+3. Keep SKILL.md under 500 lines; use supporting files for details. Keep every file the skill
+   needs (references, scripts, templates under `assets/`) inside the skill's own directory.
+4. Follow the [Skill Authoring Standards](#skill-authoring-standards) — auth
    pattern, host env vars, no `python-domino` SDK, verified endpoints,
-   smoke-tested payloads
+   smoke-tested payloads, provider-neutral wording
+5. Run `uv run --with pyyaml python scripts/lint-skills.py`
 
-### Adding a New Command
+### Adding a User-Invoked Workflow
 
-1. Create a markdown file under `commands/`
-2. Include description in frontmatter:
-
-```yaml
----
-description: What this command does
----
-
-# /command-name
-
-Usage and documentation...
-```
-
-3. Add the command to `plugin.json`
+Write it as a skill, not a slash command: OpenAI plugins can't load `commands/`, and Claude Code
+exposes plugin skills as `/dominodatalab:<skill-name>` anyway. Give it a description that names
+the request it answers (for example "Use when the user asks to scaffold a new Domino app"), list
+the inputs to collect, and put any template files in the skill's `assets/` folder. See
+`skills/domino-app-init/` for an example.
 
 ### Adding a New Agent
 
@@ -98,7 +103,9 @@ skills: skill1, skill2
 ---
 ```
 
-3. Add the agent to `plugin.json`
+Agents are Claude Code only and aren't included in the OpenAI package. Put any procedure that
+users on other platforms also need into a skill, and have the agent list that skill under
+`skills:`.
 
 ## Skill Authoring Standards
 
@@ -276,9 +283,9 @@ script is worth citing, add it to the repo under the skill (for example
 ### 10. Bump `plugin.json` on every content change, using the release scheme
 
 Claude Code copies a marketplace plugin into its cache under the `plugin.json` `version`
-string and re-reads it only when that string changes. Any change under `skills/`, `commands/`,
-`agents/`, `templates/`, `mcp-servers/`, `output-styles/`, `hooks/`, `bin/`, `workflows/`,
-`themes/`, `monitors/`, `.mcp.json`, `.lsp.json`, `settings.json` or `plugin.json` itself must
+string and re-reads it only when that string changes. Any change under `skills/`, `agents/`,
+`mcp-servers/`, `output-styles/`, `hooks/`, `assets/`, `bin/`, `workflows/`, `themes/`,
+`monitors/`, `.mcp.json`, `mcp.json`, `.lsp.json`, `settings.json` or either `plugin.json` must
 therefore bump `version` **when it reaches `main`**, or nothing reaches installed copies.
 Feature PRs land on `develop` with the version untouched; the promotion PR from `develop` to
 `main` carries the bump. CI (`scripts/check-version.sh`) rejects a promotion without a bump
@@ -297,13 +304,27 @@ The git tag `release-YYYY.X-Y.N` is created automatically from the manifest on e
 always agree. Plugin version is independent of Domino's own version numbers; `X.Y` states
 compatibility, not identity.
 
+Bump the version only in `.claude-plugin/plugin.json`, then run `scripts/sync-manifests.py` to
+copy it into the portable `plugin.json`. The OpenAI portal requires semver there, so the script
+writes `YYYY.(X*100+Y).N` (`2026.6-3.2` becomes `2026.603.2`). CI fails if the two drift.
+
+### 11. Write skills provider-neutral
+
+Skills ship to Claude Code, ChatGPT, and Codex. Say "the model" or "the assistant", not
+"Claude", and don't depend on one host's tools (for example a named user-input tool). When an
+instruction really differs per host, such as which instructions file or MCP config to write,
+give a variant for each host in one place (see "Host-specific files" in
+`skills/domino-ui-bootstrap/SKILL.md`). `scripts/lint-skills.py` fails on any skill file that
+mentions Claude unless it is listed in `scripts/claude-mentions.allow` with a reason; Claude as
+a model name in an LLM example is a valid reason.
+
 ## Release branches, tags and backports
 
 ### Where PRs go
 
 | Change | Base branch | Version |
 |---|---|---|
-| Skills, agents, commands, templates, MCP server, output styles (any content) | **`develop`** | Unchanged. CI fails a PR to `develop` that touches `plugin.json` `version`. |
+| Skills, agents, MCP server, output styles, assets (any content) | **`develop`** | Unchanged. CI fails a PR to `develop` that touches `plugin.json` `version`. |
 | Release: promote `develop` to `main` | `main`, head `develop` | The one bump to the next `YYYY.X-Y.N`; CI requires it; the tag follows on merge. |
 | Repo mechanics only (`.github/`, `scripts/`, CONTRIBUTING, README) | `main` | Unchanged; no content paths, so no bump and no tag. |
 | Backport onto a `release-X.Y` branch | that branch | Bump `N` on that line. |
@@ -370,6 +391,10 @@ How each channel receives a release:
   documentation also describes relative-path plugins from a locally added marketplace as
   loading in place without a version bump; that is not the observed behaviour on 2.1.284.
 - **`--plugin-dir`**: loads in place; `git pull` or checking out a tag is the update.
+- **OpenAI plugin directory (ChatGPT and Codex)**: nothing is pulled automatically. After a
+  release, build the ZIP with `scripts/build-openai.sh` from the release tag and upload it to
+  the existing plugin in the portal; the portal rejects an upload whose `plugin.json` version
+  is unchanged.
 
 `scripts/verify-update-flow.sh` reproduces the DSE install layout against a throwaway
 marketplace and asserts the caching behaviour these rules rest on. Run it when Claude Code
@@ -387,21 +412,13 @@ layout in place, and the DSE paragraph above needs updating.
 
 Before submitting:
 
-1. Verify all referenced files exist
-2. Test skills trigger correctly
-3. Verify commands work as documented
-4. Check for broken internal links
-5. Smoke-test every API payload documented in a skill against a live Domino
+1. Run `scripts/build-openai.sh`; it checks manifests, front matter, links, and Claude mentions
+2. Test skills trigger correctly in Claude Code, and in Codex or ChatGPT when the wording of a
+   trigger-sensitive description changed
+3. Smoke-test every API payload documented in a skill against a live Domino
    instance and record the result in the PR description (see
    [Skill Authoring Standards #5](#5-smoke-test-payloads-against-the-live-api))
 
-```bash
-# Verify file structure
-find skills -name "SKILL.md" | wc -l  # Should match plugin.json count
-
-# Check for broken links
-grep -r "\](\./" --include="*.md" | head -20
-```
 
 ## Pull Request Process
 
@@ -423,7 +440,7 @@ Reviewers will send back PRs with unticked required sections.
 ## Reporting Issues
 
 Please include:
-- Claude Code version
+- Claude Code, Codex, or ChatGPT version
 - Plugin version
 - Steps to reproduce
 - Expected vs actual behavior

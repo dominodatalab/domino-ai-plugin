@@ -3,7 +3,7 @@ name: domino-deploy
 description: Specialized agent for deploying applications, models, and endpoints to Domino. Use PROACTIVELY when deploying React/Streamlit/Dash apps, publishing model APIs, or configuring deployments.
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
-skills: domino-app-deployment, domino-model-endpoints
+skills: domino-apps, domino-model-endpoints
 ---
 
 # Domino Deploy Agent

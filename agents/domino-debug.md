@@ -3,7 +3,7 @@ name: domino-debug
 description: Specialized agent for debugging Domino issues including app deployment problems, job failures, environment build errors, and connectivity issues. Use PROACTIVELY when troubleshooting errors or unexpected behavior in Domino.
 tools: Read, Edit, Bash, Grep, Glob
 model: inherit
-skills: domino-app-deployment, domino-environments, domino-jobs
+skills: domino-apps, domino-environments, domino-jobs
 ---
 
 # Domino Debug Agent

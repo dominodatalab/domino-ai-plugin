@@ -100,7 +100,7 @@ curl -s -X POST -H "$H_DEV" -H "Content-Type: application/json" \
   -d '{}' "$BASE_DEV/rpc/export-to-file" > taxonomy-dev.csv
 
 # Inspect / scrub before promoting (e.g. remove sandbox namespaces)
-grep -v '^claude-test-' taxonomy-dev.csv > taxonomy-prod.csv
+grep -v '^sandbox-' taxonomy-dev.csv > taxonomy-prod.csv
 
 # On prod cluster — validate first
 curl -s -X POST -H "$H_PROD" -F "file=@taxonomy-prod.csv" \

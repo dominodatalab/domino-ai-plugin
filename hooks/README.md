@@ -2,6 +2,8 @@
 
 This directory contains example Claude Code hooks for Domino workflows. Hooks are shell commands that run automatically in response to Claude Code events.
 
+These examples are Claude Code only and are not part of the OpenAI package. Nothing here is loaded automatically: there is no `hooks/hooks.json`, and the OpenAI portal currently rejects packages that bundle lifecycle hooks.
+
 ## How to Use
 
 Copy the example hooks below to your `.claude/hooks.json` file to enable them.

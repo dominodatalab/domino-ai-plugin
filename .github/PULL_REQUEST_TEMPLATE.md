@@ -1,6 +1,6 @@
 ### Summary of what changed and why
 
-<!-- One paragraph. Say which skills, agents, commands, templates or distribution files
+<!-- One paragraph. Say which skills, agents, output styles or distribution files
      change and what a user gets that they did not have before. -->
 
 <!-- Maintainers link the Jira ticket (skills work lives under the DOCS-6840 epic; platform-side
@@ -14,9 +14,9 @@ Select all that apply:
 
 - [ ] New skill (`skills/<name>/SKILL.md`)
 - [ ] Fix or extension to an existing skill
-- [ ] Agent, command, template, output style or hook
+- [ ] Agent, output style or hook (Claude Code only)
 - [ ] MCP server
-- [ ] Distribution or release mechanics (`plugin.json`, `.mcp.json`, CI, installer)
+- [ ] Distribution or release mechanics (`plugin.json`, `.mcp.json`, `mcp.json`, CI, installer, OpenAI build)
 - [ ] Repo docs only (README, CONTRIBUTING, this template)
 
 ### Domino version applicability  *(required)*
@@ -79,10 +79,11 @@ Skill format:
 - [ ] `name` in frontmatter equals the directory name; `description` ≤ 1,024 characters and states when to trigger; `SKILL.md` ≤ 500 lines with details in sibling files.
 - [ ] Cross-references to other skills use their current names (`domino-apps`, not `domino-app-deployment`).
 - [ ] A skill directory always contains `SKILL.md`; reference files alone are not a skill.
+- [ ] Skill wording is provider-neutral, or host-specific steps cover both Claude Code and Codex (CONTRIBUTING standard 11); `scripts/build-openai.sh` passes.
 
 Release mechanics:
 
-- [ ] `plugin.json` `version`: **unchanged** for a PR to `develop`; bumped to the next `YYYY.X-Y.N` only in the `develop` → `main` release PR or on a `release-X.Y` branch (`N` never reused; on `release-X.Y` the version's line must equal the branch). CI enforces both directions.
+- [ ] `.claude-plugin/plugin.json` `version`: **unchanged** for a PR to `develop`; bumped to the next `YYYY.X-Y.N` only in the `develop` → `main` release PR or on a `release-X.Y` branch (`N` never reused; on `release-X.Y` the version's line must equal the branch). CI enforces both directions. After a bump, `scripts/sync-manifests.py` updates the portable `plugin.json`.
 - [ ] README skill table and counts updated for any added, renamed or removed component.
 - [ ] Eval case added or updated under `evals/` for the skill(s) touched (once the eval framework exists; until then, describe the manual test below).
 
@@ -95,7 +96,7 @@ N/A
 
 ### Branching and release
 
-- [ ] Base branch is `develop` (all skill, agent, command, template, MCP or output-style changes; version left unchanged).
+- [ ] Base branch is `develop` (all skill, agent, MCP or output-style changes; version left unchanged).
 - [ ] Base branch is `main` because this is the `develop` → `main` release promotion (version bumped to the next `YYYY.X-Y.N`) or a repo-mechanics-only change.
 - [ ] This fix must also reach a `release-X.Y` branch (once one exists): note it here so a maintainer cherry-picks after merge (backport PRs target that branch and bump `N` on its line).
 

@@ -29,3 +29,6 @@ Thumbs.db
 .idea/
 
 *checkpoint*
+
+# Build output from scripts/build-openai.sh
+dist/

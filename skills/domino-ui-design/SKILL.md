@@ -66,7 +66,7 @@ const dominoTheme = {
 
 Height: 44px, Background: `#2E2E38`, Text: `#FFFFFF`. Use the Domino logo (height 32px). Primary actions on right. Only add nav items with real destinations.
 
-**Domino Logo:** Reference `assets/domino-logo.svg` from this skill's directory (e.g. `.claude/skills/domino-ui-design/assets/domino-logo.svg`). The SVG is white text on transparent background, designed for the dark nav bar.
+**Domino Logo:** Reference `assets/domino-logo.svg`, resolved relative to this skill's directory. The SVG is white text on transparent background, designed for the dark nav bar.
 
 ### Charts (Highcharts)
 

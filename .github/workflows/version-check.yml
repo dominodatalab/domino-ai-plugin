@@ -3,9 +3,10 @@ name: Version check
 # Enforces the plugin version scheme (YYYY.X-Y.N) on pull requests.
 # On the integration branch `develop` the version must stay equal to the base: releases are
 # minted only by the develop -> main promotion PR, which carries the single bump.
-# Any change under skills/, commands/, agents/, templates/, mcp-servers/, output-styles/,
-# .mcp.json or plugin.json must bump .claude-plugin/plugin.json "version", or nothing
-# reaches installed copies: Claude Code caches plugins by that string.
+# Any change under skills/, agents/, mcp-servers/, output-styles/, assets/, .mcp.json, mcp.json
+# or either plugin.json must bump .claude-plugin/plugin.json "version", or nothing reaches
+# installed copies: Claude Code caches plugins by that string. plugin.json carries the same
+# version in semver form (scripts/sync-manifests.py) because the OpenAI portal requires semver.
 # See CONTRIBUTING.md "Release branches, tags and backports" and scripts/check-version.sh.
 
 on:
@@ -32,7 +33,19 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: scripts/check-version.sh "origin/$BASE_REF"
-      - name: Validate plugin manifest
+      - name: Validate plugin manifests
         run: |
           jq -e '.name and .version and .description' .claude-plugin/plugin.json >/dev/null
           echo "plugin.json parses; version $(jq -r .version .claude-plugin/plugin.json)"
+          python3 scripts/sync-manifests.py --check
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install PyYAML
+        run: |
+          python3 -c "import yaml" 2>/dev/null \
+            || python3 -m pip install --quiet --user --break-system-packages pyyaml
+      - name: Lint skills and build the OpenAI package
+        run: scripts/build-openai.sh

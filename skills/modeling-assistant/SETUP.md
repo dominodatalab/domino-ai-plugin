@@ -1,6 +1,6 @@
 # Complete Modeling Assistant Setup Guide
 
-This guide covers setup for the Domino modeling assistant. The Domino MCP Server is **bundled with this plugin** and starts automatically — no manual cloning, installation, or MCP configuration is required.
+This guide covers setup for the Domino modeling assistant. When the plugin is installed from the source repository (Claude Code, or Codex from a local marketplace), the Domino MCP Server is **bundled with the plugin** and starts automatically — no manual cloning, installation, or MCP configuration is required. Skills-only distributions (such as the ChatGPT plugin directory) don't include the server; see [Register the server manually](#register-the-server-manually).
 
 **Inside a Domino workspace:** Everything is auto-detected (project, auth, DFS/Git mode). Skip straight to [Step 3: Test the Integration](#step-3-test-the-integration).
 
@@ -9,7 +9,7 @@ This guide covers setup for the Domino modeling assistant. The Domino MCP Server
 ## Prerequisites
 
 - Domino Data Lab account with API access
-- Claude Code or Cursor IDE (or compatible MCP-enabled assistant)
+- An MCP-enabled coding assistant, such as Claude Code, Codex, or Cursor
 - Python 3.11+
 - `uv` package manager ([install guide](https://github.com/astral-sh/uv))
 - Git
@@ -41,7 +41,7 @@ Then reload your shell:
 source ~/.zshrc  # or ~/.bashrc
 ```
 
-The plugin's bundled MCP server picks these up automatically via the `.mcp.json` configuration — no `.env` file is needed.
+The plugin's bundled MCP server reads these from its environment — no `.env` file is needed. If your assistant doesn't forward your shell environment to MCP servers, pass `DOMINO_API_KEY` and `DOMINO_HOST` explicitly when you register the server (see below).
 
 ## Step 2: Configure Your Project (Laptop Only)
 
@@ -168,9 +168,23 @@ This image includes:
 ### "MCP server not found" or tools not appearing
 
 1. Ensure `uv` is installed and in your PATH
-2. Restart Claude Code / Cursor after installing the plugin
-3. Check plugin is enabled: `/plugin` → Installed tab
-4. Run `claude --debug` to see MCP server initialization errors
+2. Restart your assistant after installing the plugin
+3. Check the plugin and server are enabled:
+   - **Claude Code:** `/plugin` → Installed tab; run `claude --debug` to see MCP server initialization errors
+   - **Codex:** `/mcp` in a session, or `codex mcp list`, should show `domino_server`
+4. If the server isn't listed at all, your plugin distribution may be skills-only; register it manually as described below
+
+### Register the server manually
+
+Clone the plugin repository, then point your assistant at `mcp-servers/domino_mcp_server`. For Codex:
+
+```bash
+codex mcp add domino_server \
+  --env DOMINO_API_KEY="$DOMINO_API_KEY" --env DOMINO_HOST="$DOMINO_HOST" \
+  -- uv --directory /path/to/domino-ai-plugin/mcp-servers/domino_mcp_server run domino_mcp_server.py
+```
+
+This stores the key in your personal Codex config, so never run it with a key you share. For other assistants, register a stdio server with the same `uv` command.
 
 ### "Unauthorized" errors
 
