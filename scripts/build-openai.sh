@@ -33,6 +33,13 @@ else
   uv run --quiet --with pyyaml python scripts/lint-skills.py
 fi
 
+# The portal rejects listings whose icon or screenshot paths don't resolve inside the package.
+jq -r '.extensions["com.openai"].interface | [.logo, .logoDark, .composerIcon, .composerIconDark,
+  (.screenshots // [])[]] | .[] | select(. != null)' plugin.json | while read -r asset; do
+  case "$asset" in ./assets/*) ;; *) echo "::error::$asset must live under ./assets/" >&2; exit 1 ;; esac
+  [ -f "$asset" ] || { echo "::error::plugin.json references missing $asset" >&2; exit 1; }
+done
+
 name="$(jq -r .name plugin.json)"
 version="$(jq -r .version plugin.json)"
 stage="$out/openai/$name"

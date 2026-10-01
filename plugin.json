@@ -37,7 +37,9 @@
           "Help me deploy a Streamlit dashboard to Domino.",
           "Set up MLflow experiment tracking for my Domino project.",
           "Run my training script every day at midnight as a Domino job."
-        ]
+        ],
+        "composerIcon": "./assets/logo.svg",
+        "logo": "./assets/logo.svg"
       }
     }
   }

@@ -207,8 +207,10 @@ Choose **Skills only** in the portal for the default ZIP. The **With MCP** path 
 Domino MCP server to be deployed at a public HTTPS endpoint using Streamable HTTP with OAuth 2.1;
 that deployment doesn't exist yet. Until it does, ship skills-only.
 
-Before the first submission, add a square `logo` and `composerIcon` under `assets/` and reference
-them from `plugin.json` → `extensions.com.openai.interface` (or upload the icon in the dashboard).
+The listing icon is `assets/logo.svg`, used for both `logo` and `composerIcon`. It is the
+pinwheel mark from `skills/domino-ui-design/assets/domino-logo.svg` on a square `#2E2E38` tile,
+because the portal requires square icons of at least 48×48. The build fails if any icon or
+screenshot path in `plugin.json` is missing or outside `assets/`.
 
 ---
 
@@ -305,6 +307,7 @@ domino-ai-plugin/
 ├── plugin.json                  # Portable (Agent Plugins) manifest + OpenAI listing metadata
 ├── .mcp.json                    # Claude MCP config (stdio)
 ├── mcp.json                     # Portable MCP config (stdio) for Codex local installs
+├── assets/logo.svg              # OpenAI listing icon (square)
 ├── skills/                      # Shared, provider-neutral skills (27)
 ├── mcp-servers/domino_mcp_server/
 ├── agents/                      # Claude-only subagents
