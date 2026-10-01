@@ -57,7 +57,7 @@ git clone https://github.com/dominodatalab/domino-ai-plugin.git
 mkdir -p ~/.claude/marketplaces/domino/.claude-plugin
 mkdir -p ~/.claude/marketplaces/domino/plugins
 
-mv domino-ai-plugin ~/.claude/marketplaces/domino/plugins/domino-ai-plugin
+mv domino-ai-plugin ~/.claude/marketplaces/domino/plugins/domino-claude-plugin
 ```
 
 **Step 2: Create the marketplace manifest**
@@ -72,9 +72,9 @@ cat > ~/.claude/marketplaces/domino/.claude-plugin/marketplace.json << 'EOF'
   },
   "plugins": [
     {
-      "name": "domino-ai-plugin",
+      "name": "domino-claude-plugin",
       "description": "Domino Data Lab plugin - workspaces, jobs, environments, datasets, apps, models, and more",
-      "source": "./plugins/domino-ai-plugin",
+      "source": "./plugins/domino-claude-plugin",
       "category": "development"
     }
   ]
@@ -82,13 +82,18 @@ cat > ~/.claude/marketplaces/domino/.claude-plugin/marketplace.json << 'EOF'
 EOF
 ```
 
+> **Why `domino-claude-plugin`?** Claude Code tracks a marketplace install as
+> `<entry name>@<marketplace>`, so the entry keeps the name it had before the repo moved.
+> Existing installs and Domino workspaces keep updating without a reinstall. Only the clone URL
+> changed.
+
 **Step 3: Register the marketplace and install the plugin**
 
 Launch Claude Code and run:
 
 ```
 /plugin marketplace add /home/<your-username>/.claude/marketplaces/domino
-/plugin install domino-ai-plugin@domino-marketplace
+/plugin install domino-claude-plugin@domino-marketplace
 ```
 
 > **Note:** Replace `<your-username>` with your actual username, or use the full absolute path (e.g., `/home/ubuntu/.claude/marketplaces/domino`). The `~` shorthand may not expand correctly.
@@ -120,7 +125,7 @@ For teams sharing a project, add the marketplace to your project's `.claude/sett
     }
   },
   "enabledPlugins": {
-    "domino-ai-plugin@domino-marketplace": true
+    "domino-claude-plugin@domino-marketplace": true
   }
 }
 ```
@@ -134,7 +139,7 @@ When team members trust the repository folder, Claude Code will prompt them to i
   Claude loads. Run the update command and restart:
 
   ```bash
-  claude plugin update domino-ai-plugin@domino-marketplace   # local marketplace
+  claude plugin update domino-claude-plugin@domino-marketplace   # local marketplace
   claude plugin update dominodatalab@claude-plugins-official  # Anthropic marketplace
   ```
 
@@ -354,7 +359,7 @@ Run it locally with `uv run --with pyyaml python scripts/lint-skills.py`.
 | `/skills` shows "No skills found" (Claude Code) | Plugin skills don't appear in `/skills` — they are auto-invoked based on context. Check `/plugin` → Installed tab instead. |
 | Plugin not loading from settings.json | Claude Code does **not** support a `"plugins"` array in `settings.json`. Use the marketplace approach or `--plugin-dir` flag. |
 | `~` path not expanding | Always use absolute paths (e.g., `/home/ubuntu/...`) in marketplace commands and settings. |
-| "Failed to parse marketplace file" | Ensure `marketplace.json` has the `owner` object and `source` is a string path (e.g., `"./plugins/domino-ai-plugin"`), not a nested object. |
+| "Failed to parse marketplace file" | Ensure `marketplace.json` has the `owner` object and `source` is a string path (e.g., `"./plugins/domino-claude-plugin"`), not a nested object. |
 | `domino_server` tools missing (ChatGPT / Codex) | The directory package is skills-only. Install from a local checkout, or register the server manually (`skills/modeling-assistant/SETUP.md`). |
 | CI: "plugin.json is out of sync" | Run `scripts/sync-manifests.py` and commit `plugin.json`. |
 
