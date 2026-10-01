@@ -10,32 +10,23 @@ ROOT = Path(__file__).resolve().parent.parent
 CLAUDE = ROOT / ".claude-plugin" / "plugin.json"
 PORTABLE = ROOT / "plugin.json"
 SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
-SHARED = ["name", "description", "author", "homepage", "repository", "license", "keywords"]
-ORDER = ["$schema", "name", "version", *SHARED[1:], "extensions"]
+SHARED = ["name", "version", "description", "author", "homepage", "repository", "license",
+          "keywords"]
+ORDER = ["$schema", *SHARED, "extensions"]
+# YYYY.XYY.N is semver because the OpenAI portal rejects anything else.
+VERSION = re.compile(r"[0-9]{4}\.[1-9][0-9]{2,}\.(0|[1-9][0-9]*)")
 # Public-directory limits from the OpenAI submission reference.
 LISTING_LIMITS = {"displayName": 30, "shortDescription": 30, "longDescription": 4000,
                   "developerName": 80}
 MAX_PROMPTS, MAX_PROMPT_LEN = 3, 128
 
 
-def semver(claude_version: str) -> str:
-    """semver maps YYYY.X-Y.N to YYYY.(X*100+Y).N because the OpenAI portal requires semver."""
-    m = re.fullmatch(r"([0-9]{4})\.(0|[1-9][0-9]*)-(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", claude_version)
-    if not m:
-        sys.exit(f"{CLAUDE}: version '{claude_version}' is not YYYY.X-Y.N")
-    year, x, y, n = (int(g) for g in m.groups())
-    if y >= 100:
-        sys.exit(f"{CLAUDE}: Domino minor version {y} does not fit the X*100+Y mapping")
-    return f"{year}.{x * 100 + y}.{n}"
-
-
 def expected() -> dict:
     claude = json.loads(CLAUDE.read_text())
+    if not VERSION.fullmatch(claude.get("version", "")):
+        sys.exit(f"{CLAUDE}: version '{claude.get('version')}' is not YYYY.XYY.N (e.g. 2026.603.3)")
     portable = json.loads(PORTABLE.read_text()) if PORTABLE.exists() else {}
-    out = {"$schema": SCHEMA, "version": semver(claude["version"])}
-    for key in SHARED:
-        if key in claude:
-            out[key] = claude[key]
+    out = {"$schema": SCHEMA, **{k: claude[k] for k in SHARED if k in claude}}
     # OpenAI listing metadata lives only in plugin.json, so keep whatever is there.
     if "extensions" in portable:
         out["extensions"] = portable["extensions"]

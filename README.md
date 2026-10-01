@@ -216,14 +216,17 @@ screenshot path in `plugin.json` is missing or outside `assets/`.
 
 ## Versions
 
-`.claude-plugin/plugin.json` is the source of truth. Its version is `YYYY.X-Y.N` (for example
-`2026.6-3.2`): the release year, the Domino line the content is correct for as a floor (`6.3` =
-Domino 6.3 and later, including Cloud), and a release counter. Each release is tagged
-`release-YYYY.X-Y.N`. See CONTRIBUTING.md "Release branches, tags and backports".
+The version is **`YYYY.XYY.N`**, for example `2026.603.3`, and both manifests carry the same
+string. It's the release year, the oldest Domino line the content supports written as X×100+Y
+(`603` = Domino 6.3 and later, including Cloud), and a release counter. The format is valid
+semver, which the OpenAI portal requires. Each release is tagged `release-YYYY.XYY.N`. See
+CONTRIBUTING.md "Release branches, tags and backports".
 
-The OpenAI portal requires semver, so `plugin.json` carries the same version as
-`YYYY.(X*100+Y).N` (`2026.6-3.2` → `2026.603.2`). Never edit `plugin.json`'s identity fields by
-hand; change `.claude-plugin/plugin.json` and run:
+Releases up to `2026.6-3.2` used the older `YYYY.X-Y.N` form of the same scheme; `2026.603.3`
+is the first in the current form.
+
+`.claude-plugin/plugin.json` is the source of truth. Never edit `plugin.json`'s identity fields
+by hand; change `.claude-plugin/plugin.json` and run:
 
 ```bash
 scripts/sync-manifests.py

@@ -48,8 +48,10 @@ customer environments from a **public** repository. Three facts drive most rules
 | `main` | What ships. The Anthropic marketplace pins a commit on it; Domino Workspaces fall back to it | Changed only by the `develop` → `main` promotion PR, which bumps once and is tagged on merge |
 | `release-X.Y` | Snapshot for a Domino line, cut only when `main` stops being correct for it | Cherry-picks only; version stays on that line |
 
-- Version format is `YYYY.X-Y.N`, for example `2026.6-3.1`: year, Domino line as a floor
-  (`6-3` = 6.3 and later including Cloud), release counter. `N` never repeats and never resets.
+- Version format is `YYYY.XYY.N`, for example `2026.603.3`: year, Domino line as a floor
+  written X×100+Y (`603` = 6.3 and later including Cloud), release counter. It is semver
+  because the OpenAI portal requires it. `N` never repeats and never resets. Releases up to
+  `2026.6-3.2` wrote the line as `6-3`.
   CI creates the tag `release-<version>` on merge to `main` or `release-*`. After a bump, run
   `scripts/sync-manifests.py` so `plugin.json` carries it too; CI fails if they drift.
 - Never create a branch named `release-*` for anything but a real snapshot. The Domino

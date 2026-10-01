@@ -1,12 +1,12 @@
 name: Version check
 
-# Enforces the plugin version scheme (YYYY.X-Y.N) on pull requests.
+# Enforces the plugin version scheme (YYYY.XYY.N, e.g. 2026.603.3) on pull requests.
 # On the integration branch `develop` the version must stay equal to the base: releases are
 # minted only by the develop -> main promotion PR, which carries the single bump.
 # Any change under skills/, agents/, mcp-servers/, output-styles/, assets/, .mcp.json, mcp.json
 # or either plugin.json must bump .claude-plugin/plugin.json "version", or nothing reaches
-# installed copies: Claude Code caches plugins by that string. plugin.json carries the same
-# version in semver form (scripts/sync-manifests.py) because the OpenAI portal requires semver.
+# installed copies: Claude Code caches plugins by that string. plugin.json must carry the same
+# version (scripts/sync-manifests.py); the scheme is semver because the OpenAI portal requires it.
 # See CONTRIBUTING.md "Release branches, tags and backports" and scripts/check-version.sh.
 
 on:

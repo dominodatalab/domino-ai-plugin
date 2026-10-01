@@ -290,22 +290,25 @@ Feature PRs land on `develop` with the version untouched; the promotion PR from 
 `main` carries the bump. CI (`scripts/check-version.sh`) rejects a promotion without a bump
 and a `develop` PR with one.
 
-The version is **`YYYY.X-Y.N`**, for example `2026.6-3.1`:
+The version is **`YYYY.XYY.N`**, for example `2026.603.3`. It is valid semver because the
+OpenAI portal accepts nothing else, and both manifests carry the same string:
 
 | Part | Meaning |
 |---|---|
 | `YYYY` | Year of the release. |
-| `X-Y` | The Domino line the content is correct for, written with a hyphen so the four parts read at a glance (`6-3` is Domino 6.3), as a **floor**: `6.3` means Domino 6.3 and later, including Domino Cloud. `main` carries the current floor. |
-| `N` | Skill release counter. Increases with every release on that `X.Y` line, is never reused, and is **not** reset by the year (`2026.6-3.14` is followed by `2027.6-3.15`). |
+| `XYY` | The Domino line the content is correct for, as X×100+Y (`603` is Domino 6.3, `610` would be 6.10), as a **floor**: `603` means Domino 6.3 and later, including Domino Cloud. `main` carries the current floor. |
+| `N` | Skill release counter. Increases with every release on that line, is never reused, and is **not** reset by the year (`2026.603.14` is followed by `2027.603.15`). |
 
-The git tag `release-YYYY.X-Y.N` is created automatically from the manifest on every push to
+Releases up to `2026.6-3.2` wrote the line as `X-Y`; `2026.603.3` is the same scheme in
+semver form, and `scripts/check-version.sh` still reads the old form on a base branch.
+
+The git tag `release-YYYY.XYY.N` is created automatically from the manifest on every push to
 `main` or a `release-*` branch (`.github/workflows/tag-release.yml`), so tag and manifest
-always agree. Plugin version is independent of Domino's own version numbers; `X.Y` states
+always agree. Plugin version is independent of Domino's own version numbers; the line states
 compatibility, not identity.
 
 Bump the version only in `.claude-plugin/plugin.json`, then run `scripts/sync-manifests.py` to
-copy it into the portable `plugin.json`. The OpenAI portal requires semver there, so the script
-writes `YYYY.(X*100+Y).N` (`2026.6-3.2` becomes `2026.603.2`). CI fails if the two drift.
+copy it into the portable `plugin.json`. CI fails if the two drift.
 
 ### 11. Write skills provider-neutral
 
@@ -324,7 +327,7 @@ a model name in an LLM example is a valid reason.
 | Change | Base branch | Version |
 |---|---|---|
 | Skills, agents, MCP server, output styles, assets (any content) | **`develop`** | Unchanged. CI fails a PR to `develop` that touches `plugin.json` `version`. |
-| Release: promote `develop` to `main` | `main`, head `develop` | The one bump to the next `YYYY.X-Y.N`; CI requires it; the tag follows on merge. |
+| Release: promote `develop` to `main` | `main`, head `develop` | The one bump to the next `YYYY.XYY.N`; CI requires it; the tag follows on merge. |
 | Repo mechanics only (`.github/`, `scripts/`, CONTRIBUTING, README) | `main` | Unchanged; no content paths, so no bump and no tag. |
 | Backport onto a `release-X.Y` branch | that branch | Bump `N` on that line. |
 
@@ -339,24 +342,25 @@ Three things carry a version, and they are deliberately different:
 | Object | Form | Who reads it |
 |---|---|---|
 | Branch | `main`, `release-6.3`, `release-6.4` … | The Domino Standard Environment (DSE) update script, which runs at Workspace launch and resolves **by exact branch name**: `release-X.Y.Z`, then `release-X.Y`, then `main`, from the cluster's `DOMINO_VERSION`. Any other branch name is invisible to it. |
-| Tag | `release-YYYY.X-Y.N` | Humans, and admins pinning a Workspace to one release through the script's override argument (`DOMINO_CLAUDE_SKILLS_BRANCH`), which accepts a branch, tag or commit. |
-| `plugin.json` `version` | `YYYY.X-Y.N` | Claude Code, to decide whether an installed copy is stale. |
+| Tag | `release-YYYY.XYY.N` | Humans, and admins pinning a Workspace to one release through the script's override argument (`DOMINO_CLAUDE_SKILLS_BRANCH`), which accepts a branch, tag or commit. |
+| `plugin.json` `version` | `YYYY.XYY.N` | Claude Code, to decide whether an installed copy is stale; the OpenAI portal, to order uploads. |
 
 Rules:
 
 - `main` is correct for every supported target (Domino 6.3 and Cloud today). Version-specific
-  behaviour is gated inside the skill, not by branch. `X-Y` in the version is the **floor** of
-  what the content is correct for, so `main` carries `YYYY.6-3.N` for as long as it is still
+  behaviour is gated inside the skill, not by branch. `XYY` in the version is the **floor** of
+  what the content is correct for, so `main` carries `YYYY.603.N` for as long as it is still
   correct for 6.3, even after 6.4 ships.
 - A `release-X.Y` branch exists only once `main`'s floor has moved past `X.Y`. Until then a
   Domino `X.Y` cluster resolves to `main`, which is correct for it. When the floor moves (say
-  `main` drops 6.3 and becomes `YYYY.6-4.N`), cut `release-6.3` from the last `6.3` commit;
+  `main` drops 6.3 and becomes `YYYY.604.N`), cut `release-6.3` from the last `6.3` commit;
   it then receives cherry-picks only, its versions stay on the `6.3` line, and it is never
   created for a Domino version that has not shipped (Cloud runs ahead of self-managed and
-  would freeze on it). This keeps one meaning for `X.Y`: the branch line and the floor are the
-  same number, and no two branches share a counter.
+  would freeze on it). This keeps one meaning for the line: the branch name and the floor are
+  the same Domino version (`release-6.3` carries `603`), and no two branches share a counter.
 - **Backport** = cherry-pick the fix onto `release-X.Y`, bump `N` on that line, open the PR
-  against the branch. CI checks that the version's `X.Y` equals the branch's. The tag follows
+  against the branch. CI checks that the version's line matches the branch (`603` for
+  `release-6.3`). The tag follows
   automatically on merge.
 - Never reuse a version string; a reused string points Claude at the old cached copy. A
   `git revert` of a content change is itself a content change and needs its own bump. Any edit
@@ -393,7 +397,8 @@ How each channel receives a release:
 - **OpenAI plugin directory (ChatGPT and Codex)**: nothing is pulled automatically. After a
   release, build the ZIP with `scripts/build-openai.sh` from the release tag and upload it to
   the existing plugin in the portal; the portal rejects an upload whose `plugin.json` version
-  is unchanged.
+  is unchanged. Upload only releases from `main`: a backport on `release-X.Y` can carry a later
+  year than `main`, so it would sort as newer and roll the listing back.
 
 `scripts/verify-update-flow.sh` reproduces the DSE install layout against a throwaway
 marketplace and asserts the caching behaviour these rules rest on. Run it when Claude Code
@@ -428,7 +433,7 @@ Reviewers will send back PRs with unticked required sections.
 2. Declare Domino version applicability and confirm both specs were checked (standard 7).
 3. For new or rewritten skill content, name the model used and tick the attestation
    (standard 8).
-4. Confirm no internal references (standard 9) and bump `plugin.json` to the next `YYYY.X-Y.N` (standard 10). CI fails the PR otherwise.
+4. Confirm no internal references (standard 9) and bump `plugin.json` to the next `YYYY.XYY.N` (standard 10). CI fails the PR otherwise.
 5. Update the README skill table and counts for any added, renamed or removed component.
 6. Describe what you tested and against which deployment version.
 7. Target `develop` for content and `main` only for release promotions and repo mechanics
