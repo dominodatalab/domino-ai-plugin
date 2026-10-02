@@ -8,4 +8,5 @@ PASS if the reply identifies all of these problems in the user's config and give
 3. The server binds to localhost instead of 0.0.0.0.
 4. app.sh never runs the build (`npm run build`) before serving.
 5. `serve` is missing the `-s` (single-page app fallback) flag.
-FAIL if any of the five is missing, or if the reply says it edited files.
+Fixes shown as diffs or code blocks, or an offer to apply them, are proposals and are fine.
+FAIL if any of the five is missing, or if the reply claims it already changed a file.

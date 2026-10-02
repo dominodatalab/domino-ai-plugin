@@ -1,18 +1,24 @@
 ---
 name: domino-experiment-setup
 description: Set up MLflow experiment tracking in a Domino project by generating an experiment_setup.py helper with deployment-unique experiment names, Domino context tags, and framework auto-logging, plus an example training script. Use when the user asks to add or set up experiment tracking, MLflow logging, or autologging for a traditional ML project in Domino.
+compatibility: Domino 6.3 and Domino Cloud. Runs in a Domino workspace or job, where MLflow tracking is preconfigured.
 ---
 
 # Set Up Domino Experiment Tracking
+
+Applies to Domino 6.3 and Domino Cloud.
 
 Add MLflow experiment tracking to a traditional ML project. For LLM or agent tracing, use the
 `domino-trace-setup` skill instead.
 
 ## Inputs
 
-1. **Experiment base name**: ask if not given. Default to the project name.
+1. **Experiment base name**: use the one the user gave; otherwise use the project directory name.
 2. **ML frameworks**: detect them from `requirements.txt`, `pyproject.toml`, `environment.yml`,
-   or imports in the code. Confirm the list with the user.
+   or imports in the code.
+
+Do not stop to ask for either. Make the changes with these defaults, then state the base name
+and frameworks you used in the reply so the user can change them.
 
 ## Steps
 
