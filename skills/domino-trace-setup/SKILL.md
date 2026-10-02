@@ -22,7 +22,7 @@ Domino experiments. For traditional ML tracking, use the `domino-experiment-setu
 
    ```dockerfile
    RUN pip install mlflow==3.2.0
-   RUN pip install "dominodatalab[data,aisystems] @ git+https://github.com/dominodatalab/python-domino.git@master"
+   RUN pip install "dominodatalab[data,agents]==2.2.0"
    ```
 
 2. **Copy helpers** from this skill's `assets/` folder into the project:

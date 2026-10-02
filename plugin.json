@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dominodatalab",
-  "version": "2026.603.3",
+  "version": "2026.603.4",
   "description": "Full Domino Data Lab platform support — workspaces, jobs, model deployment, experiment tracking, GenAI tracing, Spark/Ray/Dask, and app deployment for data science teams",
   "author": {
     "name": "Domino Data Lab",
@@ -33,6 +33,7 @@
         "capabilities": [],
         "websiteURL": "https://www.domino.ai",
         "supportURL": "https://support.dominodatalab.com/",
+        "privacyPolicyURL": "https://domino.ai/legal/privacy-policy",
         "defaultPrompt": [
           "Help me deploy a Streamlit dashboard to Domino.",
           "Set up MLflow experiment tracking for my Domino project.",

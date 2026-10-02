@@ -774,9 +774,9 @@ The run's metrics page shows:
 
 ```text
 mlflow==3.2.0
-dominodatalab[data,aisystems] @ git+https://github.com/dominodatalab/python-domino.git@master
-openai>=1.0.0
-pyyaml>=6.0
+dominodatalab[data,agents]==2.2.0
+openai==1.97.1
+pyyaml==6.0.2
 ```
 
 ## Blueprint Reference

@@ -6,7 +6,7 @@ using the @add_tracing decorator and DominoRun context manager.
 
 Requirements:
     - mlflow==3.2.0
-    - dominodatalab[data,aisystems] @ git+https://github.com/dominodatalab/python-domino.git@master
+    - dominodatalab[data,agents]==2.2.0
 
 Usage:
     from tracing_setup import setup_tracing, create_evaluator

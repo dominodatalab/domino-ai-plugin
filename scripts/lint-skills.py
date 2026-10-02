@@ -18,6 +18,9 @@ MAX_IDENTITY = 64
 FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n(.*)\Z", re.S)
 LINK = re.compile(r"\]\(([^)#\s]+)")
 CLAUDE = re.compile(r"claude", re.I)
+# Portal review flags installs from moving refs; git sources must pin a full commit SHA.
+GIT_SOURCE = re.compile(r"git\+[a-z]+://[^\s\"'#]+", re.I)
+PINNED_SHA = re.compile(r"@[0-9a-f]{40}$")
 
 
 def load_allowlist() -> set[str]:
@@ -68,6 +71,16 @@ def main() -> int:
                           f"(max {MAX_DESCRIPTION})")
         if not m.group(2).strip():
             errors.append(f"{rel}/SKILL.md: body must not be empty")
+
+        for path in sorted(p for p in skill_dir.rglob("*") if p.is_file()):
+            try:
+                body = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for src in GIT_SOURCE.findall(body):
+                if not PINNED_SHA.search(src):
+                    errors.append(f"{path.relative_to(ROOT)}: '{src}' is a mutable git source; "
+                                  f"use a PyPI release or pin a commit SHA")
 
         for doc in sorted(skill_dir.rglob("*.md")):
             text = doc.read_text(encoding="utf-8")

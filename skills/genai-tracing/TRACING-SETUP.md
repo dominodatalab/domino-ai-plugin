@@ -16,13 +16,13 @@ USER root
 # Install MLflow 3.2.0 (required for GenAI tracing)
 RUN pip install mlflow==3.2.0
 
-# Install Domino SDK with AI systems support
-RUN pip install --no-cache-dir "git+https://github.com/dominodatalab/python-domino.git@master#egg=dominodatalab[data,aisystems]"
+# Install Domino SDK with agents (tracing) support
+RUN pip install --no-cache-dir "dominodatalab[data,agents]==2.2.0"
 
-# Install your LLM framework (choose one or more)
-RUN pip install openai>=1.0.0
-RUN pip install anthropic>=0.18.0
-RUN pip install langchain>=0.1.0
+# Install your LLM framework (choose one or more; latest versions MLflow 3.2.0 autologging supports)
+RUN pip install openai==1.97.1
+RUN pip install anthropic==0.59.0
+RUN pip install langchain==0.3.27
 
 USER ubuntu
 ```
@@ -32,10 +32,10 @@ USER ubuntu
 ```text
 # requirements.txt
 mlflow==3.2.0
-dominodatalab[data,aisystems] @ git+https://github.com/dominodatalab/python-domino.git@master
-openai>=1.0.0
-anthropic>=0.18.0
-langchain>=0.1.0
+dominodatalab[data,agents]==2.2.0
+openai==1.97.1
+anthropic==0.59.0
+langchain==0.3.27
 ```
 
 ## Framework Auto-Logging
@@ -241,9 +241,9 @@ pip install mlflow==3.2.0
 ModuleNotFoundError: No module named 'domino.agents'
 ```
 
-**Solution**: Install Domino SDK with AI systems support:
+**Solution**: Install Domino SDK with agents (tracing) support:
 ```bash
-pip install --no-cache-dir "git+https://github.com/dominodatalab/python-domino.git@master#egg=dominodatalab[data,aisystems]"
+pip install --no-cache-dir "dominodatalab[data,agents]==2.2.0"
 ```
 
 ### API Key Issues
