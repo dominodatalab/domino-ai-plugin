@@ -42,6 +42,9 @@ def listing_errors(manifest: dict) -> list[str]:
             errors.append(f"interface.{field} is required and must be one non-empty string")
         elif len(value) > limit:
             errors.append(f"interface.{field} is {len(value)} chars (max {limit})")
+    # The portal rejects listings without a reachable privacy policy.
+    if not str(interface.get("privacyPolicyURL", "")).startswith("https://"):
+        errors.append("interface.privacyPolicyURL is required and must be an https:// URL")
     prompts = interface.get("defaultPrompt", [])
     prompts = [prompts] if isinstance(prompts, str) else prompts
     if len(prompts) > MAX_PROMPTS:

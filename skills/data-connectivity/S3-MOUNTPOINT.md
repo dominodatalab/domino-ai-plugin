@@ -79,9 +79,10 @@ Create IAM policy for S3 access:
 }
 ```
 
-### Step 2: Create Service Account
+### Step 2: Create the IAM Role
 
-Using eksctl:
+Using eksctl, create only the IAM role. The Helm chart creates and annotates the service account
+in Step 3, so no existing service account is modified:
 
 ```bash
 eksctl create iamserviceaccount \
@@ -89,13 +90,15 @@ eksctl create iamserviceaccount \
   --namespace kube-system \
   --cluster YOUR-CLUSTER-NAME \
   --attach-policy-arn arn:aws:iam::ACCOUNT_ID:policy/S3CSIDriverPolicy \
-  --approve \
-  --override-existing-serviceaccounts
+  --role-name S3CSIDriverRole \
+  --role-only \
+  --approve
 ```
 
 ### Step 3: Install CSI Driver
 
-Using Helm:
+Using Helm, pinned to a reviewed chart version (check the
+[chart releases](https://github.com/awslabs/mountpoint-s3-csi-driver/releases) before upgrading):
 
 ```bash
 helm repo add aws-mountpoint-s3-csi-driver \
@@ -103,8 +106,9 @@ helm repo add aws-mountpoint-s3-csi-driver \
 
 helm install aws-mountpoint-s3-csi-driver \
   aws-mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver \
+  --version 2.8.0 \
   --namespace kube-system \
-  --set controller.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::ACCOUNT_ID:role/S3CSIDriverRole
+  --set node.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::ACCOUNT_ID:role/S3CSIDriverRole
 ```
 
 ### Step 4: Create PersistentVolume

@@ -76,7 +76,9 @@ Azure Data Lake:
 
 1. Go to **Certificates & secrets**
 2. Click **New client secret**
-3. Set expiration and save the secret value
+3. Choose the shortest expiration your rotation process supports (90 days or less)
+4. Store the value directly in your secret manager (for example Azure Key Vault or a Kubernetes
+   Secret); never paste it into code, notebooks, chat, or logs
 
 ### Step 4: Configure Domino
 

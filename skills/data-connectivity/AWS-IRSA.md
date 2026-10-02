@@ -86,10 +86,9 @@ Define permissions for your workloads:
     {
       "Effect": "Allow",
       "Action": [
-        "sagemaker:CreateEndpoint",
         "sagemaker:InvokeEndpoint"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:sagemaker:REGION:ACCOUNT_ID:endpoint/your-endpoint-name"
     }
   ]
 }
@@ -256,23 +255,25 @@ mutations:
 
 ### Using Cross-Account Role
 
+Chain the role through an AWS config profile so the SDK assumes and refreshes it. Raw keys never
+appear in code.
+
+```ini
+# ~/.aws/config (or the file named by AWS_CONFIG_FILE)
+[profile domino-irsa]
+role_arn = arn:aws:iam::DOMINO_ACCOUNT:role/DominoWorkloadRole
+web_identity_token_file = /var/run/secrets/eks.amazonaws.com/serviceaccount/token
+
+[profile data-account]
+role_arn = arn:aws:iam::OTHER_ACCOUNT:role/DataAccessRole
+source_profile = domino-irsa
+role_session_name = domino-workload
+```
+
 ```python
 import boto3
 
-# Assume role in another account
-sts = boto3.client('sts')
-assumed = sts.assume_role(
-    RoleArn='arn:aws:iam::OTHER_ACCOUNT:role/DataAccessRole',
-    RoleSessionName='domino-workload'
-)
-
-# Use assumed credentials
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=assumed['Credentials']['AccessKeyId'],
-    aws_secret_access_key=assumed['Credentials']['SecretAccessKey'],
-    aws_session_token=assumed['Credentials']['SessionToken']
-)
+s3 = boto3.Session(profile_name="data-account").client("s3")
 ```
 
 ## Troubleshooting
@@ -280,8 +281,9 @@ s3 = boto3.client(
 ### Token Not Mounted
 
 ```bash
-# Check pod for projected token
-kubectl exec -it POD_NAME -n domino-compute -- ls -la /var/run/secrets/eks.amazonaws.com/serviceaccount/
+# Confirm the role annotation and the projected token volume without opening a shell in the pod
+kubectl get serviceaccount SERVICEACCOUNT_NAME -n domino-compute -o yaml
+kubectl describe pod POD_NAME -n domino-compute | grep -A3 -E 'AWS_ROLE_ARN|aws-iam-token'
 ```
 
 ### AssumeRoleWithWebIdentity Fails

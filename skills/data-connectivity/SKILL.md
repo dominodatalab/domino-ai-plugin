@@ -7,6 +7,20 @@ description: Connect Domino workloads to external data sources including AWS S3 
 
 This skill provides comprehensive knowledge for connecting Domino workloads to external data sources, including AWS S3, Azure storage, and credential propagation.
 
+## Safety Rules
+
+The setup guides in this skill are platform-administrator procedures that change cloud IAM and
+Kubernetes cluster state. When using them:
+
+- **Explain, don't execute.** Show `aws iam`, `eksctl`, `helm`, `kubectl`, `az` commands and
+  IAM/RBAC policies for the user to review and run. Do not run them yourself unless the user
+  explicitly asks you to run that specific command.
+- **Least privilege.** Scope every policy to named buckets, endpoints, or resources. Never
+  propose `"Resource": "*"` or wildcard actions such as `s3:*`.
+- **No secrets in output.** Never print, log, or echo access keys, tokens, or client secrets, and
+  never ask the user to paste one into the chat.
+- **Read-only troubleshooting.** Prefer `get`/`describe` commands over `exec` into running pods.
+
 ## Key Concepts
 
 ### Data Access Options in Domino

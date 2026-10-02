@@ -40,6 +40,14 @@ jq -r '.extensions["com.openai"].interface | [.logo, .logoDark, .composerIcon, .
   [ -f "$asset" ] || { echo "::error::plugin.json references missing $asset" >&2; exit 1; }
 done
 
+# domino.ai answers 200 for missing pages, so match the page title instead of the status code.
+privacy="$(jq -r '.extensions["com.openai"].interface.privacyPolicyURL' plugin.json)"
+page="$(curl -fsSL --max-time 20 "$privacy" || true)"
+if ! grep -qiE '<title>[^<]*privacy policy' <<<"$page"; then
+  echo "::error::privacyPolicyURL $privacy is unreachable or is not a privacy policy page" >&2
+  exit 1
+fi
+
 name="$(jq -r .name plugin.json)"
 version="$(jq -r .version plugin.json)"
 stage="$out/openai/$name"
