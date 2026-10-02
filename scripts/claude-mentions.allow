@@ -1,0 +1,5 @@
+# Skill files allowed to mention Claude. Every other skill file must stay provider-neutral.
+skills/ai-gateway/SKILL.md               # Claude listed as a model available through AI Gateway
+skills/genai-tracing/DOMINO-RUN.md       # Claude used as an example model name in a comparison run
+skills/domino-ui-bootstrap/SKILL.md      # host-specific file table covering Claude Code and Codex
+skills/modeling-assistant/SETUP.md       # host-specific troubleshooting for Claude Code and Codex
