@@ -144,8 +144,11 @@ trusting a change. When adding a skill, add a case whose prompt should trigger i
 - `SKILL_AUDIT.md` is from May 2026 and stale; do not treat it as current.
 - Claude Code invokes a plugin skill by its **directory** name (`dominodatalab:jobs` for
   `skills/jobs/`), not its frontmatter `name` (`domino-jobs`). Twenty skills still differ, so
-  eval `skill-fired` graders accept both forms, and "use the `domino-jobs` skill" in a skill
-  body names a skill Claude Code calls `jobs`.
+  eval `skill-fired` graders accept both forms. An agent's `skills:` preload list, by
+  contrast, resolves the frontmatter `name` (`domino-apps` works; an unknown name is skipped
+  silently, which is how `domino-app-deployment` went unnoticed).
+- `mcp-servers/domino_mcp_server` needs `mcp<2`; mcp 2.x renamed `FastMCP` and the server dies
+  on import. Check it starts with `claude --plugin-dir . mcp list` (expect `✔ Connected`).
 
 ## Domino API, SDK, and platform skills
 
