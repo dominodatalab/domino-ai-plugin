@@ -12,15 +12,15 @@ An **Extension** surfaces a published **App** at a Domino UI **mount point** (pr
 | Goal | Skill |
 |------|--------|
 | Vite/React design system, `@dominodatalab/extensions-tools`, proxy-safe URLs | [domino-ui-bootstrap](../domino-ui-bootstrap/SKILL.md) |
-| `app.sh`, ports, SPA base path, generic App CI | [domino-apps](../apps/SKILL.md) |
-| REST auth, jobs, projects, platform `/api/*` and `/v4/*` | [python-sdk](../python-sdk/SKILL.md) |
+| `app.sh`, ports, SPA base path, generic App CI | [domino-apps](../domino-apps/SKILL.md) |
+| REST auth, jobs, projects, platform `/api/*` and `/v4/*` | [python-sdk](../domino-python-sdk/SKILL.md) |
 | Governance from an extension backend | [domino-governance](../domino-governance/SKILL.md) plus external URL rules below |
 
 Product overview: https://docs.domino.ai/cloud/platform-capabilities/features/extensions
 
 Official catalog install (SysAdmin/CloudAdmin): https://docs.domino.ai/cloud/platform-capabilities/features/extensions/install-domino-official-extensions
 
-Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . For HTTP client setup in Extension backends and install scripts, use [python-sdk/SKILL.md](../python-sdk/SKILL.md#authentication).
+Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . For HTTP client setup in Extension backends and install scripts, use [python-sdk/SKILL.md](../domino-python-sdk/SKILL.md#authentication).
 
 ## Extension manifest (`extension_manifest.json`)
 
@@ -57,7 +57,7 @@ Apps can run full-page (deep linking) or inside an iframe. Platform convention: 
 Typical human workflow:
 
 1. **Build the App** in a project (frontend plus optional backend). Enable extended identity propagation; Flask/Dash read proxied headers by default.
-2. **Publish the App** as a SysAdmin or CloudAdmin (App must be published before it backs an Extension). Use the Apps API publish chain (`/api/apps/v1/...` and related routes). See [python-sdk/API-APPS.md](../python-sdk/API-APPS.md); confirm paths in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (**Public routes**).
+2. **Publish the App** as a SysAdmin or CloudAdmin (App must be published before it backs an Extension). Use the Apps API publish chain (`/api/apps/v1/...` and related routes). See [python-sdk/API-APPS.md](../domino-python-sdk/API-APPS.md); confirm paths in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (**Public routes**).
 3. **Create the Extension** via Admin UI or **`POST /api/extensions/beta/extensions`** with `appId`, optional `appVersionId`, `name`, `enabled`, and `uiMountPointTypeConfigs`.
 
 REST surface (beta): prefix **`/api/extensions/beta/`** (`extensions`, `extensions-ui`, `official-installs`, ...). Confirm operation IDs and bodies in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (public routes section).
@@ -101,7 +101,7 @@ Do not edit installer-managed project, environment, App, or Extension by hand; u
 
 | Context | Guidance |
 |---------|----------|
-| **App backend** calling platform APIs as the **starting user** | `DOMINO_API_PROXY` if set (no Authorization header); else access-token plus platform host. See [python-sdk](../python-sdk/SKILL.md). |
+| **App backend** calling platform APIs as the **starting user** | `DOMINO_API_PROXY` if set (no Authorization header); else access-token plus platform host. See [python-sdk](../domino-python-sdk/SKILL.md). |
 | **Visitor identity** in the browser | Visitor JWT from the App ingress; validate with JWKS. **`GET /v4/users/self` with a visitor JWT often fails** for privileged data; do not assume it replaces admin APIs for org/role lists. |
 | **Governance** `/api/governance/v1/*` | Base URL and auth: [domino-governance — Configuration](../domino-governance/SKILL.md#configuration). Bearer PAT or SA only; never API keys. |
 | **Inference** `/endpoints/{vanity}` | Use the **`url`** from the GenAI/management API response, not `DOMINO_USER_HOST`. |
@@ -129,4 +129,4 @@ These affect Extension Apps the same as standalone Apps:
 
 OpenAPI and route discovery: [API-SPECS.md](../domino-api-intro/API-SPECS.md).
 
-- Apps publish chain: [python-sdk/API-APPS.md](../python-sdk/API-APPS.md)
+- Apps publish chain: [python-sdk/API-APPS.md](../domino-python-sdk/API-APPS.md)

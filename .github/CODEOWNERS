@@ -40,29 +40,29 @@
 # ---------------------------------------------------------------------------------------------
 
 # Agents, coding assistants, LLMs  (docs: features/agents, features/coding-assistants, features/llms)
-/skills/ai-gateway/                     @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
-/skills/genai-tracing/                  @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
+/skills/domino-ai-gateway/                     @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
+/skills/domino-genai-tracing/                  @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
 /skills/domino-trace-setup/             @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
-/skills/modeling-assistant/             @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
+/skills/domino-modeling-assistant/             @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
 /agents/                                @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
 
 # Apps, extensions, launchers  (docs: features/apps, features/extensions, features/launchers)
-/skills/apps/                           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
+/skills/domino-apps/                           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-app-init/                @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-debug-proxy/             @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-ui-bootstrap/            @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-ui-design/               @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-extensions/              @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor @ddl-bira-ignacio
-/skills/launchers/                      @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
+/skills/domino-launchers/                      @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 
 # Compute: environments, jobs, clusters and HPC  (docs: core-concepts/compute-environments, core-concepts/jobs, features/compute-clusters-hpc)
-/skills/environments/                   @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
-/skills/jobs/                           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
-/skills/distributed-computing/          @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
+/skills/domino-environments/                   @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
+/skills/domino-jobs/                           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
+/skills/domino-distributed-computing/          @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
 
 # Data  (docs: core-concepts/data, admin/data-administration)
-/skills/datasets/                       @DDL-Theo-Linnemann @ddl-giuliocapolino
-/skills/data-connectivity/              @DDL-Theo-Linnemann @ddl-giuliocapolino
+/skills/domino-datasets/                       @DDL-Theo-Linnemann @ddl-giuliocapolino
+/skills/domino-data-connectivity/              @DDL-Theo-Linnemann @ddl-giuliocapolino
 /skills/domino-data-sdk/                @DDL-Theo-Linnemann @ddl-giuliocapolino
 /skills/netapp-volumes/                 @DDL-Theo-Linnemann @ddl-giuliocapolino
 
@@ -72,19 +72,19 @@
 # Projects, workspaces, flows, experiments, model deployment and monitoring
 # (docs: core-concepts/projects, core-concepts/workspaces, features/flows, features/development,
 #  features/models, features/model-deployment, features/monitoring)
-/skills/projects/                       @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
-/skills/workspaces/                     @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
-/skills/flows/                          @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
-/skills/experiment-tracking/            @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
+/skills/domino-projects/                       @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
+/skills/domino-workspaces/                     @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
+/skills/domino-flows/                          @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
+/skills/domino-experiment-tracking/            @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
 /skills/domino-experiment-setup/        @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
-/skills/model-endpoints/                @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
+/skills/domino-model-endpoints/                @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
 /skills/domino-model-serving/           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez @ddl-bira-ignacio
-/skills/model-monitoring/               @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
+/skills/domino-model-monitoring/               @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-rodrigo-fernandez
 
 # Governance  (docs: features/governance)
 /skills/domino-governance/              @DDL-Theo-Linnemann @ddl-dkelkhoff @ddl-giuliocapolino @ddl-bira-ignacio
 
 # API, SDK and MCP server  (docs: reference/api, reference/python-sdk)
 /skills/domino-api-intro/               @DDL-Theo-Linnemann @ddl-ebrown @ddl-bira-ignacio
-/skills/python-sdk/                     @DDL-Theo-Linnemann @ddl-ebrown @ddl-bira-ignacio
+/skills/domino-python-sdk/                     @DDL-Theo-Linnemann @ddl-ebrown @ddl-bira-ignacio
 /mcp-servers/                           @DDL-Theo-Linnemann @ddl-ebrown @ddl-bira-ignacio

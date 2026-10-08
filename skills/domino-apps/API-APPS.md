@@ -58,7 +58,7 @@ Model and GenAI **inference** is not on the platform gateway. Management may be 
 
 `DOMINO_API_HOST` alone does not construct a working inference URL. Read `url` / vanity from the management API response and call that host for predictions.
 
-See [model-endpoints/SKILL.md](../model-endpoints/SKILL.md) and confirm routes in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (public routes section).
+See [model-endpoints/SKILL.md](../domino-model-endpoints/SKILL.md) and confirm routes in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (public routes section).
 
 ## When deploy or start is blocked
 

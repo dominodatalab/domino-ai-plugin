@@ -463,7 +463,7 @@ For comprehensive REST API documentation, see these specialized guides:
 | [API-MODELS.md](API-MODELS.md) | Model APIs, deployments, registry |
 | [API-MODEL-SERVING.md](API-MODEL-SERVING.md) | Lifecycle, v1/v2 registry split, invoke vs management |
 | [API-ENVIRONMENTS.md](API-ENVIRONMENTS.md) | Environments, revisions, Dockerfile |
-| [API-APPS.md](API-APPS.md) | Apps endpoint catalog (see [apps/API-APPS.md](../apps/API-APPS.md) for v1 automation) |
+| [API-APPS.md](API-APPS.md) | Apps endpoint catalog (see [apps/API-APPS.md](../domino-apps/API-APPS.md) for v1 automation) |
 | [API-ADMIN.md](API-ADMIN.md) | Users, orgs, hardware tiers, data sources |
 | [API-REFERENCE.md](API-REFERENCE.md) | Complete endpoint reference |
 
