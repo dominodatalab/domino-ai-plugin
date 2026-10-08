@@ -100,7 +100,7 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
   ticket keys, or paths users cannot obtain. No placeholder hosts such as `your-domino.com`;
   use `$DOMINO_API_HOST` or the value an API response returns.
 
-Existing skills predate these requirements and many violate them (directory names, missing
+Existing skills predate these requirements and many violate them (missing
 frontmatter, stale links). Fix violations in the files you are already changing. Do not sweep
 the tree in an unrelated PR; tree-wide fixes have their own tracked work.
 
@@ -148,11 +148,13 @@ trusting a change. When adding a skill, add a case whose prompt should trigger i
   launch on Domino 6.3 with `updateSkillsOnLaunch`, and only through a newer image on Domino
   Cloud. Laptops on the Anthropic marketplace get it once Anthropic advances its pin.
 - `SKILL_AUDIT.md` is from May 2026 and stale; do not treat it as current.
-- Claude Code invokes a plugin skill by its **directory** name (`dominodatalab:jobs` for
-  `skills/jobs/`), not its frontmatter `name` (`domino-jobs`). Twenty skills still differ, so
-  eval `skill-fired` graders accept both forms. An agent's `skills:` preload list, by
-  contrast, resolves the frontmatter `name` (`domino-apps` works; an unknown name is skipped
-  silently, which is how `domino-app-deployment` went unnoticed).
+- Every skill's directory name equals its frontmatter `name` (`skills/domino-jobs/` is
+  `domino-jobs`), and `scripts/lint-skills.py` fails otherwise. This matters across hosts:
+  Claude Code invokes a plugin skill by its directory name (`dominodatalab:domino-jobs`), Codex
+  and Gemini CLI by `name`, and Agent Plugins clients skip a skill whose two differ. An agent's
+  `skills:` preload list resolves the frontmatter `name`; an unknown name is skipped silently.
+- `SKILL.md` stays at or under 8,000 bytes (lint-enforced): Codex truncates the rest when it
+  loads the skill. Put detail in sibling reference files and link them from `SKILL.md`.
 - `mcp-servers/domino_mcp_server` needs `mcp<2`; mcp 2.x renamed `FastMCP` and the server dies
   on import. Check it starts with `claude --plugin-dir . mcp list` (expect `✔ Connected`).
 

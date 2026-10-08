@@ -25,7 +25,7 @@ Many list APIs accept `offset` and `limit` and return `totalCount`. Treat respon
 - Some routes ignore `offset` or filter query params; client-side filter may be required.
 - A first page with `data.length < totalCount` means you must paginate or accept partial results.
 
-Dataset v2 listing is a common case: see [datasets](../datasets/SKILL.md) and [API-DATASETS](../python-sdk/API-DATASETS.md).
+Dataset v2 listing is a common case: see [datasets](../domino-datasets/SKILL.md) and [API-DATASETS](../domino-python-sdk/API-DATASETS.md).
 
 Governance bulk operations (recertification, bundle lists): paginate with offset/limit until no more rows.
 
@@ -35,7 +35,7 @@ Prefer paginated event APIs over single responses that load entire audit or expo
 
 ## Async job start
 
-Job and run starts usually return the run id in the **JSON body**, not only a `Location` header. Poll until terminal status; field names vary (`status`, `statusName`, nested execution status). See [ERRORS.md](./ERRORS.md) and [jobs](../jobs/SKILL.md).
+Job and run starts usually return the run id in the **JSON body**, not only a `Location` header. Poll until terminal status; field names vary (`status`, `statusName`, nested execution status). See [ERRORS.md](./ERRORS.md) and [jobs](../domino-jobs/SKILL.md).
 
 ## Platform-only legacy JWT tooling
 

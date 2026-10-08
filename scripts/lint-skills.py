@@ -14,6 +14,15 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 ALLOW_FILE = ROOT / "scripts" / "claude-mentions.allow"
 MAX_DESCRIPTION = 1024
+# Codex truncates each plugin skill to 8,000 bytes when it loads it into the prompt
+# (openai/codex codex-rs ext/skills host_prompt.rs). Keep SKILL.md under that and move detail
+# into sibling reference files, which every host reads on demand.
+MAX_SKILL_BYTES = 8000
+# Gemini CLI substitutes these into extension SKILL.md text before the model sees it, plus the
+# value of every environment variable declared in gemini-extension.json `settings`. A literal
+# reference to a declared credential would put the user's secret into the prompt.
+GEMINI_BUILTINS = {"extensionPath", "workspacePath", "/", "pathSeparator"}
+GEMINI_VAR = re.compile(r"\$\{([A-Za-z_/][A-Za-z0-9_]*|/)(?=[}:])")
 MAX_IDENTITY = 64
 FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n(.*)\Z", re.S)
 LINK = re.compile(r"\]\(([^)#\s]+)")
@@ -28,9 +37,20 @@ def load_allowlist() -> set[str]:
     return {ln.split("#", 1)[0].strip() for ln in lines if ln.split("#", 1)[0].strip()}
 
 
+def gemini_substituted_names() -> set[str]:
+    names = set(GEMINI_BUILTINS)
+    manifest = ROOT / "gemini-extension.json"
+    if manifest.is_file():
+        for setting in json.loads(manifest.read_text()).get("settings") or []:
+            if isinstance(setting, dict) and setting.get("envVar"):
+                names.add(setting["envVar"])
+    return names
+
+
 def main() -> int:
     errors: list[str] = []
     plugin = json.loads((ROOT / "plugin.json").read_text())["name"]
+    substituted = gemini_substituted_names()
     allowed = load_allowlist()
     seen: dict[str, Path] = {}
     cross_links = 0
@@ -62,6 +82,10 @@ def main() -> int:
             if name in seen:
                 errors.append(f"{rel}/SKILL.md: name '{name}' duplicates {seen[name]}")
             seen[name] = rel
+            if name != skill_dir.name:
+                errors.append(f"{rel}/SKILL.md: name '{name}' must equal the directory name "
+                              f"'{skill_dir.name}' (agentskills.io; Agent Plugins clients skip "
+                              f"skills that differ)")
             if len(f"{plugin}:{name}") > MAX_IDENTITY:
                 errors.append(f"{rel}/SKILL.md: '{plugin}:{name}' exceeds {MAX_IDENTITY} chars")
         if not isinstance(description, str) or not description.strip():
@@ -71,6 +95,14 @@ def main() -> int:
                           f"(max {MAX_DESCRIPTION})")
         if not m.group(2).strip():
             errors.append(f"{rel}/SKILL.md: body must not be empty")
+        size = manifest.stat().st_size
+        if size > MAX_SKILL_BYTES:
+            errors.append(f"{rel}/SKILL.md: {size} bytes exceeds {MAX_SKILL_BYTES} (Codex truncates "
+                          f"the rest); move detail into sibling reference files")
+        for var in GEMINI_VAR.findall(manifest.read_text(encoding="utf-8")):
+            if var in substituted:
+                errors.append(f"{rel}/SKILL.md: '${{{var}}}' is substituted by Gemini CLI before the "
+                              f"model reads the skill; write it without braces or rephrase")
 
         for path in sorted(p for p in skill_dir.rglob("*") if p.is_file()):
             try:

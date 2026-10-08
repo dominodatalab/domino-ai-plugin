@@ -40,9 +40,32 @@ else:
 
 **Outside a run:** not in a Domino container — use the deployment HTTPS URL and Bearer PAT or service account token (see [SKILL.md](SKILL.md#outside-a-run-laptop-ci-cron-outside-domino)).
 
+**Before Domino 5.4.0:** JWT file propagation (`DOMINO_TOKEN_FILE`) was used before the API proxy; legacy behavior may still exist if admins enable `EnableLegacyJwtTooling`. Prefer migrating to the proxy pattern on supported versions.
+
 ## Base URL
 
 In-run: `DOMINO_API_PROXY` for platform `/v4/…` and `/api/…` routes when set; else access-token + `DOMINO_USER_HOST`. Path discovery: [API-SPECS.md](../domino-api-intro/API-SPECS.md).
+
+## Quick start
+
+Use the [Authentication](#authentication) setup (`base_url`, `headers`) for examples below.
+
+```python
+response = requests.get(f"{base_url}/api/projects/beta/projects", headers=headers or None)
+projects = response.json()
+```
+
+### Common Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v4/projects` | GET | List projects |
+| `/v4/projects/{id}/runs` | POST | Start a run |
+| `/v4/projects/{id}/runs/{runId}` | GET | Get run status |
+| `/v4/projects/{id}/files` | GET | List files |
+| `/v4/gateway/runs/{runId}/logs` | GET | Get run logs |
+| `/v4/models` | GET | List models |
+| `/v4/models/{id}/latest/model` | POST | Call model |
 
 ---
 
