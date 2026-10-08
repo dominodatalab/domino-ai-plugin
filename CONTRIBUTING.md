@@ -343,7 +343,7 @@ Three things carry a version, and they are deliberately different:
 
 | Object | Form | Who reads it |
 |---|---|---|
-| Branch | `main`, `release-6.3`, `release-6.4` … | The Domino Standard Environment (DSE) update script, which runs at Workspace launch and resolves **by exact branch name**: `release-X.Y.Z`, then `release-X.Y`, then `main`, from the cluster's `DOMINO_VERSION`. Any other branch name is invisible to it. |
+| Branch | `main`, `release-6.3`, `release-6.4` … | The Domino Standard Environment (DSE) update script, which resolves **by exact branch name**: `release-X.Y.Z`, then `release-X.Y`, then `main`, from the cluster's `DOMINO_VERSION`. Any other branch name is invisible to it. The script ships in the DSE image; Domino 6.3 runs it at Workspace launch when the `updateSkillsOnLaunch` setting is on. Domino Cloud doesn't run it at launch, so Cloud Workspaces keep the version their image installed, and a Workspace that persists `~/.claude` keeps its earlier copy. |
 | Tag | `release-YYYY.XYY.N` | Humans, and admins pinning a Workspace to one release through the script's override argument (`DOMINO_CLAUDE_SKILLS_BRANCH`), which accepts a branch, tag or commit. |
 | `plugin.json` `version` | `YYYY.XYY.N` | Claude Code, to decide whether an installed copy is stale; the OpenAI portal, to order uploads. |
 
@@ -436,7 +436,7 @@ Reviewers will send back PRs with unticked required sections.
 2. Declare Domino version applicability and confirm both specs were checked (standard 7).
 3. For new or rewritten skill content, name the model used and tick the attestation
    (standard 8).
-4. Confirm no internal references (standard 9) and bump `plugin.json` to the next `YYYY.XYY.N` (standard 10). CI fails the PR otherwise.
+4. Confirm no internal references (standard 9) and leave `plugin.json` `version` unchanged on a PR to `develop`; the `develop` to `main` release PR carries the bump (standard 10). CI fails either the other way round.
 5. Update the README skill table and counts for any added, renamed or removed component.
 6. Describe what you tested and against which deployment version.
 7. Target `develop` for content and `main` only for release promotions and repo mechanics

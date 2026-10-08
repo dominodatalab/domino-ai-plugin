@@ -134,14 +134,25 @@ When team members trust the repository folder, Claude Code will prompt them to i
 
 ### Updating (Claude Code)
 
-- **Marketplace install (Options 1 and 3, or the Anthropic marketplace):** Claude Code keeps a
-  cached copy keyed by the plugin version. Pulling the source directory does **not** change what
-  Claude loads. Run the update command and restart:
+- **Local marketplace install (Options 1 and 3):** Claude Code keeps a cached copy keyed by the
+  plugin version, and `claude plugin update` re-copies the clone only; it doesn't fetch. Fetch the
+  clone first, then update and restart:
 
   ```bash
-  claude plugin update domino-claude-plugin@domino-marketplace   # local marketplace
-  claude plugin update dominodatalab@claude-plugins-official  # Anthropic marketplace
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin main
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B main origin/main
+  claude plugin update domino-claude-plugin@domino-marketplace
   ```
+
+  If `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin remote get-url origin`
+  still names `domino-claude-plugin`, run `git -C <that path> remote set-url origin
+  https://github.com/dominodatalab/domino-ai-plugin.git` first. The two repositories have
+  unrelated histories, so `git pull` alone can't switch a clone; the fetch and `checkout -B` above
+  can.
+
+- **Anthropic marketplace:** `claude plugin update dominodatalab@claude-plugins-official`, then
+  restart. That entry follows whatever commit Anthropic pins, which still points at the deprecated
+  `domino-claude-plugin` repository.
 
 - **`--plugin-dir` (Option 2):** the plugin is read in place. `git pull`, then start a new session.
 
