@@ -106,7 +106,8 @@ the tree in an unrelated PR; tree-wide fixes have their own tracked work.
 ## Commands
 
 ```bash
-claude plugin validate .                              # manifest and structure
+claude plugin validate .claude-plugin/plugin.json     # plugin manifest and structure
+claude plugin validate .                              # marketplace manifest (.claude-plugin/marketplace.json)
 scripts/build-openai.sh                               # manifest sync, skill lint, OpenAI ZIP in dist/
 scripts/check-version.sh origin/develop               # what CI will say (use your PR's base)
 scripts/check-codeowners.py                           # every skill has its own CODEOWNERS line

@@ -45,7 +45,35 @@ the Codex variant. CI enforces this; see [Skill rules](#skill-rules).
 - Domino API key (for API operations when running outside a Domino workspace)
 - **`uv`** package manager ([install guide](https://github.com/astral-sh/uv)) — required for the bundled Domino MCP server
 
-### Option 1: Marketplace Install (Recommended)
+### Recommended: install from GitHub
+
+The repository is its own marketplace (`.claude-plugin/marketplace.json`, named
+`domino-marketplace`), so Claude Code can install and update the plugin straight from GitHub:
+
+```bash
+claude plugin marketplace add dominodatalab/domino-ai-plugin
+claude plugin install dominodatalab@domino-marketplace
+```
+
+Claude Code installs a copy and replaces it when a release changes the plugin's `version`.
+Auto-update is off by default for marketplaces other than Anthropic's: turn it on under
+`/plugin` → **Marketplaces**, or set `autoUpdate` in your settings:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "domino-marketplace": {
+      "source": { "source": "github", "repo": "dominodatalab/domino-ai-plugin" },
+      "autoUpdate": true
+    }
+  }
+}
+```
+
+The marketplace also maps the old entry name `domino-claude-plugin` to `dominodatalab`, so a
+setting written for the old name keeps working.
+
+### Option 1: Local Marketplace Install (the Domino Workspace layout)
 
 This approach registers the plugin through Claude Code's native marketplace system so it persists across sessions.
 
@@ -134,6 +162,14 @@ When team members trust the repository folder, Claude Code will prompt them to i
 
 ### Updating (Claude Code)
 
+- **Installed from GitHub (recommended above):** with auto-update on, Claude Code updates the
+  copy after a release on its own. To update now:
+
+  ```bash
+  claude plugin marketplace update domino-marketplace
+  claude plugin update dominodatalab@domino-marketplace
+  ```
+
 - **Local marketplace install (Options 1 and 3):** Claude Code reads the clone in place, so
   checking out a newer commit is the update; start a new session afterwards. `git pull` fails on
   a detached checkout, so fetch and check out `main` instead:
@@ -159,34 +195,21 @@ When team members trust the repository folder, Claude Code will prompt them to i
 
 ## Installation: Codex and the ChatGPT desktop app
 
-### From this repository (local marketplace)
+### From GitHub (recommended)
 
-Codex reads the portable `plugin.json`, `skills/`, and `mcp.json` straight from the repo, so a
-local checkout works without a build step.
+The repository is also a Codex marketplace (`.agents/plugins/marketplace.json`, named
+`domino-marketplace`). Codex reads the portable `plugin.json`, `skills/`, and `mcp.json` from it,
+with no build step:
 
 ```bash
-git clone https://github.com/dominodatalab/domino-ai-plugin.git ~/.codex/plugins/domino-ai-plugin
+codex plugin marketplace add dominodatalab/domino-ai-plugin
+codex plugin add dominodatalab@domino-marketplace
 ```
 
-Then add an entry to `~/.agents/plugins/marketplace.json`:
-
-```json
-{
-  "name": "domino-local",
-  "interface": { "displayName": "Domino" },
-  "plugins": [
-    {
-      "name": "dominodatalab",
-      "source": { "source": "local", "path": "./.codex/plugins/domino-ai-plugin" },
-      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
-      "category": "Developer Tools"
-    }
-  ]
-}
-```
-
-Restart the ChatGPT desktop app or Codex and install **Domino Data Lab** from the `Domino` source
-in the Plugins Directory. This path includes the bundled MCP server (stdio, needs `uv`).
+Codex refreshes Git marketplaces when it starts, and `codex plugin marketplace upgrade
+domino-marketplace` refreshes it now. Add `--ref <tag>` to `marketplace add` to stay on one release.
+This path includes the bundled MCP server (stdio, needs `uv`). Restart the ChatGPT desktop app to
+see the plugin there.
 
 > **MCP credentials:** the portable `mcp.json` can't carry secrets, so the server reads
 > `DOMINO_API_KEY` and `DOMINO_HOST` from the environment the host passes it. If tools fail with

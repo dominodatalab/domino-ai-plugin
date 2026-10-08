@@ -29,7 +29,7 @@ base_ref="${1:-}"
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 2; }
 
 manifest=".claude-plugin/plugin.json"
-content_paths=(skills commands agents templates mcp-servers output-styles hooks bin workflows themes monitors assets .mcp.json .lsp.json settings.json mcp.json plugin.json "$manifest")
+content_paths=(skills commands agents templates mcp-servers output-styles hooks bin workflows themes monitors assets rules .agents .mcp.json .lsp.json settings.json mcp.json mcp_config.json plugin.json gemini-extension.json .claude-plugin/marketplace.json "$manifest")
 
 fail() { echo "::error::$*" >&2; exit 1; }
 note() { echo "$*"; }
