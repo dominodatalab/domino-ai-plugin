@@ -2,9 +2,16 @@ name: Tag release
 
 # On every push to main or a release-X.Y branch, create the tag
 #   release-<plugin.json version>        e.g. release-2026.603.3
-# if it does not exist yet. The tag is derived from the manifest, so tag and manifest
-# always agree. Branch names stay release-X.Y because the Domino DSE update script
-# resolves them by exact name; tags are the per-release labels an admin can pin to.
+# if it does not exist yet, then publish a GitHub Release from it. The tag is derived from
+# the manifest, so tag, Release and manifest always agree. Branch names stay release-X.Y
+# because the Domino DSE update script resolves them by exact name; tags are the per-release
+# labels an admin can pin to.
+#
+# Releases matter to installers: Gemini CLI installs and updates from the repository's
+# "latest" Release once one exists, and `gh skill install` prefers the latest Release. So only
+# releases from main are marked latest; a backport on release-X.Y never is, or default users
+# would be moved onto the backport line. No files are attached: a Release with exactly one
+# attached file is installed by Gemini CLI as if that file were the extension.
 
 on:
   push:
@@ -69,3 +76,18 @@ jobs:
           git tag -a "$TAG" -m "domino-ai-plugin $VERSION (${GITHUB_REF_NAME})" "$GITHUB_SHA"
           git push origin "refs/tags/$TAG"
           echo "created $TAG at $GITHUB_SHA"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists; nothing to do"; exit 0
+          fi
+          code="$(cut -d. -f2 <<<"$VERSION")"
+          line="$(( 10#$code / 100 )).$(( 10#$code % 100 ))"
+          if [ "$GITHUB_REF_NAME" = "main" ]; then latest=true; else latest=false; fi
+          gh release create "$TAG" --verify-tag --title "$VERSION" --latest="$latest" \
+            --notes "domino-ai-plugin $VERSION for Domino $line and later, including Domino Cloud. Built from \`${GITHUB_REF_NAME}\` at ${GITHUB_SHA}. See the repository README for installation in Claude Code, Codex, ChatGPT and Gemini CLI."
+          echo "published release $TAG (latest=$latest)"

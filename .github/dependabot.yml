@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned GitHub Actions current. Python dependencies of the MCP server are added
+# here once the server has a lockfile (the server is being redesigned; see the MCP plan).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

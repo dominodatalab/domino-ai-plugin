@@ -1,0 +1,31 @@
+name: Skill request
+description: Ask for a skill covering a Domino feature, or for more depth in an existing skill.
+labels: ["enhancement", "skill-request"]
+body:
+  - type: textarea
+    id: task
+    attributes:
+      label: What do you want an agent to be able to do?
+      description: Describe the task in your own words, as you would ask the agent.
+    validations:
+      required: true
+  - type: input
+    id: feature
+    attributes:
+      label: Domino feature and docs link
+      placeholder: https://docs.domino.ai/...
+  - type: dropdown
+    id: domino-version
+    attributes:
+      label: Domino version you need it for
+      multiple: true
+      options:
+        - Domino Cloud
+        - Domino 6.3
+        - Other self-managed version
+    validations:
+      required: true
+  - type: input
+    id: existing-skill
+    attributes:
+      label: Closest existing skill, if any

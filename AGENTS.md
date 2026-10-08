@@ -38,7 +38,8 @@ customer environments from a **public** repository. Three facts drive most rules
 | `scripts/check-version.sh` | The CI version gate; run it locally before opening a PR |
 | `scripts/build-openai.sh` | Builds the OpenAI ZIP; runs `sync-manifests.py --check` and `lint-skills.py` first |
 | `scripts/verify-update-flow.sh` | Reproduces how Claude installs and updates this plugin |
-| `.github/` | PR template, `version-check.yml`, `tag-release.yml`, `CODEOWNERS` |
+| `.github/` | PR template, issue forms, `version-check.yml`, `tag-release.yml`, `CODEOWNERS` (one line per skill), `dependabot.yml` |
+| `MAINTAINERS.md`, `SECURITY.md`, `SUPPORT.md` | Who is accountable, how to report vulnerabilities, where users get help |
 
 ## Branches and versions
 
@@ -107,6 +108,7 @@ the tree in an unrelated PR; tree-wide fixes have their own tracked work.
 claude plugin validate .                              # manifest and structure
 scripts/build-openai.sh                               # manifest sync, skill lint, OpenAI ZIP in dist/
 scripts/check-version.sh origin/develop               # what CI will say (use your PR's base)
+scripts/check-codeowners.py                           # every skill has its own CODEOWNERS line
 scripts/verify-update-flow.sh                         # install/update behaviour (needs the claude CLI, ~2 min)
 claude --plugin-dir .                                 # load this checkout in place; replaces a same-named installed plugin for the session
 /reload-plugins                                       # inside a session, after editing a skill
@@ -128,6 +130,8 @@ trusting a change. When adding a skill, add a case whose prompt should trigger i
   write the model identifier and tick neither box: the human who reviews and opens the PR
   ticks one. An agent never attests for a human.
 - Base branch: `develop` for content, `main` for the promotion PR and repo mechanics.
+- A new or renamed skill directory needs its own line in `.github/CODEOWNERS` in the same PR;
+  `scripts/check-codeowners.py` fails CI otherwise.
 - Merging needs the `version` check, one approving review, a code-owner review where
   `.github/CODEOWNERS` matches, and an up-to-date branch. When the base moves, rebase or use
   "Update branch".
