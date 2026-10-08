@@ -1,0 +1,64 @@
+name: Bug report
+description: A skill gave wrong or outdated instructions, or the plugin or MCP server misbehaved.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Do not include tokens, API keys, hostnames of private deployments, or customer data.
+  - type: input
+    id: skill
+    attributes:
+      label: Skill or component
+      description: Skill directory name (for example `jobs`), or `mcp-server`, `manifest`, `install`.
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      options:
+        - Claude Code
+        - OpenAI Codex
+        - ChatGPT
+        - Gemini CLI
+        - Antigravity
+        - Other (say which below)
+    validations:
+      required: true
+  - type: input
+    id: agent-version
+    attributes:
+      label: Agent version
+      placeholder: e.g. claude --version
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: The `version` in `.claude-plugin/plugin.json`, or the release tag you installed.
+      placeholder: e.g. 2026.603.4
+    validations:
+      required: true
+  - type: dropdown
+    id: domino-version
+    attributes:
+      label: Domino version
+      options:
+        - Domino Cloud
+        - Domino 6.3
+        - Other self-managed version (say which below)
+        - Not using a Domino deployment
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+      description: Include the prompt you gave the agent and what it did. Paste error text as text, not screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: correct-source
+    attributes:
+      label: Correct behaviour source
+      description: If the skill is wrong, link the docs.domino.ai page or API reference that shows the correct behaviour.

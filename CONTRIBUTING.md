@@ -52,8 +52,10 @@ so user-invoked workflows are skills, and their templates live in the skill's `a
 
 ### Adding a New Skill
 
-1. Create a new directory under `skills/`
-2. Add a `SKILL.md` file with YAML frontmatter:
+1. Create a new directory under `skills/`. Its name must equal the `name` in the frontmatter.
+2. Add a line for it to `.github/CODEOWNERS` naming its owners (`scripts/check-codeowners.py`
+   fails CI otherwise; see [MAINTAINERS.md](MAINTAINERS.md) for how owners are chosen).
+3. Add a `SKILL.md` file with YAML frontmatter:
 
 ```yaml
 ---
@@ -73,12 +75,12 @@ Detailed description of the skill...
 The directory name **must equal** `name` (agentskills.io rule; Codex and OpenCode key on
 `name`, Antigravity on the folder).
 
-3. Keep SKILL.md under 500 lines; use supporting files for details. Keep every file the skill
+4. Keep SKILL.md under 500 lines; use supporting files for details. Keep every file the skill
    needs (references, scripts, templates under `assets/`) inside the skill's own directory.
-4. Follow the [Skill Authoring Standards](#skill-authoring-standards) — auth
+5. Follow the [Skill Authoring Standards](#skill-authoring-standards) — auth
    pattern, host env vars, no `python-domino` SDK, verified endpoints,
    smoke-tested payloads, provider-neutral wording
-5. Run `uv run --with pyyaml python scripts/lint-skills.py`
+6. Run `uv run --with pyyaml python scripts/lint-skills.py`
 
 ### Adding a User-Invoked Workflow
 
@@ -445,12 +447,9 @@ Reviewers will send back PRs with unticked required sections.
 
 ## Reporting Issues
 
-Please include:
-- Claude Code, Codex, or ChatGPT version
-- Plugin version
-- Steps to reproduce
-- Expected vs actual behavior
-- Error messages (if any)
+Use the issue forms (bug report or skill request); they ask for the agent, plugin version and
+Domino version. Report security problems privately as described in [SECURITY.md](SECURITY.md).
+Help with the Domino platform itself goes to Domino support; see [SUPPORT.md](SUPPORT.md).
 
 ## Code of Conduct
 
@@ -463,4 +462,5 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Questions?
 
 - Open an issue for bugs or feature requests
-- See [Domino Documentation](https://docs.dominodatalab.com/) for platform questions
+- See [Domino Documentation](https://docs.domino.ai) for platform questions
+- [MAINTAINERS.md](MAINTAINERS.md) lists who maintains this repository

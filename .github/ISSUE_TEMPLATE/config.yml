@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Help using Domino
+    url: https://support.dominodatalab.com/
+    about: Questions about your Domino deployment or account go to Domino support, not this repository.
+  - name: Report a security vulnerability
+    url: https://github.com/dominodatalab/domino-ai-plugin/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Domino documentation
+    url: https://docs.domino.ai
+    about: Product documentation for Domino 6.3 and Domino Cloud.
