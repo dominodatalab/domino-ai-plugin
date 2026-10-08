@@ -354,13 +354,16 @@ Rules:
   behaviour is gated inside the skill, not by branch. `XYY` in the version is the **floor** of
   what the content is correct for, so `main` carries `YYYY.603.N` for as long as it is still
   correct for 6.3, even after 6.4 ships.
-- A `release-X.Y` branch exists only once `main`'s floor has moved past `X.Y`. Until then a
-  Domino `X.Y` cluster resolves to `main`, which is correct for it. When the floor moves (say
-  `main` drops 6.3 and becomes `YYYY.604.N`), cut `release-6.3` from the last `6.3` commit;
-  it then receives cherry-picks only, its versions stay on the `6.3` line, and it is never
-  created for a Domino version that has not shipped (Cloud runs ahead of self-managed and
-  would freeze on it). This keeps one meaning for the line: the branch name and the floor are
-  the same Domino version (`release-6.3` carries `603`), and no two branches share a counter.
+- Each self-managed Domino line that has shipped has a `release-X.Y` branch (`release-6.3`
+  today), so the Domino Workspace updater and pinned installs can name it. While `main`'s floor
+  is at or below `X.Y`, `main` is correct for that line, and
+  `.github/workflows/advance-release-branches.yml` fast-forwards `release-X.Y` to `main` on every
+  push: the two are identical and nobody commits to the branch directly. When the floor moves
+  past `X.Y` (say `main` drops 6.3 and becomes `YYYY.604.N`), the workflow stops advancing
+  `release-6.3`; from then on it receives cherry-picks only and its versions stay on the `6.3`
+  line. Never create `release-X.Y` for a Domino version that hasn't shipped as self-managed:
+  Domino Cloud reports newer versions than self-managed and would resolve to it. The branch
+  name and the floor name the same Domino version (`release-6.3` carries `603`).
 - **Backport** = cherry-pick the fix onto `release-X.Y`, bump `N` on that line, open the PR
   against the branch. CI checks that the version's line matches the branch (`603` for
   `release-6.3`). The tag follows
