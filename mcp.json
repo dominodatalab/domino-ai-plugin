@@ -10,6 +10,10 @@
         "run",
         "domino_mcp_server.py"
       ]
+    },
+    "domino_docs": {
+      "type": "streamable-http",
+      "url": "https://docs.domino.ai/mcp"
     }
   }
 }

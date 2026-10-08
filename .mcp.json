@@ -12,6 +12,10 @@
         "DOMINO_API_KEY": "${DOMINO_API_KEY}",
         "DOMINO_HOST": "${DOMINO_HOST}"
       }
+    },
+    "domino_docs": {
+      "type": "http",
+      "url": "https://docs.domino.ai/mcp"
     }
   }
 }
