@@ -169,7 +169,7 @@ newer features (e.g. NetApp volume mounts on jobs). Show REST + `curl` (or
 `requests`) instead. (PR #8: *"a lot of its methods use older APIs and won't
 support things like specifying NetApp volume mounts"*.)
 
-Exception: the `domino-data-sdk` and `python-sdk` skills exist specifically to
+Exception: the `domino-data-sdk` and `domino-python-sdk` skills exist specifically to
 document the SDK. They should clearly mark which methods are still supported
 vs deprecated. All other skills should not pull `from domino import Domino`
 into their examples.

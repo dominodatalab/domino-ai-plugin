@@ -45,7 +45,7 @@ Missing or stale status while a run is still active: keep polling with backoff; 
 
 Async job start returns the run id in the **response body**, not only a `Location` header. Poll the job status route documented for your start API on https://docs.domino.ai/llms-full.txt .
 
-See [jobs](../jobs/SKILL.md) and [API-JOBS](../python-sdk/API-JOBS.md).
+See [jobs](../domino-jobs/SKILL.md) and [API-JOBS](../domino-python-sdk/API-JOBS.md).
 
 ## Datasource audit and legacy DataSet projects
 
@@ -56,7 +56,7 @@ Workarounds:
 - List datasources: `GET /api/datasource/v1/datasources` (filter client-side by project if needed).
 - Audit at scale: paginated `GET /v4/datasource/audit/events` (not a single bulk dump that loads the full audit in one response).
 
-See [data-connectivity](../data-connectivity/SKILL.md).
+See [data-connectivity](../domino-data-connectivity/SKILL.md).
 
 ## Wrong surface symptoms
 

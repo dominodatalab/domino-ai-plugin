@@ -12,15 +12,15 @@ An **Extension** surfaces a published **App** at a Domino UI **mount point** (pr
 | Goal | Skill |
 |------|--------|
 | Vite/React design system, `@dominodatalab/extensions-tools`, proxy-safe URLs | [domino-ui-bootstrap](../domino-ui-bootstrap/SKILL.md) |
-| `app.sh`, ports, SPA base path, generic App CI | [domino-apps](../apps/SKILL.md) |
-| REST auth, jobs, projects, platform `/api/*` and `/v4/*` | [python-sdk](../python-sdk/SKILL.md) |
+| `app.sh`, ports, SPA base path, generic App CI | [domino-apps](../domino-apps/SKILL.md) |
+| REST auth, jobs, projects, platform `/api/*` and `/v4/*` | [python-sdk](../domino-python-sdk/SKILL.md) |
 | Governance from an extension backend | [domino-governance](../domino-governance/SKILL.md) plus external URL rules below |
 
 Product overview: https://docs.domino.ai/cloud/platform-capabilities/features/extensions
 
 Official catalog install (SysAdmin/CloudAdmin): https://docs.domino.ai/cloud/platform-capabilities/features/extensions/install-domino-official-extensions
 
-Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . For HTTP client setup in Extension backends and install scripts, use [python-sdk/SKILL.md](../python-sdk/SKILL.md#authentication).
+Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . For HTTP client setup in Extension backends and install scripts, use [python-sdk/SKILL.md](../domino-python-sdk/SKILL.md#authentication).
 
 ## Extension manifest (`extension_manifest.json`)
 
@@ -57,43 +57,16 @@ Apps can run full-page (deep linking) or inside an iframe. Platform convention: 
 Typical human workflow:
 
 1. **Build the App** in a project (frontend plus optional backend). Enable extended identity propagation; Flask/Dash read proxied headers by default.
-2. **Publish the App** as a SysAdmin or CloudAdmin (App must be published before it backs an Extension). Use the Apps API publish chain (`/api/apps/v1/...` and related routes). See [python-sdk/API-APPS.md](../python-sdk/API-APPS.md); confirm paths in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (**Public routes**).
+2. **Publish the App** as a SysAdmin or CloudAdmin (App must be published before it backs an Extension). Use the Apps API publish chain (`/api/apps/v1/...` and related routes). See [python-sdk/API-APPS.md](../domino-python-sdk/API-APPS.md); confirm paths in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (**Public routes**).
 3. **Create the Extension** via Admin UI or **`POST /api/extensions/beta/extensions`** with `appId`, optional `appVersionId`, `name`, `enabled`, and `uiMountPointTypeConfigs`.
 
-REST surface (beta): prefix **`/api/extensions/beta/`** (`extensions`, `extensions-ui`, `official-installs`, ...). Confirm operation IDs and bodies in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (public routes section).
-
-```python
-import os
-import requests
-
-if os.environ.get("DOMINO_API_PROXY"):
-    base_url = os.environ["DOMINO_API_PROXY"].rstrip("/")
-    headers = {}
-else:
-    base_url = (os.environ.get("DOMINO_USER_HOST") or os.environ.get("DOMINO_API_HOST") or "").rstrip("/")
-    token = requests.get("http://localhost:8899/access-token").text.strip()
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-body = {
-    "name": "My Extension",
-    "enabled": True,
-    "appId": "app-id-from-publish",
-    "uiMountPointTypeConfigs": {
-        "projectSidebar": {
-            "enabled": True,
-            "allProjects": True,
-            "urlConfig": {"contextualQueryParams": ["projectId"]},
-        }
-    },
-}
-response = requests.post(f"{base_url}/api/extensions/beta/extensions", headers=headers, json=body)
-```
+Beta REST surface (prefix `/api/extensions/beta/`), a create-Extension request sample, and official-install API analogs: [API-EXTENSIONS.md](./API-EXTENSIONS.md).
 
 Only Admins create Extensions; viewers grant consent when the App acts as them.
 
 ### Official Extension install (manifest-driven)
 
-For Domino-built Extensions, an admin installs from **Manage Domino-official Extensions** in the Admin panel. The installer creates project, environment, App, and Extension from the release manifest (background job with retry/cancel). API analogs: `official-install-menu`, `POST .../official-installs`, snapshot status endpoints under `/api/extensions/beta/official-installs/`.
+Admins install Domino-built Extensions from **Manage Domino-official Extensions** in the Admin panel; installer behavior and its API analogs are in [API-EXTENSIONS.md](./API-EXTENSIONS.md).
 
 Do not edit installer-managed project, environment, App, or Extension by hand; use the official install UI for version changes.
 
@@ -101,7 +74,7 @@ Do not edit installer-managed project, environment, App, or Extension by hand; u
 
 | Context | Guidance |
 |---------|----------|
-| **App backend** calling platform APIs as the **starting user** | `DOMINO_API_PROXY` if set (no Authorization header); else access-token plus platform host. See [python-sdk](../python-sdk/SKILL.md). |
+| **App backend** calling platform APIs as the **starting user** | `DOMINO_API_PROXY` if set (no Authorization header); else access-token plus platform host. See [python-sdk](../domino-python-sdk/SKILL.md). |
 | **Visitor identity** in the browser | Visitor JWT from the App ingress; validate with JWKS. **`GET /v4/users/self` with a visitor JWT often fails** for privileged data; do not assume it replaces admin APIs for org/role lists. |
 | **Governance** `/api/governance/v1/*` | Base URL and auth: [domino-governance — Configuration](../domino-governance/SKILL.md#configuration). Bearer PAT or SA only; never API keys. |
 | **Inference** `/endpoints/{vanity}` | Use the **`url`** from the GenAI/management API response, not `DOMINO_USER_HOST`. |
@@ -109,24 +82,12 @@ Do not edit installer-managed project, environment, App, or Extension by hand; u
 
 Domino does not inject a single `DOMINO_EXTERNAL_URL`; derive public URL from deployment config, forwarded headers, or app conventions (`DOMINO_PUBLIC_HOST` / `DOMINO_EXTERNAL_HOST` are app patterns, not guaranteed core run injection).
 
-## Platform caveats (Apps API + Extensions)
-
-These affect Extension Apps the same as standalone Apps:
-
-| Topic | Behavior |
-|-------|----------|
-| **`netAppVolumeIds` on App version create** | Accepted in the API but NetApp volumes may **not mount** (silent no-op vs workspace parity). Prefer explicit volume workflows; manifest `mountNetAppVolumes` does not fix API no-op alone. |
-| **App delete and vanity URL** | Deleting an App may **not release** its vanity URL for immediate reuse; recreate failures may need admin cleanup. |
-| **Apps beta vs v1** | Extension backing Apps may be created or published through beta or v1 routes; confirm routes in [API-SPECS.md](../domino-api-intro/API-SPECS.md) (public routes section). Prefer documented v1 publish flows for new automation where available. |
-
 ## Prerequisites on the deployment
 
 - Extensions feature enabled.
 - **`SecureIdentityPropagationToAppsEnabled`** and extended identity propagation for Apps (default on Domino Cloud).
 - For official installs: platform egress to GitHub for catalog, manifests, and release artifacts.
 
-## Related API reference
+## Reference files
 
-OpenAPI and route discovery: [API-SPECS.md](../domino-api-intro/API-SPECS.md).
-
-- Apps publish chain: [python-sdk/API-APPS.md](../python-sdk/API-APPS.md)
+- [API-EXTENSIONS.md](./API-EXTENSIONS.md) — beta REST routes with a create-Extension sample, official-install API analogs, Apps-API caveats (NetApp volumes, vanity URLs, beta vs v1), and OpenAPI/Apps-publish pointers. Read before automating Extension create or install.
