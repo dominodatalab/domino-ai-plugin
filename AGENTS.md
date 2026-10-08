@@ -12,11 +12,12 @@ builds the OpenAI plugin-directory ZIP from `skills/` alone. Copilot, OpenCode a
 read the same agentskills.io layout from their own skills directories. Content here ships to
 customer environments from a **public** repository. Three facts drive most rules below:
 
-1. Claude Code installs a marketplace plugin as a cache copy keyed by the `plugin.json`
-   `version` string and re-reads it only when that string changes. A content change without a
-   version change ships to nobody. (Verified on Claude Code 2.1.284; it contradicts the docs'
-   description of local-directory marketplaces, so re-run `scripts/verify-update-flow.sh`
-   when Claude Code changes and update CONTRIBUTING if it stops holding.)
+1. Installs from a git source (the Anthropic marketplace, `claude plugin marketplace add
+   owner/repo`, the OpenAI directory) are copies that update only when the `plugin.json`
+   `version` string changes, so a content change without a version change reaches none of
+   them. A local-directory marketplace, which the Domino Workspace image uses, is read in place
+   from its clone: a checkout there is the whole update (verified on Claude Code 2.1.294 by
+   `scripts/verify-update-flow.sh`; re-run it when Claude Code changes).
 2. One tree targets **Domino 6.3 (self-managed) and Domino Cloud**. Where the product differs,
    the skill branches at runtime; content is never forked per version.
 3. The same skills run under Claude Code, ChatGPT and Codex, so skill text is provider-neutral
@@ -138,13 +139,13 @@ trusting a change. When adding a skill, add a case whose prompt should trigger i
 
 ## Things that will bite you
 
-- Editing the marketplace clone changes nothing Claude loads until the version changes and
-  `claude plugin update` runs. Editing the cache copy under `~/.claude/plugins/cache/` takes
-  effect but is overwritten on update. Do neither; test with `--plugin-dir`.
-- The Domino Workspace image installs this plugin from a local marketplace with auto-update
-  off by default. A bump on `main` reaches laptops through the Anthropic marketplace once the
-  pin advances; it reaches Workspaces only after the image turns auto-update on or runs
-  `plugin update` at launch.
+- Test changes with `claude --plugin-dir .`. A git-sourced install of this plugin is a copy that
+  ignores your checkout until the version changes; a local-directory install reads its clone
+  in place, so editing that clone changes the next session immediately.
+- The Domino Workspace image installs this plugin from a local-directory marketplace, which is
+  read in place. A release reaches a Workspace when its clone checks out the new commit: at
+  launch on Domino 6.3 with `updateSkillsOnLaunch`, and only through a newer image on Domino
+  Cloud. Laptops on the Anthropic marketplace get it once Anthropic advances its pin.
 - `SKILL_AUDIT.md` is from May 2026 and stale; do not treat it as current.
 - Claude Code invokes a plugin skill by its **directory** name (`dominodatalab:jobs` for
   `skills/jobs/`), not its frontmatter `name` (`domino-jobs`). Twenty skills still differ, so
