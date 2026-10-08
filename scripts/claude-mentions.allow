@@ -3,3 +3,5 @@ skills/domino-ai-gateway/SKILL.md               # Claude listed as a model avail
 skills/domino-genai-tracing/DOMINO-RUN.md       # Claude used as an example model name in a comparison run
 skills/domino-ui-bootstrap/SKILL.md      # host-specific file table covering Claude Code and Codex
 skills/domino-modeling-assistant/SETUP.md       # host-specific troubleshooting for Claude Code and Codex
+skills/domino-ui-bootstrap/SETUP-STEPS.md       # host-specific MCP registration steps for Claude Code and Codex
+skills/domino-ui-bootstrap/PROJECT-FILES.md     # host-specific instructions-file and settings steps for Claude Code and Codex
