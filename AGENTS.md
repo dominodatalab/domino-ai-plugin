@@ -48,7 +48,7 @@ customer environments from a **public** repository. Three facts drive most rules
 |---|---|---|
 | `develop` | Integration branch. All content PRs target it. | `plugin.json` `version` unchanged; CI fails a bump here |
 | `main` | What ships. The Anthropic marketplace pins a commit on it; Domino Workspaces fall back to it | Changed only by the `develop` → `main` promotion PR, which bumps once and is tagged on merge |
-| `release-X.Y` | Snapshot for a Domino line, cut only when `main` stops being correct for it | Cherry-picks only; version stays on that line |
+| `release-X.Y` | One per shipped self-managed Domino line (`release-6.3`). Equals `main` while `main`'s floor is at or below X.Y: CI fast-forwards it on every push to `main` | Never commit to it while it follows `main`; after `main` moves past the line, cherry-picks only and the version stays on that line |
 
 - Version format is `YYYY.XYY.N`, for example `2026.603.3`: year, Domino line as a floor
   written X×100+Y (`603` = 6.3 and later including Cloud), release counter. It is semver
