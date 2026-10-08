@@ -283,8 +283,9 @@ script is worth citing, add it to the repo under the skill (for example
 
 ### 10. Bump `plugin.json` on every content change, using the release scheme
 
-Claude Code copies a marketplace plugin into its cache under the `plugin.json` `version`
-string and re-reads it only when that string changes. Any change under `skills/`, `agents/`,
+Installs from a git source (the Anthropic marketplace, a marketplace added as `owner/repo`, the
+OpenAI directory) are copies that update only when the `plugin.json` `version` string changes.
+Any change under `skills/`, `agents/`,
 `mcp-servers/`, `output-styles/`, `hooks/`, `assets/`, `bin/`, `workflows/`, `themes/`,
 `monitors/`, `.mcp.json`, `mcp.json`, `.lsp.json`, `settings.json` or either `plugin.json` must
 therefore bump `version` **when it reaches `main`**, or nothing reaches installed copies.
@@ -364,7 +365,7 @@ Rules:
   against the branch. CI checks that the version's line matches the branch (`603` for
   `release-6.3`). The tag follows
   automatically on merge.
-- Never reuse a version string; a reused string points Claude at the old cached copy. A
+- Never reuse a version string; installs from a git source treat a reused string as no change. A
   `git revert` of a content change is itself a content change and needs its own bump. Any edit
   to `plugin.json` counts as content.
 - If `tag-release` fails with "already exists at a different commit", two PRs landed with the
@@ -381,20 +382,14 @@ How each channel receives a release:
   Code installs the new copy once the manifest string differs. After a release, check the
   `sha` for `dominodatalab` in `anthropics/claude-plugins-official` and request a bump if it
   lags.
-- **Domino DSE Workspaces**: the launch script checks out the resolved branch in the clone,
-  but Claude Code loads a cache copy keyed by version, so the checkout alone changes nothing
-  (verified on 2.1.284). The copy is refreshed only when something recomputes the version:
-  `claude plugin update`, or Claude Code's background auto-update, which runs a few minutes
-  into an interactive session, refreshes every marketplace that has auto-update **on**, and
-  applies the new copy at the next launch. Auto-update is **off by default for every
-  marketplace except Anthropic's**, including the image's local `domino-marketplace`, so
-  the image must turn it on (`autoUpdate: true` on the marketplace's `extraKnownMarketplaces`
-  settings entry, or the `/plugin` Marketplaces toggle) or the launch script must run
-  `claude plugin update domino-claude-plugin@domino-marketplace` after the checkout. With
-  either in place, a version bump on the resolved branch reaches a Workspace one launch
-  later. Until then a Workspace keeps the version its image was built with. Claude Code's
-  documentation also describes relative-path plugins from a locally added marketplace as
-  loading in place without a version bump; that is not the observed behaviour on 2.1.284.
+- **Domino DSE Workspaces**: the image clones this repository into a local-directory
+  marketplace, and Claude Code reads that clone in place (verified on 2.1.294), so whatever
+  commit the clone has checked out is what loads at the next session, with or without a
+  version bump. Domino 6.3 runs the update script at Workspace launch when
+  `updateSkillsOnLaunch` is on, which checks out the resolved branch. Domino Cloud doesn't
+  run it, so a Cloud Workspace keeps the commit its image cloned, and a Workspace that
+  persists `~/.claude` keeps its earlier clone. A local-directory marketplace can't
+  auto-update: Claude Code has nothing to fetch.
 - **`--plugin-dir`**: loads in place; `git pull` or checking out a tag is the update.
 - **OpenAI plugin directory (ChatGPT and Codex)**: nothing is pulled automatically. After a
   release, build the ZIP with `scripts/build-openai.sh` from the release tag and upload it to
@@ -402,10 +397,10 @@ How each channel receives a release:
   is unchanged. Upload only releases from `main`: a backport on `release-X.Y` can carry a later
   year than `main`, so it would sort as newer and roll the listing back.
 
-`scripts/verify-update-flow.sh` reproduces the DSE install layout against a throwaway
-marketplace and asserts the caching behaviour these rules rest on. Run it when Claude Code
-changes its plugin loading; if its first assertion fails, Claude has started loading this
-layout in place, and the DSE paragraph above needs updating.
+`scripts/verify-update-flow.sh` reproduces the DSE install layout in a throwaway Claude Code
+configuration and asserts that the clone is read in place. Run it when Claude Code changes its
+plugin loading; if it fails, Claude Code copies this layout again and the DSE paragraph above
+needs updating.
 
 ## Code Style
 

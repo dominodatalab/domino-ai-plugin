@@ -134,14 +134,13 @@ When team members trust the repository folder, Claude Code will prompt them to i
 
 ### Updating (Claude Code)
 
-- **Local marketplace install (Options 1 and 3):** Claude Code keeps a cached copy keyed by the
-  plugin version, and `claude plugin update` re-copies the clone only; it doesn't fetch. Fetch the
-  clone first, then update and restart:
+- **Local marketplace install (Options 1 and 3):** Claude Code reads the clone in place, so
+  checking out a newer commit is the update; start a new session afterwards. `git pull` fails on
+  a detached checkout, so fetch and check out `main` instead:
 
   ```bash
   git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin main
   git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B main origin/main
-  claude plugin update domino-claude-plugin@domino-marketplace
   ```
 
   If `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin remote get-url origin`
@@ -342,7 +341,7 @@ domino-ai-plugin/
 │   ├── lint-skills.py           # Skill rules shared by both platforms
 │   ├── claude-mentions.allow    # Skill files allowed to mention Claude, with reasons
 │   ├── check-version.sh         # Release-scheme check (CI)
-│   └── verify-update-flow.sh    # Claude Code cache/update behaviour check
+│   └── verify-update-flow.sh    # checks Claude Code reads a local marketplace clone in place
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── README.md
