@@ -44,8 +44,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - name: Skip release-branch commits that main already contains
+        id: owner
+        run: |
+          # A release-X.Y branch that follows main (advance-release-branches.yml) carries main's
+          # own commits; main's run of this workflow owns their tag and GitHub Release. Tagging
+          # them here could race that run and publish the Release without marking it latest.
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            git fetch --quiet origin main
+            if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+              echo "$GITHUB_SHA is on main; main's run tags it"
+              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
       - name: Read version
         id: v
+        if: steps.owner.outputs.skip != 'true'
         run: |
           v="$(jq -r '.version // empty' .claude-plugin/plugin.json)"
           [ -n "$v" ] || { echo "::error::plugin.json has no version"; exit 1; }
@@ -58,6 +73,7 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "tag=release-$v" >> "$GITHUB_OUTPUT"
       - name: Create tag if absent
+        if: steps.owner.outputs.skip != 'true'
         env:
           TAG: ${{ steps.v.outputs.tag }}
           VERSION: ${{ steps.v.outputs.version }}
@@ -77,6 +93,7 @@ jobs:
           git push origin "refs/tags/$TAG"
           echo "created $TAG at $GITHUB_SHA"
       - name: Publish GitHub Release
+        if: steps.owner.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.v.outputs.tag }}

@@ -7,15 +7,18 @@ name: Advance release branches
 # main's floor. Once main's floor moves past X.Y, release-X.Y stops following main and receives
 # cherry-picked backports only (see CONTRIBUTING.md "Release branches, tags and backports").
 #
-# Pushes made with GITHUB_TOKEN don't start other workflows, so tag-release.yml doesn't run
-# again for the release branch; the tag already exists from main's run at the same commit.
+# Branch rulesets require a pull request on release-*; only repository admins and deploy keys
+# bypass them. So this job pushes with a write deploy key whose private half is the secret
+# RELEASE_BRANCH_DEPLOY_KEY in the `release-branches` environment, which only main may use.
+# tag-release.yml skips release-branch commits that main already contains, so it never races
+# main's own run for the tag or the GitHub Release.
 
 on:
   push:
     branches: ["main"]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: advance-release-branches
@@ -24,10 +27,12 @@ concurrency:
 jobs:
   advance:
     runs-on: ubuntu-latest
+    environment: release-branches
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_BRANCH_DEPLOY_KEY }}
       - name: Fast-forward release branches at or above main's floor
         run: |
           set -euo pipefail
