@@ -1,38 +1,49 @@
 ---
 trigger: always_on
-description: "How to work with Domino Data Lab: documentation, authentication, version differences, and which Domino skills to use"
+description: "How to work with Domino Data Lab: documentation, authentication, version differences, working in Workspaces, and which Domino skills to use"
 ---
 
 # Working with Domino Data Lab
 
-Domino Data Lab is an enterprise platform for building, deploying and governing AI and ML systems. Docs: https://docs.domino.ai (Cloud under /cloud/, Domino 6.3 under /6.3/). https://docs.domino.ai/llms.txt indexes every page, appending .md to any page URL returns Markdown, and the domino_docs MCP server searches the same pages and OpenAPI specs. Auth: inside a Domino run call $DOMINO_API_PROXY/<path> with no Authorization header; outside a run send a Personal Access Token or service account token as Authorization: Bearer. Legacy API keys (X-Domino-Api-Key, DOMINO_USER_API_KEY) are deprecated. For API or SDK work read the domino-api-intro skill first.
+Domino Data Lab is an enterprise platform for building, deploying and governing AI and ML systems. Docs: https://docs.domino.ai (Cloud under /cloud/, Domino 6.3 under /6.3/); llms.txt indexes every page, appending .md to a page URL returns Markdown, and domino_docs searches them. Auth: inside a Domino run call $DOMINO_API_PROXY/<path> with no Authorization header; outside a run send a Personal Access Token or service account token as Authorization: Bearer. A Workspace has little disk, so write bulk and scratch files to a Dataset or Volume. For API or SDK work read the domino-api-intro skill first.
 
 ## Finding documentation
 
-- domino_docs tools: search_domino (query; optional version Cloud or 6.3), query_docs_filesystem_domino (read-only rg, cat, jq over pages and specs), submit_feedback (report a docs error).
-- Public API specs: https://docs.domino.ai/api-specs/cloud/public-api.json and https://docs.domino.ai/api-specs/6.3/public-api.json. A deployment's own API reference: https://<domain>/docs.
+- domino_docs: search_domino (query; version Cloud or 6.3), query_docs_filesystem_domino (read-only shell over pages and specs).
+- API specs: https://docs.domino.ai/api-specs/cloud/public-api.json, or /api-specs/6.3/ for 6.3. A deployment's own reference: https://<domain>/docs.
 
 ## Authentication
 
-- In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token for you. A short-lived bearer is also served at http://localhost:8899/access-token.
-- Outside a run: a Personal Access Token acts as you; a service account token is for pipelines.
-- https://docs.domino.ai/cloud/reference/api/domino-api-authentication
+In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token; a short-lived bearer is also at http://localhost:8899/access-token. Legacy API keys (X-Domino-Api-Key, DOMINO_USER_API_KEY) are deprecated. See https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 
 ## Which Domino
 
 - GET $DOMINO_API_HOST/version returns JSON with a version key; no auth needed.
-- A run injects DOMINO_API_HOST, DOMINO_PROJECT_ID, DOMINO_PROJECT_OWNER, DOMINO_PROJECT_NAME and DOMINO_RUN_ID.
-- Cloud and 6.3 differ in places: 6.3 has the legacy AI Gateway, Cloud has LLM Gateway 2.0.
+- A run injects DOMINO_API_HOST, DOMINO_PROJECT_ID, DOMINO_PROJECT_OWNER, DOMINO_PROJECT_NAME, DOMINO_RUN_ID.
+- Cloud and 6.3 differ: 6.3 has the legacy AI Gateway, Cloud has LLM Gateway 2.0.
+
+## Working in a Workspace or Job
+
+- Paths follow the Project type, which DOMINO_IS_GIT_BASED reports. Git-based: code /mnt/code, artifacts /mnt/artifacts, Datasets /mnt/data/<name>. DFS: working directory DOMINO_WORKING_DIR (usually /mnt), Datasets /domino/datasets/local/<name>.
+- Disk is small: the Workspace and Job volume defaults to 10 GiB, and Project files copy into every execution, capped by default at 10,000 files and 8 GB each. Datasets and NetApp Volumes have no Domino size cap, so keep bulk data, checkpoints and scratch there; every Project starts with a Dataset named after it, and admins may set per-user quotas.
+- Stopping a Workspace keeps only /mnt. Files elsewhere, installed packages included, are lost unless Package Persistence or Home Directory Persistence is on; put dependencies in the Compute Environment or requirements.txt.
+- A Git-based Project never commits code for you: commit and push. A DFS Project syncs /mnt. Sync before stopping or deleting a Workspace.
+- Run long or heavy work as a Job: Workspaces shut down after an admin-set period and lose in-memory state. An App's entry point (app.sh) must serve on 0.0.0.0 port 8888.
+- Never hard-code secrets: use user or Project environment variables, or a Data Source.
 
 ## Calling the API
 
-- Prefer /api/... Public API routes. /v4/* routes are the Domino Internal API and may change between versions.
-- Check the route exists in the target version's spec. List endpoints take offset and limit; a first page may be partial.
+Prefer /api/... Public API routes; /v4/* is the Domino Internal API and may change between versions. Check the route exists in the target version's spec. List endpoints take offset and limit; a first page may be partial.
 
 ## Skills to use
 
-domino-api-intro first for auth, hosts, pagination and errors, then the domain skill: domino-jobs (batch and scheduled runs), domino-workspaces (Jupyter, VS Code, RStudio), domino-apps (web apps behind the proxy), domino-datasets (versioned data, snapshots), domino-environments (compute environments), domino-projects (Git, collaboration), domino-experiment-tracking (MLflow runs, registry), domino-genai-tracing (LLM and agent traces), domino-model-endpoints (model APIs), domino-governance (policies, bundles, evidence), domino-python-sdk (python-domino, REST).
+Read domino-api-intro first, then the domain skill: domino-jobs, domino-workspaces, domino-apps, domino-datasets, netapp-volumes, domino-environments, domino-projects, domino-experiment-tracking, domino-genai-tracing, domino-model-endpoints, domino-governance, domino-python-sdk.
 
 ## Working safely
 
-Running Jobs, Workspaces, clusters and endpoints incurs per-minute hardware-tier cost. Deleting a Workspace also deletes its snapshots, which cannot be recovered. Confirm with the user before starting large executions or deleting data.
+Jobs, Workspaces, clusters and endpoints bill per minute of hardware time; data and snapshots bill storage. Deleting a Workspace deletes its snapshots unrecoverably. Confirm before large executions or deleting data.
+
+## Updating this plugin
+
+- Marketplace installs (claude-plugins-official, the OpenAI plugin directory, or domino-marketplace from dominodatalab/domino-ai-plugin) are copies that update when a release changes the plugin version: Claude Code `claude plugin update <plugin>@<marketplace>` or its auto-update where enabled; Codex `codex plugin marketplace upgrade`.
+- In a Domino Workspace it is a git clone at ~/.claude/marketplaces/domino/plugins/domino-claude-plugin, loaded in place: on Domino 6.3 refreshed at Workspace launch when the administrator enables that, otherwise when the Compute Environment is rebuilt. By hand, in that directory: git fetch origin <branch>, then git checkout -B <branch> FETCH_HEAD, where <branch> is release-X.Y for the deployment's self-managed Domino version if that branch exists (for example release-6.3), otherwise main. Start a new session after any update.
