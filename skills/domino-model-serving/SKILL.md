@@ -5,7 +5,7 @@ description: Deploy, invoke, and retire Domino model APIs and registered models 
 
 # Domino model serving (REST)
 
-Programmatic model deployment and inference on Domino. UI-focused endpoint monitoring stays in [model-endpoints](../model-endpoints/SKILL.md). Shared REST field catalogs live in [API-MODEL-SERVING.md](../python-sdk/API-MODEL-SERVING.md) and [API-MODELS.md](../python-sdk/API-MODELS.md).
+Programmatic model deployment and inference on Domino. UI-focused endpoint monitoring stays in [model-endpoints](../domino-model-endpoints/SKILL.md). Shared REST field catalogs live in [API-MODEL-SERVING.md](../domino-python-sdk/API-MODEL-SERVING.md) and [API-MODELS.md](../domino-python-sdk/API-MODELS.md).
 
 Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . **Do not use API keys.**
 
@@ -38,7 +38,7 @@ Logging a run to MLflow does not replace registry or modelServing calls for depl
 - Create/list/update: platform base + `/api/modelServing/v1/...` (or registered-models paths).
 - **Predict:** use the **`url`** field on the model API or version (often `.../models/.../latest/model`), on the deployment ingress. That path is not routed through `DOMINO_API_HOST` sidecar the same way as `/api/`.
 
-GenAI: management API vs `https://.../endpoints/{vanity}` split. See [model-endpoints](../model-endpoints/SKILL.md) and the GenAI section in [API-MODEL-SERVING.md](../python-sdk/API-MODEL-SERVING.md).
+GenAI: management API vs `https://.../endpoints/{vanity}` split. See [model-endpoints](../domino-model-endpoints/SKILL.md) and the GenAI section in [API-MODEL-SERVING.md](../domino-python-sdk/API-MODEL-SERVING.md).
 
 ## Lifecycle (model APIs)
 
@@ -51,7 +51,7 @@ Typical order:
 5. Treat **DELETE** on deployments/model APIs as best-effort; verify resource gone before assuming cleanup.
 6. **Stop** may be long-running and not idempotent; poll status instead of fire-and-forget retry loops.
 
-Details and route list: [API-MODEL-SERVING.md](../python-sdk/API-MODEL-SERVING.md).
+Details and route list: [API-MODEL-SERVING.md](../domino-python-sdk/API-MODEL-SERVING.md).
 
 ## Registered model path key
 
@@ -63,7 +63,7 @@ Use the model API token documented on https://docs.domino.ai for the model endpo
 
 ## Related documentation
 
-- [API-MODEL-SERVING.md](../python-sdk/API-MODEL-SERVING.md) - REST lifecycle and routes
-- [API-MODELS.md](../python-sdk/API-MODELS.md) - broader models API catalog
-- [model-endpoints](../model-endpoints/SKILL.md) - Grafana, Triton, UI deploy
+- [API-MODEL-SERVING.md](../domino-python-sdk/API-MODEL-SERVING.md) - REST lifecycle and routes
+- [API-MODELS.md](../domino-python-sdk/API-MODELS.md) - broader models API catalog
+- [model-endpoints](../domino-model-endpoints/SKILL.md) - Grafana, Triton, UI deploy
 - Model registry (product): https://docs.domino.ai/cloud/platform-capabilities/features/model-registry

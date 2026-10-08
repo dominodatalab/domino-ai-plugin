@@ -213,7 +213,7 @@ see the plugin there.
 
 > **MCP credentials:** the portable `mcp.json` can't carry secrets, so the server reads
 > `DOMINO_API_KEY` and `DOMINO_HOST` from the environment the host passes it. If tools fail with
-> "environment variable not set", see `skills/modeling-assistant/SETUP.md` → "Register the server
+> "environment variable not set", see `skills/domino-modeling-assistant/SETUP.md` → "Register the server
 > manually".
 
 ### From the public plugin directory
@@ -374,8 +374,11 @@ domino-ai-plugin/
 
 `scripts/lint-skills.py` runs in CI and enforces:
 
-- Every `skills/<dir>/SKILL.md` has valid YAML front matter with a unique `name` and a
-  `description` of at most 1,024 characters, and a non-empty body.
+- Every `skills/<dir>/SKILL.md` has valid YAML front matter with a unique `name` equal to its
+  directory name, a `description` of at most 1,024 characters, and a non-empty body.
+- `SKILL.md` is at most 8,000 bytes; Codex truncates anything longer. Detail goes in sibling files.
+- `SKILL.md` contains no `${...}` reference that Gemini CLI would substitute (`${extensionPath}`,
+  `${workspacePath}`, `${/}`, or a variable declared in `gemini-extension.json` settings).
 - `dominodatalab:<skill-name>` is at most 64 characters.
 - Relative links resolve and stay inside `skills/`; the OpenAI package ships `skills/` without
   the rest of the repo. Links between skills are fine.
@@ -409,7 +412,7 @@ go to `evals/results/`, which is git-ignored. `evals/` is not part of the OpenAI
 | Plugin not loading from settings.json | Claude Code does **not** support a `"plugins"` array in `settings.json`. Use the marketplace approach or `--plugin-dir` flag. |
 | `~` path not expanding | Always use absolute paths (e.g., `/home/ubuntu/...`) in marketplace commands and settings. |
 | "Failed to parse marketplace file" | Ensure `marketplace.json` has the `owner` object and `source` is a string path (e.g., `"./plugins/domino-claude-plugin"`), not a nested object. |
-| `domino_server` tools missing (ChatGPT / Codex) | The directory package is skills-only. Install from a local checkout, or register the server manually (`skills/modeling-assistant/SETUP.md`). |
+| `domino_server` tools missing (ChatGPT / Codex) | The directory package is skills-only. Install from a local checkout, or register the server manually (`skills/domino-modeling-assistant/SETUP.md`). |
 | CI: "plugin.json is out of sync" | Run `scripts/sync-manifests.py` and commit `plugin.json`. |
 
 ---
