@@ -153,7 +153,7 @@ RULES = ROOT / "rules"
 # rules/*.md is loaded into every session of every user (Claude Code session-start hook, Gemini CLI
 # contextFileName, Antigravity always-on rule), and its lead section is the bundled MCP server's
 # instructions, which Codex truncates at 1,000 bytes. Keep it short, plain and host-neutral.
-MAX_RULES_CHARS = 2000
+MAX_RULES_CHARS = 2500
 MAX_RULES_LEAD_BYTES = 900
 # Product names, matched case-sensitively so ordinary words ("a pagination cursor") pass.
 HOST_NAMES = re.compile(r"\b(Claude|Codex|ChatGPT|Gemini|Antigravity|Copilot|Cursor)\b")
