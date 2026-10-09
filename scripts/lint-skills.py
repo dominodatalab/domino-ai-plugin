@@ -157,7 +157,8 @@ MAX_RULES_CHARS = 5000
 # Host names are allowed only in this section, which gives per-host update commands.
 HOST_SECTION = "## Updating this plugin"
 MAX_RULES_LEAD_BYTES = 900
-HOST_NAMES = re.compile(r"\b(claude|codex|chatgpt|gemini|antigravity|copilot|cursor)\b", re.I)
+# Product names, matched case-sensitively so ordinary words ("a pagination cursor") pass.
+HOST_NAMES = re.compile(r"\b(Claude|Codex|ChatGPT|Gemini|Antigravity|Copilot|Cursor)\b")
 
 
 def lint_rules(errors: list[str]) -> int:
@@ -181,6 +182,9 @@ def lint_rules(errors: list[str]) -> int:
         except yaml.YAMLError as exc:
             errors.append(f"{rel}: front matter is not valid YAML: {exc}")
             continue
+        if not isinstance(meta, dict):
+            errors.append(f"{rel}: front matter must be a mapping with `trigger` and `description`")
+            continue
         if meta.get("trigger") != "always_on":
             errors.append(f"{rel}: front matter needs `trigger: always_on`")
         if not meta.get("description"):
@@ -200,7 +204,8 @@ def lint_rules(errors: list[str]) -> int:
             head, rest = neutral.split(HOST_SECTION, 1)
             tail = rest.split("\n## ", 1)
             neutral = head + ("\n## " + tail[1] if len(tail) > 1 else "")
-        for name in sorted({mm.group(0).lower() for mm in HOST_NAMES.finditer(neutral)}):
+        neutral = f"{meta.get('description') or ''}\n{neutral}"   # hosts show the description too
+        for name in sorted({mm.group(0) for mm in HOST_NAMES.finditer(neutral)}):
             errors.append(f"{rel}: names the host '{name}' outside '{HOST_SECTION}'; keep always-on text host-neutral")
     return len(files)
 

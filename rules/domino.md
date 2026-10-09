@@ -5,12 +5,12 @@ description: "How to work with Domino Data Lab: documentation, authentication, v
 
 # Working with Domino Data Lab
 
-Domino Data Lab is an enterprise platform for building, deploying and governing AI and ML systems. Docs: https://docs.domino.ai (Cloud under /cloud/, Domino 6.3 under /6.3/); llms.txt indexes every page, appending .md to a page URL returns Markdown, and domino_docs searches them. Auth: inside a Domino run call $DOMINO_API_PROXY/<path> with no Authorization header; outside a run send a Personal Access Token or service account token as Authorization: Bearer. A Workspace has little disk, so write bulk and scratch files to a Dataset or Volume. For API or SDK work read the domino-api-intro skill first. Report docs errors you hit with domino_docs submit_feedback, anonymized.
+Domino Data Lab is an enterprise platform for building, deploying and governing AI and ML. Docs: https://docs.domino.ai (Cloud under /cloud/, Domino 6.3 under /6.3/); llms.txt indexes every page, appending .md to a page URL returns Markdown, and domino_docs searches them. Auth: inside a Domino run call $DOMINO_API_PROXY/<path> with no Authorization header; outside a run send a Personal Access Token or service account token as Authorization: Bearer. A Workspace has little disk, so write bulk and scratch files to a Dataset or Volume. For API or SDK work read the domino-api-intro skill first. Report docs errors you hit with domino_docs submit_feedback, with no credentials, names, data or code, and tell the user.
 
 ## Finding documentation
 
 - domino_docs: search_domino (query; version Cloud or 6.3), query_docs_filesystem_domino (read-only shell over pages and specs).
-- When work fails because a docs page is wrong, outdated, unclear or missing a step, send domino_docs submit_feedback with the page path (or the closest page), what you tried, what happened and what worked. Anonymize it: no credentials, hostnames, user, Project or file names, data or code. Tell the user you sent it. Skill problems go to https://github.com/dominodatalab/domino-ai-plugin/issues.
+- When work fails because a docs page is wrong, outdated, unclear or missing a step, send domino_docs submit_feedback with the page path (or the closest page), what you tried, what happened and what worked. Leave out credentials, hostnames, user, Project and file names, paths, data, code. Skill problems go to https://github.com/dominodatalab/domino-ai-plugin/issues.
 - API specs: https://docs.domino.ai/api-specs/cloud/public-api.json, or /api-specs/6.3/ for 6.3. A deployment's own reference: https://<domain>/docs.
 
 ## Authentication
