@@ -188,6 +188,8 @@ def lint_rules(errors: list[str]) -> int:
             continue
         if meta.get("trigger") != "always_on":
             errors.append(f"{rel}: front matter needs `trigger: always_on`")
+        if meta.get("alwaysApply") is not True:
+            errors.append(f"{rel}: front matter needs `alwaysApply: true` (Cursor's always-on key; it ignores `trigger`)")
         if not meta.get("description"):
             errors.append(f"{rel}: front matter needs a `description`")
         body = m.group(2)

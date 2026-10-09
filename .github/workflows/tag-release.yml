@@ -35,6 +35,7 @@ on:
       - "plugin.json"
       - "rules/**"
       - ".agents/**"
+      - ".cursor-plugin/**"
       - "mcp_config.json"
       - "gemini-extension.json"
       - ".claude-plugin/marketplace.json"

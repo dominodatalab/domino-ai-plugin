@@ -11,6 +11,11 @@ import re
 import webbrowser
 import urllib.parse
 
+# A host that cannot resolve a ${...} placeholder in its MCP config may pass it through as
+# literal text (Cursor does for an unset ${env:NAME}). Treat such values as unset so the
+# .env fallback and the "not set" errors below still apply.
+for _name in [k for k, v in os.environ.items() if v.startswith("${")]:
+    del os.environ[_name]
 load_dotenv()
 
 
