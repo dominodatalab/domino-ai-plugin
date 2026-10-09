@@ -111,9 +111,12 @@ def _plugin_instructions() -> str | None:
         text = rules.read_text(encoding="utf-8")
     except OSError:
         return None
-    if text.startswith("---"):
-        end = text.find("\n---", 3)
-        text = text[end + 4:] if end != -1 else text
+    import re
+    text = text.replace("\r\n", "\n")
+    # Same front-matter rule as scripts/lint-skills.py: exact "---" delimiter lines.
+    match = re.match(r"\A---\n.*?\n---\n(.*)\Z", text, re.S)
+    if match:
+        text = match.group(1)
     lead = text.split("\n## ", 1)[0].strip()
     return lead.encode("utf-8")[:900].decode("utf-8", "ignore") or None
 

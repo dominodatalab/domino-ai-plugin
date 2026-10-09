@@ -173,6 +173,9 @@ def lint_rules(errors: list[str]) -> int:
         except UnicodeDecodeError:
             errors.append(f"{rel}: must be ASCII only (some hosts read it without a UTF-8 BOM)")
             text = raw.decode("utf-8", "replace")
+        if "\r" in text:
+            errors.append(f"{rel}: must use LF line endings (.gitattributes sets eol=lf for rules/*.md)")
+            text = text.replace("\r\n", "\n")
         m = FRONTMATTER.match(text)
         if not m:
             errors.append(f"{rel}: must start with YAML front matter between --- lines")
@@ -199,11 +202,9 @@ def lint_rules(errors: list[str]) -> int:
                           f"keep it under {MAX_RULES_LEAD_BYTES}, since it is also the MCP server instructions")
         if "${" in text:
             errors.append(f"{rel}: must not contain '${{'; hosts substitute variables in context files")
-        neutral = body
-        if HOST_SECTION in neutral:
-            head, rest = neutral.split(HOST_SECTION, 1)
-            tail = rest.split("\n## ", 1)
-            neutral = head + ("\n## " + tail[1] if len(tail) > 1 else "")
+        # Exempt only a real "## Updating this plugin" heading line and its section, up to the next
+        # "## " heading; a mention of the heading in prose exempts nothing.
+        neutral = re.sub(rf"(?ms)^{re.escape(HOST_SECTION)}[ \t]*$.*?(?=^## |\Z)", "", body)
         neutral = f"{meta.get('description') or ''}\n{neutral}"   # hosts show the description too
         for name in sorted({mm.group(0) for mm in HOST_NAMES.finditer(neutral)}):
             errors.append(f"{rel}: names the host '{name}' outside '{HOST_SECTION}'; keep always-on text host-neutral")

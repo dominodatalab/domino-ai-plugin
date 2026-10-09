@@ -11,7 +11,7 @@ Domino Data Lab is an enterprise platform for building, deploying and governing 
 
 - domino_docs: search_domino (query; version Cloud or 6.3), query_docs_filesystem_domino (read-only shell over pages and specs).
 - When work fails because a docs page is wrong, outdated, unclear or missing a step, send domino_docs submit_feedback with the page path (or the closest page), what you tried, what happened and what worked. Leave out credentials, hostnames, user, Project and file names, paths, data, code. Skill problems go to https://github.com/dominodatalab/domino-ai-plugin/issues.
-- API specs: https://docs.domino.ai/api-specs/cloud/public-api.json, or /api-specs/6.3/ for 6.3. A deployment's own reference: https://<domain>/docs.
+- API specs: https://docs.domino.ai/api-specs/cloud/public-api.json and https://docs.domino.ai/api-specs/6.3/public-api.json. A deployment's own reference: https://<domain>/docs.
 
 ## Authentication
 
@@ -21,7 +21,7 @@ In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token; a short-l
 
 - GET $DOMINO_API_HOST/version (no auth) returns the version.
 - A run injects DOMINO_API_HOST, DOMINO_PROJECT_ID, DOMINO_PROJECT_OWNER, DOMINO_PROJECT_NAME, DOMINO_RUN_ID.
-- Cloud and 6.3 differ: 6.3 has the legacy AI Gateway, Cloud has LLM Gateway 2.0.
+- The legacy AI Gateway exists only on 6.3, off by default; LLM Gateway 2.0 is a separately deployed app on either. Check what the deployment runs.
 
 ## Working in a Workspace or Job
 
@@ -34,15 +34,15 @@ In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token; a short-l
 
 ## Calling the API
 
-Prefer /api/... Public API routes; /v4/* is the Internal API and may change between versions. Check routes in the target version's spec. List endpoints page with offset and limit.
+Prefer /api/... Public API routes; /v4/* is the Internal API and may change between versions. Check routes in the target version's spec. Page each list endpoint as its spec says: most use offset and limit, some page and size or pageToken.
 
 ## Skills to use
 
-Read domino-api-intro first, then the domain skill: domino-jobs, domino-workspaces, domino-apps, domino-datasets, netapp-volumes, domino-environments, domino-projects, domino-experiment-tracking, domino-genai-tracing, domino-model-endpoints, domino-governance, domino-python-sdk.
+Read domino-api-intro first, then the skill for the task at hand.
 
 ## Working safely
 
-Jobs, Workspaces, clusters and endpoints bill per minute of hardware time; data and snapshots bill storage. Deleting a Workspace deletes its snapshots unrecoverably. Confirm before large executions or deleting data.
+Jobs, Workspaces, clusters and endpoints hold hardware for as long as they run, and kept data and snapshots hold storage; both can cost money. Deleting a Workspace deletes its snapshots unrecoverably. Confirm before large executions or deleting data.
 
 ## Updating this plugin
 
