@@ -5,20 +5,21 @@ description: "How to work with Domino Data Lab: documentation, authentication, v
 
 # Working with Domino Data Lab
 
-Domino Data Lab is an enterprise platform for building, deploying and governing AI and ML systems. Docs: https://docs.domino.ai (Cloud under /cloud/, Domino 6.3 under /6.3/); llms.txt indexes every page, appending .md to a page URL returns Markdown, and domino_docs searches them. Auth: inside a Domino run call $DOMINO_API_PROXY/<path> with no Authorization header; outside a run send a Personal Access Token or service account token as Authorization: Bearer. A Workspace has little disk, so write bulk and scratch files to a Dataset or Volume. For API or SDK work read the domino-api-intro skill first.
+Domino Data Lab is an enterprise platform for building, deploying and governing AI and ML systems. Docs: https://docs.domino.ai (Cloud under /cloud/, Domino 6.3 under /6.3/); llms.txt indexes every page, appending .md to a page URL returns Markdown, and domino_docs searches them. Auth: inside a Domino run call $DOMINO_API_PROXY/<path> with no Authorization header; outside a run send a Personal Access Token or service account token as Authorization: Bearer. A Workspace has little disk, so write bulk and scratch files to a Dataset or Volume. For API or SDK work read the domino-api-intro skill first. Report docs errors you hit with domino_docs submit_feedback, anonymized.
 
 ## Finding documentation
 
 - domino_docs: search_domino (query; version Cloud or 6.3), query_docs_filesystem_domino (read-only shell over pages and specs).
+- When work fails because a docs page is wrong, outdated, unclear or missing a step, send domino_docs submit_feedback with the page path (or the closest page), what you tried, what happened and what worked. Anonymize it: no credentials, hostnames, user, Project or file names, data or code. Tell the user you sent it. Skill problems go to https://github.com/dominodatalab/domino-ai-plugin/issues.
 - API specs: https://docs.domino.ai/api-specs/cloud/public-api.json, or /api-specs/6.3/ for 6.3. A deployment's own reference: https://<domain>/docs.
 
 ## Authentication
 
-In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token; a short-lived bearer is also at http://localhost:8899/access-token. Legacy API keys (X-Domino-Api-Key, DOMINO_USER_API_KEY) are deprecated. See https://docs.domino.ai/cloud/reference/api/domino-api-authentication
+In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token; a short-lived bearer is also at http://localhost:8899/access-token. Legacy API keys (X-Domino-Api-Key, DOMINO_USER_API_KEY) are deprecated.
 
 ## Which Domino
 
-- GET $DOMINO_API_HOST/version returns JSON with a version key; no auth needed.
+- GET $DOMINO_API_HOST/version (no auth) returns the version.
 - A run injects DOMINO_API_HOST, DOMINO_PROJECT_ID, DOMINO_PROJECT_OWNER, DOMINO_PROJECT_NAME, DOMINO_RUN_ID.
 - Cloud and 6.3 differ: 6.3 has the legacy AI Gateway, Cloud has LLM Gateway 2.0.
 
@@ -33,7 +34,7 @@ In a run (Workspace, Job, App) DOMINO_API_PROXY adds the user's token; a short-l
 
 ## Calling the API
 
-Prefer /api/... Public API routes; /v4/* is the Domino Internal API and may change between versions. Check the route exists in the target version's spec. List endpoints take offset and limit; a first page may be partial.
+Prefer /api/... Public API routes; /v4/* is the Internal API and may change between versions. Check routes in the target version's spec. List endpoints page with offset and limit.
 
 ## Skills to use
 
