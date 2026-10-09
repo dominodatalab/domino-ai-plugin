@@ -153,9 +153,7 @@ RULES = ROOT / "rules"
 # rules/*.md is loaded into every session of every user (Claude Code session-start hook, Gemini CLI
 # contextFileName, Antigravity always-on rule), and its lead section is the bundled MCP server's
 # instructions, which Codex truncates at 1,000 bytes. Keep it short, plain and host-neutral.
-MAX_RULES_CHARS = 5000
-# Host names are allowed only in this section, which gives per-host update commands.
-HOST_SECTION = "## Updating this plugin"
+MAX_RULES_CHARS = 2000
 MAX_RULES_LEAD_BYTES = 900
 # Product names, matched case-sensitively so ordinary words ("a pagination cursor") pass.
 HOST_NAMES = re.compile(r"\b(Claude|Codex|ChatGPT|Gemini|Antigravity|Copilot|Cursor)\b")
@@ -202,12 +200,9 @@ def lint_rules(errors: list[str]) -> int:
                           f"keep it under {MAX_RULES_LEAD_BYTES}, since it is also the MCP server instructions")
         if "${" in text:
             errors.append(f"{rel}: must not contain '${{'; hosts substitute variables in context files")
-        # Exempt only a real "## Updating this plugin" heading line and its section, up to the next
-        # "## " heading; a mention of the heading in prose exempts nothing.
-        neutral = re.sub(rf"(?ms)^{re.escape(HOST_SECTION)}[ \t]*$.*?(?=^## |\Z)", "", body)
-        neutral = f"{meta.get('description') or ''}\n{neutral}"   # hosts show the description too
+        neutral = f"{meta.get('description') or ''}\n{body}"   # hosts show the description too
         for name in sorted({mm.group(0) for mm in HOST_NAMES.finditer(neutral)}):
-            errors.append(f"{rel}: names the host '{name}' outside '{HOST_SECTION}'; keep always-on text host-neutral")
+            errors.append(f"{rel}: names the host '{name}'; keep always-on text host-neutral")
     return len(files)
 
 
