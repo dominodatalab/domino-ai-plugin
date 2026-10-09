@@ -137,13 +137,73 @@ def main() -> int:
         if not path.exists() or not CLAUDE.search(path.read_text(encoding="utf-8")):
             errors.append(f"{ALLOW_FILE.relative_to(ROOT)}: '{stale}' no longer needs an entry")
 
+    rules_count = lint_rules(errors)
+
     for err in errors:
         print(f"::error::{err}")
     if errors:
         print(f"{len(errors)} problem(s) in skills/", file=sys.stderr)
         return 1
-    print(f"ok: {len(seen)} skills valid ({cross_links} links between skills)")
+    print(f"ok: {len(seen)} skills valid ({cross_links} links between skills); "
+          f"{rules_count} always-on rules file(s) valid")
     return 0
+
+
+RULES = ROOT / "rules"
+# rules/*.md is loaded into every session of every user (Claude Code session-start hook, Gemini CLI
+# contextFileName, Antigravity always-on rule), and its lead section is the bundled MCP server's
+# instructions, which Codex truncates at 1,000 bytes. Keep it short, plain and host-neutral.
+MAX_RULES_CHARS = 2500
+MAX_RULES_LEAD_BYTES = 900
+# Product names, matched case-sensitively so ordinary words ("a pagination cursor") pass.
+HOST_NAMES = re.compile(r"\b(Claude|Codex|ChatGPT|Gemini|Antigravity|Copilot|Cursor)\b")
+
+
+def lint_rules(errors: list[str]) -> int:
+    if not RULES.is_dir():
+        return 0
+    files = sorted(RULES.glob("*.md"))
+    for path in files:
+        rel = path.relative_to(ROOT).as_posix()
+        raw = path.read_bytes()
+        try:
+            text = raw.decode("ascii")
+        except UnicodeDecodeError:
+            errors.append(f"{rel}: must be ASCII only (some hosts read it without a UTF-8 BOM)")
+            text = raw.decode("utf-8", "replace")
+        if "\r" in text:
+            errors.append(f"{rel}: must use LF line endings (.gitattributes sets eol=lf for rules/*.md)")
+            text = text.replace("\r\n", "\n")
+        m = FRONTMATTER.match(text)
+        if not m:
+            errors.append(f"{rel}: must start with YAML front matter between --- lines")
+            continue
+        try:
+            meta = yaml.safe_load(m.group(1)) or {}
+        except yaml.YAMLError as exc:
+            errors.append(f"{rel}: front matter is not valid YAML: {exc}")
+            continue
+        if not isinstance(meta, dict):
+            errors.append(f"{rel}: front matter must be a mapping with `trigger` and `description`")
+            continue
+        if meta.get("trigger") != "always_on":
+            errors.append(f"{rel}: front matter needs `trigger: always_on`")
+        if not meta.get("description"):
+            errors.append(f"{rel}: front matter needs a `description`")
+        body = m.group(2)
+        if len(text) > MAX_RULES_CHARS:
+            errors.append(f"{rel}: {len(text)} characters exceeds {MAX_RULES_CHARS}; every session pays for it")
+        lead = body.split("\n## ", 1)[0].strip()
+        lead_bytes = len(lead.encode("utf-8"))
+        if lead_bytes > MAX_RULES_LEAD_BYTES:
+            errors.append(f"{rel}: lead section (before the first ## heading) is {lead_bytes} bytes; "
+                          f"keep it under {MAX_RULES_LEAD_BYTES}, since it is also the MCP server instructions")
+        if "${" in text:
+            errors.append(f"{rel}: must not contain '${{'; hosts substitute variables in context files")
+        neutral = f"{meta.get('description') or ''}\n{body}"   # hosts show the description too
+        for name in sorted({mm.group(0) for mm in HOST_NAMES.finditer(neutral)}):
+            errors.append(f"{rel}: names the host '{name}'; keep always-on text host-neutral")
+    return len(files)
 
 
 if __name__ == "__main__":

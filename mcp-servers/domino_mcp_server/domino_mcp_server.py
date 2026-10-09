@@ -97,8 +97,32 @@ def _get_workspace_project_info() -> dict | None:
         return {"user_name": owner, "project_name": name}
     return None
 
+def _plugin_instructions() -> str | None:
+    """The lead section of the plugin's always-on rules file, sent as MCP server instructions.
+
+    rules/domino.md is the single source for the plugin's always-on guidance. Hosts that load it
+    directly (a session-start hook, a context file, an always-on rule) get the whole file; hosts
+    that only surface MCP server instructions, such as Codex, get its lead section: everything
+    before the first "## " heading, without frontmatter, capped at 900 bytes.
+    """
+    from pathlib import Path
+    rules = Path(__file__).resolve().parents[2] / "rules" / "domino.md"
+    try:
+        text = rules.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    import re
+    text = text.replace("\r\n", "\n")
+    # Same front-matter rule as scripts/lint-skills.py: exact "---" delimiter lines.
+    match = re.match(r"\A---\n.*?\n---\n(.*)\Z", text, re.S)
+    if match:
+        text = match.group(1)
+    lead = text.split("\n## ", 1)[0].strip()
+    return lead.encode("utf-8")[:900].decode("utf-8", "ignore") or None
+
+
 # Initialize the Fast MCP server
-mcp = FastMCP("domino_server")
+mcp = FastMCP("domino_server", instructions=_plugin_instructions())
 
 def _validate_url_parameter(param_value: str, param_name: str) -> str:
     """

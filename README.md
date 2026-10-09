@@ -25,6 +25,8 @@ The plugin helps AI assistants with all aspects of Domino Data Lab, including:
 | --- | --- | --- |
 | `skills/` (30 skills) | ✅ | ✅ |
 | Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) |
+| Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package |
+| Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins |
 | Subagents (`agents/`) | ✅ | ❌ Claude-only |
 | Output styles (`output-styles/`) | ✅ | ❌ Claude-only |
 | Hook examples (`hooks/`) | Docs only | ❌ |

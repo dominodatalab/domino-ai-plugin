@@ -9,5 +9,10 @@
   "homepage": "https://github.com/dominodatalab/domino-ai-plugin",
   "repository": "https://github.com/dominodatalab/domino-ai-plugin",
   "license": "MIT",
-  "keywords": ["domino", "mlops", "data-science", "machine-learning","experiment-tracking","genai-tracing","spark","ray","dask","app-deployment"]
+  "keywords": ["domino", "mlops", "data-science", "machine-learning","experiment-tracking","genai-tracing","spark","ray","dask","app-deployment"],
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "cat \"${CLAUDE_PLUGIN_ROOT}/rules/domino.md\"" } ] }
+    ]
+  }
 }
