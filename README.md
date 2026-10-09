@@ -73,6 +73,17 @@ Auto-update is off by default for marketplaces other than Anthropic's: turn it o
 The marketplace also maps the old entry name `domino-claude-plugin` to `dominodatalab`, so a
 setting written for the old name keeps working.
 
+**Already installed from a local marketplace (Options 1 and 3)?** Claude Code won't add a second
+source under the same name, `domino-marketplace`. Remove the local one first, including any
+`extraKnownMarketplaces` entry you added for it in `.claude/settings.json`, then run the two
+commands above:
+
+```bash
+claude plugin marketplace remove domino-marketplace
+```
+
+Inside a Domino Workspace, leave the image's local marketplace as it is.
+
 ### Option 1: Local Marketplace Install (the Domino Workspace layout)
 
 This approach registers the plugin through Claude Code's native marketplace system so it persists across sessions.
