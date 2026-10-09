@@ -1,5 +1,6 @@
 ---
 trigger: always_on
+alwaysApply: true
 description: "Domino Data Lab: API proxy auth, where to write code, artifacts and data, environment variables, docs and feedback"
 ---
 

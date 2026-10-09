@@ -32,10 +32,11 @@ customer environments from a **public** repository. Three facts drive most rules
 | `skills/<name>/assets/` | Templates a skill copies into the user's project (no `templates/` or `commands/` dirs) |
 | `agents/`, `output-styles/` | Claude-only components; not in the OpenAI package |
 | `hooks/` | Documentation only today; no `hooks.json` is shipped |
-| `rules/domino.md` | Always-on Domino guidance, loaded into every session: by a `SessionStart` hook in `.claude-plugin/plugin.json` (Claude Code), as an always-on rule (Antigravity), and as the bundled MCP server's instructions (lead section only, for Codex). Every user pays for it on every turn, so it holds only what an assistant needs to work in Domino: lint caps it at 2,500 characters, ASCII, host-neutral, with a lead section under 900 bytes |
+| `rules/domino.md` | Always-on Domino guidance, loaded into every session: by a `SessionStart` hook in `.claude-plugin/plugin.json` (Claude Code), as an always-on rule (Antigravity reads `trigger: always_on`, Cursor reads `alwaysApply: true`), and as the bundled MCP server's instructions (lead section only, for Codex). Every user pays for it on every turn, so it holds only what an assistant needs to work in Domino: lint caps it at 2,500 characters, ASCII, host-neutral, with a lead section under 900 bytes |
 | `mcp-servers/` | Bundled MCP server, started by `.mcp.json` (Claude Code) and `mcp.json` (Codex). Both files also register the Domino docs MCP server, `domino_docs` at `https://docs.domino.ai/mcp`; `mcp_config.json` registers it for Antigravity |
 | `.claude-plugin/plugin.json` | Claude manifest and source of truth for name and `version`; see the rules below before touching it |
 | `plugin.json` | Portable manifest plus OpenAI listing metadata; identity fields are copied by `scripts/sync-manifests.py` |
+| `.cursor-plugin/` | Cursor: `plugin.json` (identity fields copied by `scripts/sync-manifests.py`; Cursor's schema is closed, so only its own keys), `mcp.json` (`${CURSOR_PLUGIN_ROOT}` paths, `${env:NAME}` values Cursor asks for at install) and `marketplace.json` (needed to import the repo from GitHub) |
 | `assets/` | OpenAI listing icon |
 | `scripts/check-version.sh` | The CI version gate; run it locally before opening a PR |
 | `scripts/build-openai.sh` | Builds the OpenAI ZIP; runs `sync-manifests.py --check` and `lint-skills.py` first |

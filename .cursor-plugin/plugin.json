@@ -1,0 +1,26 @@
+{
+  "name": "dominodatalab",
+  "displayName": "Domino Data Lab",
+  "version": "2026.603.4",
+  "description": "Full Domino Data Lab platform support — workspaces, jobs, model deployment, experiment tracking, GenAI tracing, Spark/Ray/Dask, and app deployment for data science teams",
+  "author": {
+    "name": "Domino Data Lab"
+  },
+  "homepage": "https://github.com/dominodatalab/domino-ai-plugin",
+  "repository": "https://github.com/dominodatalab/domino-ai-plugin",
+  "license": "MIT",
+  "keywords": [
+    "domino",
+    "mlops",
+    "data-science",
+    "machine-learning",
+    "experiment-tracking",
+    "genai-tracing",
+    "spark",
+    "ray",
+    "dask",
+    "app-deployment"
+  ],
+  "logo": "assets/logo.svg",
+  "mcpServers": ".cursor-plugin/mcp.json"
+}

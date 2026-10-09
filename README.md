@@ -21,16 +21,16 @@ The plugin helps AI assistants with all aspects of Domino Data Lab, including:
 
 ## What ships where
 
-| Component | Claude Code | ChatGPT / Codex |
-| --- | --- | --- |
-| `skills/` (30 skills) | ✅ | ✅ |
-| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) |
-| Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package |
-| Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins |
-| Subagents (`agents/`) | ✅ | ❌ Claude-only |
-| Output styles (`output-styles/`) | ✅ | ❌ Claude-only |
-| Hook examples (`hooks/`) | Docs only | ❌ |
-| Manifest | `.claude-plugin/plugin.json` | `plugin.json` ([Agent Plugins](https://agent-plugins.org) format) |
+| Component | Claude Code | ChatGPT / Codex | Cursor |
+| --- | --- | --- | --- |
+| `skills/` (30 skills) | ✅ | ✅ | ✅ |
+| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; Cursor asks for `DOMINO_HOST` and `DOMINO_API_KEY` at install) |
+| Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` |
+| Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) |
+| Subagents (`agents/`) | ✅ | ❌ | ✅ |
+| Output styles (`output-styles/`) | ✅ | ❌ Claude-only | ❌ |
+| Hook examples (`hooks/`) | Docs only | ❌ | ❌ |
+| Manifest | `.claude-plugin/plugin.json` | `plugin.json` ([Agent Plugins](https://agent-plugins.org) format) | `.cursor-plugin/plugin.json` |
 
 Skills are written provider-neutral. Where an instruction really is host-specific (for example
 which instructions file or MCP config file to write), the skill gives both the Claude Code and
@@ -200,6 +200,27 @@ in the Plugins Directory. This path includes the bundled MCP server (stdio, need
 Once published, install **Domino Data Lab** from the Plugins Directory in ChatGPT or Codex. The
 directory package is currently **skills-only**: it doesn't include the MCP server.
 
+## Installation: Cursor
+
+Cursor reads `.cursor-plugin/plugin.json`: the skills, the always-on rule `rules/domino.md`, the
+subagents in `agents/`, and both MCP servers (`.cursor-plugin/mcp.json`). Cursor support is new and
+not yet tested in a logged-in Cursor; please report what you find.
+
+- **Cursor desktop:** Customize → From GitHub Repository → `https://github.com/dominodatalab/domino-ai-plugin`,
+  then install `dominodatalab` at user or project scope.
+- **Cursor CLI (`agent`):** `agent plugin marketplace add https://github.com/dominodatalab/domino-ai-plugin`,
+  then `/plugin` in a session. Update with `agent plugin marketplace update domino-marketplace`.
+- **Local checkout:** clone (don't symlink) into `~/.cursor/plugins/local/dominodatalab` and run
+  Developer: Reload Window, or run `agent --plugin-dir /path/to/domino-ai-plugin`.
+
+The bundled MCP server needs `uv` on `PATH`, plus `DOMINO_HOST` (your Domino URL) and
+`DOMINO_API_KEY`. Cursor asks for both when you install the plugin; the CLI reads them from your
+shell. The server sends the key as `X-Domino-Api-Key`, so it must be a Domino API key: a Personal
+Access Token isn't accepted there yet.
+
+If the plugin is also installed in Claude Code, Cursor may import that copy too (Settings → Agents →
+Third-Party Imports). Install it in Cursor only once.
+
 ---
 
 ## OpenAI build
@@ -303,7 +324,7 @@ Requires `uv`.
 replace the former slash commands of the same names. In Claude Code they're still invocable as
 `/dominodatalab:<name>`, and every host can also pick them up automatically from context.
 
-### Subagents (Claude Code only)
+### Subagents (Claude Code and Cursor)
 
 | Agent | Description |
 | --- | --- |

@@ -1,0 +1,16 @@
+{
+  "name": "domino-marketplace",
+  "owner": {
+    "name": "Domino Data Lab"
+  },
+  "metadata": {
+    "description": "Domino Data Lab plugin: skills and MCP servers for working with Domino from AI coding assistants."
+  },
+  "plugins": [
+    {
+      "name": "dominodatalab",
+      "source": "./",
+      "description": "Domino Data Lab skills for Workspaces, Jobs, Projects, data, experiments, model deployment and monitoring, apps, governance, and the Domino APIs."
+    }
+  ]
+}
