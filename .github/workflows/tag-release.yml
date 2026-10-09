@@ -33,6 +33,11 @@ on:
       - ".lsp.json"
       - "settings.json"
       - "plugin.json"
+      - "rules/**"
+      - ".agents/**"
+      - "mcp_config.json"
+      - "gemini-extension.json"
+      - ".claude-plugin/marketplace.json"
 
 permissions:
   contents: write
