@@ -19,9 +19,11 @@ reference, use the `domino-genai-tracing` skill.
 2. **Agent name**: name for the traced entry-point function (letters, digits, `_` and `-` only).
 3. **Evaluator**: whether to add quality scoring, and whether to use an LLM-as-judge.
 4. **Aggregated metrics**: which evaluator metrics to summarize per run, and with which statistic.
-5. **Model access**: LLM Gateway 2.0 where an administrator deployed it (`domino-llm-gateway`), else
-   a Domino-hosted endpoint or a provider key (`domino-llm-access`). The helper's `llm_client()`
-   uses the gateway when `DOMINO_LLM_GATEWAY_URL` is set; model names are then gateway aliases.
+
+Model access is not an input. Tracing instruments whichever client the agent already uses (a
+provider SDK, a Domino-hosted endpoint, or LLM Gateway 2.0 where it is installed: `domino-llm-access`,
+`domino-llm-gateway`); do not change it. Pass that client to `create_llm_judge_evaluator(client=...)`
+so the judge shares it; through the gateway, model names are aliases.
 
 ## Steps
 
@@ -41,7 +43,7 @@ reference, use the `domino-genai-tracing` skill.
    ```
 
 2. **Copy helpers** from this skill's `assets/` folder next to the agent's entry point:
-   - `assets/tracing_setup.py`: `setup_tracing(framework)`, `llm_client()`, `create_evaluator()`,
+   - `assets/tracing_setup.py`: `setup_tracing(framework)`, `create_evaluator()`,
      `create_llm_judge_evaluator()`, `get_aggregation_metrics()`, plus `input_text()` and
      `output_text()` for reading a span.
    - `assets/config.yaml`: agent configuration logged as run parameters through
@@ -57,9 +59,10 @@ reference, use the `domino-genai-tracing` skill.
 import mlflow
 from domino.agents.tracing import add_tracing
 from domino.agents.logging import DominoAgentContext
-from tracing_setup import llm_client
+from openai import OpenAI
 
 mlflow.openai.autolog()
+client = OpenAI()     # the agent's existing client; a gateway or Domino-hosted-endpoint client traces the same way
 
 def quality_evaluator(span):
     """Span evaluator: span.inputs is a dict of the call's arguments, span.outputs its return value."""
@@ -71,7 +74,7 @@ def quality_evaluator(span):
 
 @add_tracing(name="my_agent", span_type="AGENT", evaluator=quality_evaluator)
 def my_agent(query: str) -> dict:
-    response = llm_client().chat.completions.create(   # fresh per call (input 5)
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": query}],
     )

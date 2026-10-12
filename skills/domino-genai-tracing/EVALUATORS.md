@@ -93,7 +93,7 @@ from contextlib import contextmanager
 import mlflow
 from openai import OpenAI
 
-judge_client = OpenAI()           # or the LLM Gateway 2.0 client; TRACING-SETUP.md, Model access
+judge_client = OpenAI()           # or the LLM Gateway 2.0 client (then an alias as model); TRACING-SETUP.md, Model access
 mlflow.openai.autolog()          # enabled at startup; autolog_paused() restores this state
 
 @contextmanager

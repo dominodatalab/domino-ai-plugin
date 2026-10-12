@@ -13,7 +13,7 @@ mlflow 3.2.x, and mlflow 3.2.0 cannot end spans with opentelemetry-sdk 1.36 or l
     opentelemetry-api<1.36
 
 Usage:
-    from tracing_setup import (setup_tracing, llm_client, create_evaluator,
+    from tracing_setup import (setup_tracing, create_evaluator,
                                create_llm_judge_evaluator, get_aggregation_metrics)
     from domino.agents.tracing import add_tracing
     from domino.agents.logging import DominoAgentContext
@@ -56,8 +56,7 @@ from contextlib import contextmanager
 import mlflow
 
 FRAMEWORKS = ("openai", "anthropic", "langchain")
-DEFAULT_JUDGE_MODEL = "gpt-4o-mini"   # keep in sync with models.judge in config.yaml; a gateway alias
-                                      # when DOMINO_LLM_GATEWAY_URL is set
+DEFAULT_JUDGE_MODEL = "gpt-4o-mini"   # keep in sync with models.judge in config.yaml
 _openai_autolog_enabled = False       # set by setup_tracing("openai"); read by the judge helper
 
 
@@ -70,30 +69,6 @@ def setup_tracing(framework: str = "openai") -> None:
     if framework == "openai":
         _openai_autolog_enabled = True
     print(f"Enabled {framework} auto-tracing")
-
-
-def llm_client():
-    """
-    OpenAI-compatible client, built fresh per call so an in-run access token never expires mid-run.
-
-    Where an administrator has deployed LLM Gateway 2.0 and its URL is in the
-    DOMINO_LLM_GATEWAY_URL environment variable, the client calls the gateway (model names are
-    gateway aliases; see the domino-llm-gateway skill). Otherwise it is a plain OpenAI() client
-    reading OPENAI_API_KEY from a Domino environment variable (domino-llm-access skill). Both
-    are autologged the same way.
-    """
-    from openai import OpenAI
-
-    gateway = os.environ.get("DOMINO_LLM_GATEWAY_URL")
-    if not gateway:
-        return OpenAI()
-    proxy = os.environ.get("DOMINO_API_PROXY")
-    if proxy:                                        # inside Domino: fresh access token
-        import requests
-        token = requests.get(f"{proxy}/access-token", timeout=5).text.strip()
-    else:                                            # outside Domino: PAT or gateway token
-        token = os.environ["DOMINO_GATEWAY_TOKEN"]
-    return OpenAI(base_url=gateway.rstrip("/") + "/v1", api_key=token)
 
 
 def output_text(outputs) -> str:
@@ -162,7 +137,10 @@ def _openai_autolog_paused():
 
 def create_llm_judge_evaluator(judge_model: str = None, client=None):
     """
-    Return an LLM-as-judge span evaluator that scores the output 0-1 with an OpenAI model.
+    Return an LLM-as-judge span evaluator that scores the output 0-1 with an OpenAI-style model.
+
+    client is the OpenAI-compatible client the agent already uses (a provider SDK, a Domino-hosted
+    endpoint or LLM Gateway 2.0, where judge_model is a gateway alias); defaults to OpenAI().
 
     judge_model defaults to the JUDGE_MODEL environment variable, then DEFAULT_JUDGE_MODEL;
     pass the value from config.yaml (models.judge) so the run's parameters and the judge agree.
@@ -171,7 +149,9 @@ def create_llm_judge_evaluator(judge_model: str = None, client=None):
     judge_model = judge_model or os.environ.get("JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
 
     def llm_judge(span):
-        judge_client = client or llm_client()
+        from openai import OpenAI
+
+        judge_client = client or OpenAI()
         query = input_text(span.inputs)
         response = output_text(span.outputs)
         prompt = (
@@ -219,17 +199,18 @@ def get_aggregation_metrics(metric_names=None):
 
 
 if __name__ == "__main__":
-    # Minimal end-to-end example: LLM Gateway 2.0 when DOMINO_LLM_GATEWAY_URL is set (then
-    # MODEL must be a gateway alias), otherwise OPENAI_API_KEY from a Domino environment variable.
+    # Minimal end-to-end example; needs OPENAI_API_KEY as a Domino environment variable.
     from domino.agents.logging import DominoAgentContext
     from domino.agents.tracing import add_tracing
+    from openai import OpenAI
 
     setup_tracing("openai")
-    model = os.environ.get("MODEL", "gpt-4o-mini")
+    client = OpenAI()
+    model = "gpt-4o-mini"
 
     @add_tracing(name="example_agent", span_type="AGENT", evaluator=create_evaluator())
     def example_agent(query: str) -> dict:
-        response = llm_client().chat.completions.create(
+        response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": query}],
         )
