@@ -44,7 +44,7 @@ import os
 import requests
 from openai import OpenAI
 
-ENDPOINT_URL = os.environ["DOMINO_LLM_ENDPOINT_URL"]
+ENDPOINT_URL = os.environ["LLM_ENDPOINT_URL"]
 API_KEY = requests.get("http://localhost:8899/access-token").text
 
 client = OpenAI(base_url=ENDPOINT_URL, api_key=API_KEY)
@@ -64,7 +64,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-ENDPOINT_URL = os.environ["DOMINO_LLM_ENDPOINT_URL"]
+ENDPOINT_URL = os.environ["LLM_ENDPOINT_URL"]
 API_KEY = requests.get("http://localhost:8899/access-token").text
 
 model = OpenAIChatModel(
@@ -75,7 +75,7 @@ agent = Agent(model)
 print(agent.run_sync("Summarize the latest quarterly report.").output)
 ```
 
-`your-model-name` is the `servedModelName` configured on the endpoint. The OpenAI Responses API is also supported. Store the URL as a Domino environment variable (for example `DOMINO_LLM_ENDPOINT_URL`) rather than hard-coding it, so swapping endpoints is a configuration change.
+`your-model-name` is the `servedModelName` configured on the endpoint. The OpenAI Responses API is also supported. Store the URL as a Domino environment variable (for example `LLM_ENDPOINT_URL`) rather than hard-coding it, so swapping endpoints is a configuration change.
 
 ## Step 4: monitor
 

@@ -2,7 +2,7 @@
 
 Applies to Domino 6.3 and Domino Cloud where an administrator has deployed LLM Gateway 2.0 (early access). All examples use:
 
-- `GATEWAY`: the App's URL without a trailing slash (`https://<domino or apps host>/apps/<app id or vanity URL>`), kept in a Domino environment variable such as `DOMINO_LLM_GATEWAY_URL`.
+- `GATEWAY`: the App's URL without a trailing slash (`https://<domino or apps host>/apps/<app id or vanity URL>`), kept in a Domino environment variable such as `LLM_GATEWAY_URL`.
 - `token()`: the bearer. Inside a Domino execution it is the access token from `$DOMINO_API_PROXY/access-token` (`http://localhost:8899/access-token`), re-read before every request because it is short-lived; outside Domino a Personal Access Token or a gateway token (`dgw_...`) from an environment variable. Never a legacy user API key.
 - `model`: a gateway **alias** name, never a vendor model name. List them with `GET {GATEWAY}/v1/models`.
 
@@ -10,13 +10,13 @@ Applies to Domino 6.3 and Domino Cloud where an administrator has deployed LLM G
 import os
 import requests
 
-GATEWAY = os.environ["DOMINO_LLM_GATEWAY_URL"].rstrip("/")
+GATEWAY = os.environ["LLM_GATEWAY_URL"].rstrip("/")
 
 def token() -> str:
     proxy = os.environ.get("DOMINO_API_PROXY")
     if proxy:
         return requests.get(f"{proxy}/access-token", timeout=5).text.strip()
-    return os.environ["DOMINO_GATEWAY_TOKEN"]
+    return os.environ["LLM_GATEWAY_TOKEN"]
 ```
 
 Build the client right before the call (or refresh its key) so a long-running Job or App never sends an expired token. Constructing an OpenAI client is cheap.

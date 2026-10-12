@@ -62,7 +62,7 @@ import os
 import requests
 from openai import OpenAI
 
-ENDPOINT_URL = os.environ["DOMINO_LLM_ENDPOINT_URL"]            # copied from the Calling tab
+ENDPOINT_URL = os.environ["LLM_ENDPOINT_URL"]            # copied from the Calling tab
 API_KEY = requests.get("http://localhost:8899/access-token").text  # in-run access token
 
 client = OpenAI(base_url=ENDPOINT_URL, api_key=API_KEY)
@@ -73,7 +73,7 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-The OpenAI Responses API is also supported. Keep the URL in a Domino environment variable such as `DOMINO_LLM_ENDPOINT_URL` so promoting from a development to a production endpoint is a configuration change. The access token is short-lived and exists only inside a Domino execution; code outside Domino uses a Personal Access Token as the bearer. Legacy user API keys are deprecated; do not use them.
+The OpenAI Responses API is also supported. Keep the URL in a Domino environment variable such as `LLM_ENDPOINT_URL` so promoting from a development to a production endpoint is a configuration change. The access token is short-lived and exists only inside a Domino execution; code outside Domino uses a Personal Access Token as the bearer. Legacy user API keys are deprecated; do not use them.
 
 ## Gateways
 

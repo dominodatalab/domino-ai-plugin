@@ -5,4 +5,4 @@ max_turns: 15
 allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
 ---
 
-Our Domino admin deployed LLM Gateway 2.0 and gave us the alias `support-llm`. The gateway URL is in the project environment variable `DOMINO_LLM_GATEWAY_URL`. Change `ask.py` so it calls the alias through the gateway when it runs as a Domino Job, without putting any provider key in the code.
+Our Domino admin deployed LLM Gateway 2.0 and gave us the alias `support-llm`. The gateway URL is in the project environment variable `LLM_GATEWAY_URL`. Change `ask.py` so it calls the alias through the gateway when it runs as a Domino Job, without putting any provider key in the code.
