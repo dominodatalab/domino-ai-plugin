@@ -1,5 +1,6 @@
 ---
 type: regex
 target: { source: file, path: flow.py }
-pattern: '@workflow'
+flags: m
+pattern: '^\s*@workflow\b'
 ---
