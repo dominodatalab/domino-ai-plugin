@@ -96,7 +96,9 @@ Proxy authentication, appended to the same user file:
 ```
 
 No quotes around values, even when the password contains spaces; the NTLM username is
-case-sensitive; leave a blank line at the end of the file.
+case-sensitive; leave a blank line at the end of the file. The file then holds the proxy
+password in plaintext on your laptop: restrict it to your user (`chmod 600`) and keep it out of
+version control.
 
 ## Force-restore a local project
 

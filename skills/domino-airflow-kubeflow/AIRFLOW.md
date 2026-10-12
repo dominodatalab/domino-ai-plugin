@@ -223,10 +223,11 @@ the second) or through a Dataset.
 
 ## Result delivery
 
-Domino delivers results itself, so start there: a scheduled Job's **Notify emails** send the
-last lines of output and up to ten result files (`.dominoresults` and `email.html` shape them),
-and the scoring Job can write straight to the warehouse or bucket through a Data Source
-(`domino-data-sdk`). Add an Airflow delivery task only when Airflow already owns the downstream load.
+Domino delivers results itself, so start there: the Job's success email carries the last lines of
+output and up to ten result files (`.dominoresults` and `email.html` shape them; a scheduled Job's
+**Notify emails** field lists the recipients), and the scoring Job can write straight to the
+warehouse or bucket through a Data Source (`domino-data-sdk`). Add an Airflow delivery task only
+when Airflow already owns the downstream load.
 
 Airflow can also run **after** a Domino scheduled Job finished elsewhere: a sensor-style task
 lists Jobs (`GET /api/jobs/beta/jobs?projectId=...&statusFilter=completed`), downloads the newest

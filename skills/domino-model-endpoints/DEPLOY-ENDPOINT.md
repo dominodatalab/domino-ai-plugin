@@ -208,7 +208,7 @@ import requests
 base = f"{DOMINO_URL}/api/modelApis/async/v1/{MODEL_ID}"
 headers = {"Authorization": f"Bearer {TOKEN}"}
 
-created = requests.post(base, headers=headers, json={"parameters": {"input_file": "s3://bucket/batch.parquet"}})
+created = requests.post(base, headers=headers, json={"parameters": {"input_key": "batch/2026-10.parquet"}})   # an object key the function reads through a Data Source
 created.raise_for_status()
 prediction_id = created.json()["asyncPredictionId"]
 

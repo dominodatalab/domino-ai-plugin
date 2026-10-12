@@ -99,6 +99,10 @@ Common classes and fields (all optional keyword arguments):
 | `DatabricksConfig` | `catalog`, `schema`, `datetime_precision` | `personal_access_token` |
 | `DatasetConfig` | `snapshot_id`, `subfolder` | none |
 
+Credential fields take their values from a Domino user or Project environment variable
+(`os.environ`), never a literal in code; prefer fixing the Data Source's stored credentials over
+overriding them.
+
 `datetime_precision` (relational sources, Domino 6.3 and later) is `seconds`, `milliseconds`,
 `microseconds` or `nanoseconds` (default); lower it when extreme datetimes overflow.
 

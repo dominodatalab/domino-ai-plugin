@@ -76,7 +76,7 @@ Vite exposes only variables prefixed `VITE_`, and only those present at **build*
 - `npm ci` with a committed `package-lock.json`, not `npm install`.
 - Add `serve` (or `express`) to `package.json` so `npx` fetches nothing at start.
 - Put Python packages in the Compute Environment, not in `app.sh`.
-- `npm ci` itself needs egress to the npm registry (or a private mirror configured in `.npmrc`). If the build is the bottleneck, build once in a Domino Workspace or Job (on an air-gapped site, wherever npm is reachable, such as your CI), commit `dist/` on a deploy branch, point the App's version at that branch, and reduce `app.sh` to the serve step.
+- `npm ci` itself needs egress to the npm registry (or a private mirror configured in `.npmrc`). If the build is the bottleneck, build once in a Domino Workspace and commit `dist/` on a deploy branch (**Sync to Git**, or **Sync to Domino** in a DFS Project); on an air-gapped site build wherever npm or a mirror is reachable, such as your CI. Point the App's version at that branch and reduce `app.sh` to the serve step.
 
 ## 9. Streamlit websocket or "connection error"
 
@@ -119,7 +119,7 @@ CMD ["node", "server.js"]
 ```
 
 ```bash
-docker build -t test-app . && docker run -p 8888:8888 -e MODEL_API_URL=... -e MODEL_API_TOKEN=... test-app
+docker build -t test-app . && docker run -p 8888:8888 test-app
 ```
 
 ## Quick reference

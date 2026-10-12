@@ -48,7 +48,7 @@ ENV MODEL_PATH=/mnt/artifacts/model.pkl
 USER ubuntu
 ```
 
-One `pip install` per set of packages, pinned versions, `&&` to merge layers, `ARG NAME` + `ENV NAME=$NAME` to carry a variable into the build. Private Git packages: install at runtime via `requirements.txt`, never with credentials in the Dockerfile.
+One `pip install` per set of packages, pinned versions, `&&` to merge layers, `ARG NAME` + `ENV NAME=$NAME` to carry a variable into the build. Private Git packages: install at runtime via `requirements.txt` through Domino's Git integration (the credential lives under **Account** > **Account Settings** > **Git Credentials**), never with credentials in the Dockerfile or in `requirements.txt`.
 
 **Pluggable Workspace Tools**: YAML defining the IDEs offered at launch; [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md).
 
