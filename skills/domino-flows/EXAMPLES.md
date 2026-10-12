@@ -38,11 +38,13 @@ feature_task = DominoJobTask(
 
 @workflow
 def data_pipeline(source_path: str = "/mnt/data/raw/transactions.csv", max_missing: float = 0.2) -> CSV:
-    raw = load_task(source_path=source_path)
-    clean = clean_task(raw=raw["raw"], max_missing=max_missing)
-    features = feature_task(clean=clean["clean"])
-    return features["features"]
+    raw = load_task(source_path=source_path)                       # one output: a single promise
+    clean = clean_task(raw=raw, max_missing=max_missing)           # pass it as is
+    features = feature_task(clean=clean)
+    return features.features                                       # two outputs: a namedtuple, select by attribute
 ```
+
+A task with one declared output returns the promise itself; one with several returns a namedtuple (`features.features`, `features.row_count`, or `features_file, row_count = feature_task(...)`). `features["features"]` does not compile for multi-output tasks (`TypeError: tuple indices must be integers or slices, not str`), and `raw["raw"]` on a single-output task binds a lookup inside the file rather than the output.
 
 `flows/stages/load.py`:
 
@@ -128,7 +130,7 @@ def training_pipeline(features_path: str, test_size: float = 0.2) -> ModelArtifa
     train = run_domino_job_task(
         flyte_task_name="Train",
         command="python flows/stages/train.py",
-        inputs=[Input(name="train", type=CSV, value=split["train"])],
+        inputs=[Input(name="train", type=CSV, value=split.train)],    # two outputs: attribute access
         output_specs=[Output(name="model", type=PKL)],
         hardware_tier_id="large-k8s",             # id from GET /api/hardwaretiers/v1/hardwaretiers
         use_project_defaults_for_omitted=True,
@@ -137,16 +139,16 @@ def training_pipeline(features_path: str, test_size: float = 0.2) -> ModelArtifa
     run_domino_job_task(
         flyte_task_name="Evaluate metrics",
         command="python flows/stages/evaluate.py",
-        inputs=[Input(name="model", type=PKL, value=train["model"]),
-                Input(name="test", type=CSV, value=split["test"])],
+        inputs=[Input(name="model", type=PKL, value=train),            # one output: the promise itself
+                Input(name="test", type=CSV, value=split.test)],
         output_specs=[Output(name="metrics", type=ReportArtifact.File(name="metrics.json"))],
         use_project_defaults_for_omitted=True,
     )
     run_domino_job_task(
         flyte_task_name="Plot ROC",
         command="python flows/stages/plot.py",
-        inputs=[Input(name="model", type=PKL, value=train["model"]),
-                Input(name="test", type=CSV, value=split["test"])],
+        inputs=[Input(name="model", type=PKL, value=train),
+                Input(name="test", type=CSV, value=split.test)],
         output_specs=[Output(name="roc", type=ReportArtifact.File(name="roc.png"))],
         use_project_defaults_for_omitted=True,
     )
@@ -157,7 +159,7 @@ def training_pipeline(features_path: str, test_size: float = 0.2) -> ModelArtifa
         hardware_tier_id="small-k8s",
         use_project_defaults_for_omitted=True,
     )
-    return train["model"]
+    return train
 ```
 
 `flows/stages/split.py`:
@@ -298,17 +300,17 @@ def pinned_task(name, script, inputs, outputs, **task_kwargs):
 def release_pipeline(features_path: str, test_size: float = 0.2) -> PKL:
     split = pinned_task("Split (pinned)", "flows/stages/split.py",
                         {"features_path": str, "test_size": float}, {"train": CSV, "test": CSV})
-    splits = split(features_path=features_path, test_size=test_size)
+    splits = split(features_path=features_path, test_size=test_size)   # two outputs: namedtuple
 
     train = pinned_task("Train (pinned)", "flows/stages/train.py",
                         {"train": CSV}, {"model": PKL}, retries=1, timeout=timedelta(hours=2))
-    trained = train(train=splits["train"])
+    trained = train(train=splits.train)                                  # one output: a single promise
 
     # The run pauses here until someone clicks Resume and approves in the Flows UI; rejecting stops it
-    approved_model = approve(trained["model"], "Release approval", timeout=timedelta(hours=24))
+    approved_model = approve(trained, "Release approval", timeout=timedelta(hours=24))
 
     package = pinned_task("Package for deployment", "flows/stages/package.py", {"model": PKL}, {"bundle": PKL})
-    return package(model=approved_model)["bundle"]
+    return package(model=approved_model)
 ```
 
 `flows/stages/package.py`:

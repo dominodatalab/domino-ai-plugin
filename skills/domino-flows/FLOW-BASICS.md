@@ -23,20 +23,25 @@ def training_workflow(data_path: str) -> FlyteFile[TypeVar("pt")]:
         outputs={"processed_data": FlyteFile[TypeVar("csv")]},
         use_latest=True,
     )
-    prep_results = prep(data_path=data_path)
+    prep_results = prep(data_path=data_path)              # one output: the promise itself
 
     # 2. Helper
     train_results = run_domino_job_task(
         flyte_task_name="Train model",
         command="python train-model.py",
-        inputs=[Input(name="processed_data", type=FlyteFile[TypeVar("csv")], value=prep_results["processed_data"])],
+        inputs=[Input(name="processed_data", type=FlyteFile[TypeVar("csv")], value=prep_results)],
         output_specs=[Output(name="model", type=FlyteFile[TypeVar("pt")])],
         use_project_defaults_for_omitted=True,
     )
-    return train_results["model"]
+    return train_results
 ```
 
-Task results are promises; index them by output name (`prep_results["processed_data"]`). Passing one task's output into another creates the dependency edge; tasks without a data dependency run in parallel. A `@workflow` function may return nothing, one output, or a tuple.
+How to consume a task result depends on how many outputs the task declares, for both `DominoJobTask` and the helper:
+
+- **One output**: the call returns a single promise. Pass it as is (`value=prep_results`, `return train_results`). Do not write `prep_results["processed_data"]`: it compiles, but flytekit binds it as a lookup *inside* the output value (an attribute path on the file), not as selecting the output.
+- **Two or more outputs**: the call returns a namedtuple of promises. Select by attribute (`res.train`, `res.test`) or unpack (`train, test = split(...)`). String indexing (`res["train"]`) fails at compile time with `TypeError: tuple indices must be integers or slices, not str`.
+
+The docs.domino.ai define-flows page shows string indexing (`data_prep_results["processed_data"]`); that form fails for multi-output tasks and binds the wrong thing for single-output ones (verified with `flytekit` 1.15 and `flytekitplugins-dominojob` 0.18 on an internal Domino test cluster). Passing one task's output into another creates the dependency edge; tasks without a data dependency run in parallel. A `@workflow` function may return nothing, one output, or a tuple. `@workflow` compiles lazily, so call `my_workflow.compile()` in a Workspace to surface these errors before `pyflyte run`.
 
 ## Types
 
@@ -122,7 +127,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/hardwaretiers/v1
 curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/environments/beta/environments?limit=100"   # id, name
 ```
 
-Dataset ids and snapshot versions come from the Dataset page in the project or the datasets API (`domino-datasets`). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header. Inside a Workspace the plugin can also print the valid values for the current project in one call: `from flytekitplugins.domino.helpers import retrieve_valid_properties; retrieve_valid_properties()` (it reads an internal `/v4/jobs/.../retrieveValidProperties` route through the API proxy and prints environments with their revisions and the other job properties; `page_size` raises the number of environments listed).
+Dataset ids and snapshot versions come from the Dataset page in the project or the datasets API (`domino-datasets`). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header. Inside a Workspace the plugin can also print the valid values for the current project in one call: `from flytekitplugins.domino.helpers import retrieve_valid_properties; retrieve_valid_properties()` (it reads the `/v4/jobs/.../retrieveValidProperties` route through the API proxy, a Domino Internal API route that may change between Domino versions, and prints environments with their revisions and the other job properties; `page_size` raises the number of environments listed).
 
 ## Launch
 

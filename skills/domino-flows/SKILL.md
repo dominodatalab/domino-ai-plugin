@@ -20,6 +20,7 @@ A flow is a Python function decorated with `@workflow` whose nodes are **tasks**
 ## Rules specific to Domino Flows
 
 - Define tasks with `DominoJobTask` + `DominoJobConfig` (`flytekitplugins.domino.task`) or the `run_domino_job_task` helper (`flytekitplugins.domino.helpers`). These are the task types documented for Domino Flows; plain Flyte `@task` functions are not documented, and dynamic workflows and map tasks are explicitly unsupported. `@workflow` comes from `flytekit`.
+- A task call returns one promise when it declares one output (pass it as is) and a namedtuple when it declares several (`res.name` or `a, b = task(...)`); `res["name"]` fails to compile for multi-output tasks and binds the wrong thing for single-output ones.
 - Task code reads each input from `/workflow/inputs/<name>` and must write each declared output to `/workflow/outputs/<name>`; a missing output fails the task. Non-file inputs (`str`, `int`, `float`, `bool`, `list`, `dict`) arrive as the value's text; file inputs are the file itself.
 - Flow jobs make no code commits or dataset snapshots at the end; results must be task outputs (or Flow Artifacts exported to a Dataset or NetApp Volume).
 - Only Dataset and NetApp Volume **snapshots** can be mounted (never version 0, the read-write view), one snapshot per dataset, read-only, at the usual `latest` path (`/mnt/data/<name>` Git-based, `/domino/datasets/local/<name>` DFS).
