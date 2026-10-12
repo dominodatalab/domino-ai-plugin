@@ -13,7 +13,7 @@ There is **no `run_name` parameter**; passing one raises `TypeError`. The object
 
 | Parameter | Meaning |
 |-----------|---------|
-| `experiment_name` | Name of an **existing** MLflow experiment to log to. The SDK raises if it does not exist (create it first with `mlflow.create_experiment` or in the UI). Omitted: the active experiment (`mlflow.set_experiment`, else MLflow's default). |
+| `experiment_name` | Name of an **existing** MLflow experiment to log to. The SDK raises `Could not find experiment with name ...` if it does not exist. Simplest: call `mlflow.set_experiment(name)` first (it creates the experiment if needed and makes it active) and omit this argument; the run then goes to the active experiment. |
 | `run_id` | Continue logging to an existing run instead of starting a new one. |
 | `agent_config_path` | YAML file to log as parameters. Omitted: `DOMINO_AGENT_CONFIG_PATH`, else `./agent_config.yaml`. A missing file logs a warning and no parameters. |
 | `custom_summary_metrics` | List of `(metric_name, statistic)` tuples; statistics are `mean`, `median`, `stdev`, `max`, `min`. Omitted: the mean of every evaluator metric found. |
@@ -30,15 +30,19 @@ Not thread-safe: use one context per thread; parallel work inside one context is
 | **Deployed agent** (Domino App) | **No** | `@add_tracing` alone is sufficient; the SDK routes production traces to `agent_experiment_<app id>` and skips inline evaluators there |
 
 ```python
+import asyncio
+
 # DEPLOYED AGENT: no context manager
 @app.post("/chat")
 async def chat(body: dict):
     return await run_agent_turn(body["message"])     # @add_tracing handles tracing
 
-# EVALUATION: context manager around the loop
+# EVALUATION: context manager around the loop. run_agent_turn is async, so it must be
+# awaited here too; calling it bare returns an un-awaited coroutine and creates no trace.
+mlflow.set_experiment("agent-eval")
 with DominoAgentContext(agent_config_path="config.yaml") as run:
     for item in test_data:
-        run_agent_turn(item["question"])
+        asyncio.run(run_agent_turn(item["question"]))
 ```
 
 ## Basic usage
@@ -47,7 +51,7 @@ with DominoAgentContext(agent_config_path="config.yaml") as run:
 import mlflow
 from domino.agents.logging import DominoAgentContext
 
-mlflow.set_experiment("support-agent-eval")        # or pass experiment_name=
+mlflow.set_experiment("support-agent-eval")        # creates it if missing; experiment_name= needs an existing one
 
 with DominoAgentContext(agent_config_path="config.yaml") as run:
     for question in questions:
@@ -150,10 +154,10 @@ client = OpenAI()
 
 def quality_evaluator(span):
     output = span.outputs or {}
-    return {
-        "response_length": len(output.get("response", "")),
-        "confidence": float(output.get("confidence", 0.0)),
-    }
+    scores = {"response_length": len(output.get("response", ""))}
+    if isinstance(output.get("confidence"), (int, float)):   # omit rather than invent a default
+        scores["confidence"] = float(output["confidence"])
+    return scores
 
 @add_tracing(name="qa_agent", span_type="AGENT", autolog_frameworks=["openai"], evaluator=quality_evaluator)
 def qa_agent(question: str) -> dict:
@@ -176,8 +180,8 @@ with DominoAgentContext(agent_config_path="config.yaml", custom_summary_metrics=
 
 ```python
 def process_batch(items, batch_name):
-    with DominoAgentContext(experiment_name=f"eval-{batch_name}",     # experiment must exist
-                            custom_summary_metrics=[("accuracy", "mean"), ("latency", "max")]) as run:
+    mlflow.set_experiment(f"eval-{batch_name}")                       # get-or-create
+    with DominoAgentContext(custom_summary_metrics=[("accuracy", "mean"), ("latency", "max")]) as run:
         results = []
         for item in items:
             try:

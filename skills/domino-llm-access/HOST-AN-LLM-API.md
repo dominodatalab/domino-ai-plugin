@@ -1,8 +1,8 @@
 # Host an LLM: REST API reference
 
-Applies to Domino 6.3 and Domino Cloud. Every route below is present, with the same bodies, in both public specs (6.3.1 and 6.4.0) under the `/api/gen-ai/beta` prefix: 14 paths, 17 operations. The prefix is `beta`; re-check the deployment's own reference (`https://<domino-domain>/docs`, or `GET $DOMINO_API_HOST/assets/public-api.json`) before generating client code.
+Applies to Domino 6.3 and Domino Cloud. Every route below is present, with the same bodies, in both public specs (6.3.1 and 6.4.0) under the `/api/gen-ai/beta` prefix: 14 paths, 17 operations. The prefix is `beta`; re-check the deployment's own reference (`https://<domino-domain>/docs`; `$DOMINO_API_HOST/assets/public-api.json` is an incomplete subset that does include these routes) before generating client code. The write operations below (create, patch, start, stop, delete) are taken from the spec and have not been exercised against a live deployment; confirm the first call's response before building on it.
 
-## Authentication
+## Authentication and base URL
 
 ```python
 import os
@@ -17,7 +17,7 @@ else:                                                        # in-run, access-to
 # Outside a run: base_url = the deployment's HTTPS URL, headers = Bearer <Personal Access Token>
 ```
 
-Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) are deprecated; do not use them.
+In a run without `DOMINO_API_PROXY`, `DOMINO_API_HOST` may point at a legacy sidecar that lacks some `/api/*` routes (see HOSTS.md in the `domino-api-intro` skill). A 404 from it is not proof the route is absent: retry against the deployment's public HTTPS URL with a Personal Access Token before concluding anything. Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) are deprecated; do not use them.
 
 ## Routes
 
@@ -31,7 +31,7 @@ Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) are deprecated;
 | GET | `/api/gen-ai/beta/endpoints/{endpointId}/collaborators` | Who has access |
 | GET | `/api/gen-ai/beta/endpoints/{endpointId}/versions` | Versions of the endpoint |
 | GET | `/api/gen-ai/beta/endpoints/{endpointId}/versions/{versionNumber}` | One version |
-| PATCH | `/api/gen-ai/beta/endpoints/{endpointId}/versions/{versionNumber}` | Change a version (model source, environment, tier, configuration, access, vanity URL, instructions) |
+| PATCH | `/api/gen-ai/beta/endpoints/{endpointId}/versions/{versionNumber}` | Patch labels, description, access or instructions in place; a change to `vanityUrl`, `modelSource`, `environment`, `hardwareTierId` or `configuration` stops the version and starts a new one (see below) |
 | POST | `.../versions/{versionNumber}/start` | Start a version |
 | POST | `.../versions/{versionNumber}/stop` | Stop a version |
 | GET | `.../versions/{versionNumber}/request-metrics` | Request metrics |
@@ -95,17 +95,20 @@ Field notes, from the spec:
 ```python
 import time
 
+TERMINAL = {"Running", "Stopped", "Failed", "BuildFailed", "Unknown"}
+status = None
 for _ in range(120):
     ep = requests.get(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}", headers=headers).json()
-    status = ep["currentVersion"]["status"]
-    if status in ("Running", "Failed", "BuildFailed"):
+    version = ep.get("currentVersion")            # not guaranteed by the spec; absent while nothing is deployed
+    status = version["status"] if version else None
+    if status in TERMINAL:
         break
     time.sleep(10)
 
-print(status, ep["url"])   # ep["url"] is the base_url for OpenAI-style clients
+print(status, ep["url"])   # ep["url"] is the base_url for OpenAI-style clients, valid once status is Running
 ```
 
-`currentVersion.status` is one of `Building`, `BuildFailed`, `Starting`, `Running`, `Stopping`, `Stopped`, `Failed`, `Unknown`. On `Failed` or `BuildFailed`, read `realTimeLogs` for the version before retrying. The endpoint detail also carries `requestCount`, `instructions`, `generalAccess`, `project`, `currentVersion.number`, `currentVersion.configuration` and `currentVersion.hardwareTier` (`id`, `dataPlaneId`, `dataPlaneName`). On a live Cloud deployment `url` is served from the apps host (`https://apps.<domain>/endpoints/<vanityUrl>/`), not from `DOMINO_API_HOST`; always read it from the response.
+`currentVersion.status` is one of `Building`, `BuildFailed`, `Starting`, `Running`, `Stopping`, `Stopped`, `Failed`, `Unknown`; only `Running` means the endpoint serves requests. On `Failed` or `BuildFailed`, read `realTimeLogs` for the version before retrying. The endpoint detail also carries `requestCount`, `instructions`, `generalAccess`, `project`, `currentVersion.number`, `currentVersion.configuration` and `currentVersion.hardwareTier` (`id`, `dataPlaneId`, `dataPlaneName`). On a live Cloud deployment `url` is served from the apps host (`https://apps.<domain>/endpoints/<vanityUrl>/`), not from `DOMINO_API_HOST`; always read it from the response.
 
 ## Call the running endpoint
 
@@ -118,15 +121,26 @@ v = ep["currentVersion"]["number"]
 requests.post(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}/versions/{v}/stop", headers=headers)
 requests.post(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}/versions/{v}/start", headers=headers)
 
-# change the hardware tier or vLLM arguments of a version
+# Patch in place: versionLabel, versionDescription, name, description, generalAccess, collaborators, instructions
 requests.patch(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}/versions/{v}", headers=headers,
-               json={"hardwareTierId": "<a larger GPU tier id>",
-                     "configuration": {"vllmArguments": "--max-model-len 8192"}})
+               json={"versionLabel": "v1-reviewed", "instructions": "Use servedModelName support-llm"})
+
+# Change the serving setup: the spec says a change to vanityUrl, modelSource, environment, hardwareTierId or
+# configuration STOPS this version and STARTS A NEW ONE with the patched values. Send the complete
+# configuration object (copy it from currentVersion and change the field): the spec does not say whether a
+# partial object is merged or replaces the whole configuration, and a replacement would drop servedModelName.
+new_configuration = dict(ep["currentVersion"]["configuration"])
+new_configuration["vllmArguments"] = "--enable-auto-tool-choice --tool-call-parser hermes --max-model-len 8192"
+requests.patch(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}/versions/{v}", headers=headers,
+               json={"hardwareTierId": "<a larger GPU tier id>", "configuration": new_configuration})
+
+ep = requests.get(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}", headers=headers).json()
+v = ep["currentVersion"]["number"]      # the new version; poll its status as above before calling the endpoint
 
 requests.delete(f"{base_url}/api/gen-ai/beta/endpoints/{endpoint_id}", headers=headers)
 ```
 
-After a stop or delete, `GET` the endpoint again and confirm the state before assuming the operation completed.
+After any of these, `GET` the endpoint again and read `currentVersion.number`, `currentVersion.status` and `url` before assuming the operation completed or telling callers what to use.
 
 ## Metrics and logs
 
@@ -142,5 +156,5 @@ requests.get(f"{base}/realTimeLogs", headers=headers, params={"logType": "stderr
 
 ## Verified
 
-- Routes, required fields and enums above: both published specs (6.3.1 and 6.4.0), 2026-10-12.
+- Routes, required fields, enums and the PATCH stop-and-restart rule above: both published specs (6.3.1 and 6.4.0), 2026-10-12. The write operations were not executed against a live deployment.
 - Read-only against a live Domino Cloud deployment (`GET /version` returned `6.4.0`), 2026-10-12: `GET /api/gen-ai/beta/default-endpoint-environment` returned `{id, name}` with no `revisionId`; `GET /api/gen-ai/beta/endpoints` returned `{"items": [...]}` with the documented keys, `generalAccess` values `Viewer` and `Consumer`, `currentVersion.status` `Stopped`, `currentVersion.configuration` carrying `vllmArguments`, `maxNumberOfSequences` and `tensorParallelism`, and `url` on the apps host; `GET /api/aigateway/v1/endpoints` returned 404 (legacy gateway absent on Cloud).

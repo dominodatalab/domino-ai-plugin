@@ -4,21 +4,25 @@ Environment and SDK setup for GenAI tracing on Domino 6.3 and Domino Cloud.
 
 ## Environment requirements
 
-The agents SDK (`domino.agents`) ships in the Domino Standard Environment from Domino 6.2, together with a compatible MLflow. Check before changing anything:
+The agents SDK (`domino.agents`) ships in the Domino Standard Environment from Domino 6.2, together with a compatible MLflow. Check the versions before changing anything; the examples in this skill need `dominodatalab` 2.1.0 or later (`span_type` and `attributes` on `@add_tracing` arrived in 2.1.0; 2.2.0 is the verified release), MLflow 3.2.x, and an OpenTelemetry SDK below 1.36:
 
 ```bash
-python -c "import mlflow, domino.agents; print(mlflow.__version__)"
+python - <<'EOF'
+import importlib.metadata as m
+for p in ("dominodatalab", "mlflow", "opentelemetry-sdk"):
+    print(p, m.version(p))
+EOF
 ```
 
-If the import fails or MLflow is below 3.2.0, add the pinned pair to a custom Compute Environment. The `agents` extra of `dominodatalab` 2.2.0 requires `mlflow-skinny` and `mlflow-tracing` `>=3.2.0,<3.3.0`, so pin MLflow to 3.2.x alongside it.
+If any import fails, `dominodatalab` is below 2.1.0, MLflow is not 3.2.x, or `opentelemetry-sdk` is 1.36 or later, install the pinned set below in a custom Compute Environment (or in the Workspace for a quick check). The `agents` extra of `dominodatalab` 2.2.0 requires `mlflow-skinny` and `mlflow-tracing` `>=3.2.0,<3.3.0`, and MLflow 3.2.0 cannot end spans with `opentelemetry-sdk` 1.36 or later (verified: 1.45 fails, 1.35 works), so all four pins belong together.
 
 Dockerfile instructions:
 
 ```dockerfile
 USER root
 
-# MLflow 3.2.x and the Domino SDK with agents (tracing) support, pinned together
-RUN pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0"
+# MLflow 3.2.x, the Domino SDK with agents (tracing) support, and the OpenTelemetry SDK MLflow 3.2.0 works with
+RUN pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0" "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
 
 # Your LLM framework(s); versions that MLflow 3.2.0 autologging supports
 RUN pip install openai==1.97.1
@@ -33,12 +37,12 @@ USER ubuntu
 ```text
 mlflow==3.2.0
 dominodatalab[data,agents]==2.2.0
+opentelemetry-sdk<1.36
+opentelemetry-api<1.36
 openai==1.97.1
 anthropic==0.59.0
 langchain==0.3.27
 ```
-
-Pin the OpenTelemetry SDK too if traces fail to end (see Troubleshooting).
 
 ## Framework auto-logging
 
@@ -194,16 +198,20 @@ my-agent-project/
 
 ### `Failed to end span ...: 'MlflowV3SpanProcessor' object has no attribute '_shutdown'`
 
-MLflow 3.2.0 cannot end spans with a newer `opentelemetry-sdk` (seen with 1.45; works with 1.35). No traces or aggregated metrics are written. Pin it in the environment:
+The environment has an `opentelemetry-sdk` MLflow 3.2.0 cannot work with (1.36 or later; 1.45 reproduces it, 1.35 works). No traces or aggregated metrics are written. A custom environment built on an image that already carries a newer OpenTelemetry keeps it when only MLflow is pinned, which is why the install line above pins both:
 
 ```bash
 pip install "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
 ```
 
+### `TypeError: add_tracing() got an unexpected keyword argument 'span_type'`
+
+`dominodatalab` is older than 2.1.0. Install the pinned set from "Environment requirements".
+
 ### `module 'mlflow' has no attribute 'openai'` or `No module named 'domino.agents'`
 
 ```bash
-pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0"
+pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0" "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
 ```
 
 ### `This version of Domino doesn't support the agents package`

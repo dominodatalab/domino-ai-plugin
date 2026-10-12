@@ -28,7 +28,9 @@ add_tracing(
 | `attributes` | No | Extra attributes set on the span. |
 | `eagerly_evaluate_streamed_results` | No | For generator functions. `True` (default): all yielded values are collected as the span's output and evaluated once. `False`: one span per yielded value, inline evaluators disabled. |
 
-Evaluators run only in development mode; when `DOMINO_AGENT_IS_PROD=true` the SDK skips them. Async functions and generators are supported.
+Evaluators run only in development mode; when `DOMINO_AGENT_IS_PROD=true` the SDK skips them. Their results are written as tags on the **trace**, not on the span: when decorated functions nest, every evaluator in the call tree writes to the same trace and the outer function's evaluator, which runs last, overwrites same-named metrics. Use distinct metric names per function.
+
+Supported function kinds in `dominodatalab` 2.2.0: plain functions, `async def` coroutines, and sync generators. **Async generators (`async def` with `yield`) are not supported**: the decorator treats them as a plain function, the span ends immediately with the generator object as its output, and every inner span becomes its own orphan trace. For a streaming agent, decorate a coroutine that collects the stream and returns the result, and stream to the client from outside it (see "Streaming agents" below). `span_type` and `attributes` need `dominodatalab` 2.1.0 or later.
 
 ## Basic usage
 
@@ -170,15 +172,40 @@ async def run_agent(messages: list[dict], max_iterations: int = 8) -> dict:
     return {"content": "Max iterations reached.", "tool_calls_made": tool_calls_made}
 ```
 
-Resulting trace tree:
+Resulting trace tree (MLflow's OpenAI autologging names the span after the client class, `AsyncCompletions` here and `Completions` for a sync `OpenAI()` client, and types chat completions as `CHAT_MODEL`, not `LLM`):
 
 ```
 agent_turn (AGENT)
-├── Completions (LLM, autologged: model, messages, tokens, latency)
+├── AsyncCompletions (CHAT_MODEL, autologged: model, messages, tokens, latency)
 ├── tool:get_data (TOOL)
 ├── tool:analyze (TOOL)
-└── Completions (LLM, autologged)
+└── AsyncCompletions (CHAT_MODEL, autologged)
 ```
+
+## Streaming agents
+
+`@add_tracing` does not support async generators. Collect the stream inside a decorated coroutine, then stream the collected result to the client; the trace gets the full output and the evaluator sees it:
+
+```python
+from fastapi.responses import StreamingResponse
+
+@add_tracing(name="chat_turn", span_type="AGENT", autolog_frameworks=["openai"])
+async def chat_turn(message: str) -> dict:
+    chunks = []
+    stream = await client.chat.completions.create(
+        model=MODEL, messages=[{"role": "user", "content": message}], stream=True)
+    async for event in stream:
+        delta = event.choices[0].delta.content or ""
+        chunks.append(delta)
+    return {"response": "".join(chunks), "chunks": chunks}
+
+@app.post("/chat")
+async def chat(body: dict):
+    result = await chat_turn(body["message"])          # traced, evaluated
+    return StreamingResponse((c for c in result["chunks"]), media_type="text/plain")
+```
+
+Token-by-token delivery to the client then starts after the model finished; if that latency is unacceptable, trace the non-streaming parts (tools, retrieval) with `@mlflow.trace` and leave the streaming call untraced.
 
 ## Span annotation APIs
 
@@ -213,6 +240,8 @@ def pipeline(text: str) -> dict:
     category = classify(text)             # child span
     return {"category": category, "response": respond(text, category)}   # child span
 ```
+
+If `classify`, `respond` and `pipeline` all carry evaluators, their results land on the one trace that `pipeline` started; `pipeline`'s evaluator runs last and wins any name clash. Prefix metric names per function (`classifier_confidence`, `responder_length`, `pipeline_quality`).
 
 ## Graceful fallback when the SDK is absent
 

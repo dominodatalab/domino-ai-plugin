@@ -185,11 +185,13 @@ async def chat(request: ChatRequest):
 
 ```
 agent_turn (AGENT)
-├── AsyncCompletions (LLM, autologged: model, tokens, latency)
+├── AsyncCompletions (CHAT_MODEL, autologged: model, messages, tokens, latency)
 ├── tool:query_data (TOOL)
 ├── tool:analyze (TOOL)
-└── AsyncCompletions (LLM, autologged)
+└── AsyncCompletions (CHAT_MODEL, autologged)
 ```
+
+MLflow's OpenAI autologging names the span after the client class (`Completions` for a sync `OpenAI()` client, `AsyncCompletions` for `AsyncOpenAI()`) and types chat completions as `CHAT_MODEL`, not `LLM`.
 
 Inline evaluators do not run here; score production traces with a scheduled Job ([EVALUATORS.md](./EVALUATORS.md), "Production evaluation").
 
@@ -203,6 +205,8 @@ An incident-triage pipeline with four agents, evaluated under `DominoAgentContex
 2. **Impact**: assesses blast radius and affected users
 3. **Resource**: matches responders by skills
 4. **Response**: drafts stakeholder communications
+
+**Where evaluator scores go.** The SDK writes every evaluator result as a tag on the **trace**, not on the span whose evaluator produced it. In a call tree of decorated functions the inner evaluators run first (when their spans end) and the outer one runs last, so a metric name used by two evaluators keeps only the last value (verified with 2.2.0: an inner `impact_score=7.0` was silently replaced by the outer `0.7`). Prefix each agent's metrics with the agent's name, as below, and keep the pipeline-level names distinct.
 
 ### Project structure
 
@@ -281,13 +285,14 @@ from agents.common import ask_json, config
 
 def classifier_evaluator(span):
     output = span.outputs or {}
-    confidence = float(output.get("confidence", 0.0))
-    return {
-        "classification_confidence": confidence,
-        "valid_category": 1.0 if output.get("category") in config["agents"]["classifier"]["categories"] else 0.0,
-        "valid_urgency": 1.0 if output.get("urgency") in config["agents"]["classifier"]["urgency_levels"] else 0.0,
-        "high_confidence": 1.0 if confidence > 0.8 else 0.0,
+    scores = {
+        "classifier_valid_category": 1.0 if output.get("category") in config["agents"]["classifier"]["categories"] else 0.0,
+        "classifier_valid_urgency": 1.0 if output.get("urgency") in config["agents"]["classifier"]["urgency_levels"] else 0.0,
     }
+    if isinstance(output.get("confidence"), (int, float)):     # only when the model reported one
+        scores["classifier_confidence"] = float(output["confidence"])
+        scores["classifier_high_confidence"] = 1.0 if output["confidence"] > 0.8 else 0.0
+    return scores
 
 @add_tracing(name="classifier_agent", span_type="CHAIN", evaluator=classifier_evaluator)
 def classify_incident(incident: dict) -> dict:
@@ -311,11 +316,13 @@ from agents.common import ask_json
 
 def impact_evaluator(span):
     output = span.outputs or {}
-    return {
-        "impact_score": float(output.get("score", 0)),
-        "has_affected_users": 1.0 if output.get("affected_users", 0) > 0 else 0.0,
-        "has_financial_estimate": 1.0 if output.get("financial_exposure") else 0.0,
+    scores = {
+        "impact_has_affected_users": 1.0 if (output.get("affected_users") or 0) > 0 else 0.0,
+        "impact_has_financial_estimate": 1.0 if output.get("financial_exposure") else 0.0,
     }
+    if isinstance(output.get("score"), (int, float)):
+        scores["impact_raw_score"] = float(output["score"])      # 0-10, as the model returned it
+    return scores
 
 @add_tracing(name="impact_agent", span_type="CHAIN", evaluator=impact_evaluator)
 def assess_impact(incident: dict, classification: dict) -> dict:
@@ -339,9 +346,9 @@ from agents.common import ask_json
 def resource_evaluator(span):
     output = span.outputs or {}
     return {
-        "responder_count": len(output.get("responders", [])),
-        "has_eta": 1.0 if output.get("eta") else 0.0,
-        "meets_sla": 1.0 if output.get("meets_sla", False) else 0.0,
+        "resource_responder_count": len(output.get("responders", [])),
+        "resource_has_eta": 1.0 if output.get("eta") else 0.0,
+        "resource_meets_sla": 1.0 if output.get("meets_sla", False) else 0.0,
     }
 
 @add_tracing(name="resource_agent", span_type="CHAIN", evaluator=resource_evaluator)
@@ -368,8 +375,8 @@ def response_evaluator(span):
     output = span.outputs or {}
     return {
         "response_length": len(output.get("message", "")),
-        "has_all_audiences": 1.0 if len(output.get("audiences", [])) >= 2 else 0.0,
-        "has_action_items": 1.0 if output.get("action_items") else 0.0,
+        "response_has_all_audiences": 1.0 if len(output.get("audiences", [])) >= 2 else 0.0,
+        "response_has_action_items": 1.0 if output.get("action_items") else 0.0,
     }
 
 @add_tracing(name="response_agent", span_type="CHAIN", evaluator=response_evaluator)
@@ -392,27 +399,35 @@ ETA: {resources.get('eta', 'Unknown')}"""
 
 ```python
 def pipeline_evaluator(span):
-    """Scores the whole pipeline's output (span.outputs of triage_incident)."""
+    """Scores the whole pipeline's output (span.outputs of triage_incident).
+
+    Runs after the four agent evaluators and writes to the same trace, so every name here
+    must differ from theirs (classifier_*, impact_*, resource_*, response_*)."""
     output = span.outputs or {}
     classification = output.get("classification", {})
     impact = output.get("impact", {})
     resources = output.get("resources", {})
     response = output.get("response", {})
 
+    confidence = classification.get("confidence")
+    raw_impact = impact.get("score")
+    if not isinstance(confidence, (int, float)) or not isinstance(raw_impact, (int, float)):
+        return {"pipeline_incomplete": 1.0}          # do not invent scores for missing fields
+
     scores = {
-        "classification_confidence": float(classification.get("confidence", 0.0)),
-        "impact_score": float(impact.get("score", 0)) / 10.0,
-        "resource_coverage": min(len(resources.get("responders", [])) / 3, 1.0),
-        "meets_sla": 1.0 if resources.get("meets_sla", False) else 0.0,
-        "response_completeness": (
+        "pipeline_classification_confidence": float(confidence),
+        "pipeline_impact_score": float(raw_impact) / 10.0,            # 0-1, unlike impact_raw_score
+        "pipeline_resource_coverage": min(len(resources.get("responders", [])) / 3, 1.0),
+        "pipeline_meets_sla": 1.0 if resources.get("meets_sla", False) else 0.0,
+        "pipeline_response_completeness": (
             (1.0 if response.get("message") else 0.0) * 0.4
             + min(len(response.get("audiences", [])) / 2, 1.0) * 0.3
             + min(len(response.get("action_items", [])) / 3, 1.0) * 0.3
         ),
     }
     scores["overall_quality"] = (
-        scores["classification_confidence"] * 0.25 + scores["impact_score"] * 0.25
-        + scores["resource_coverage"] * 0.25 + scores["response_completeness"] * 0.25
+        scores["pipeline_classification_confidence"] * 0.25 + scores["pipeline_impact_score"] * 0.25
+        + scores["pipeline_resource_coverage"] * 0.25 + scores["pipeline_response_completeness"] * 0.25
     )
     return scores
 ```
@@ -456,19 +471,17 @@ TEST_INCIDENTS = [
 
 def main():
     aggregated = [
-        ("classification_confidence", "mean"),
-        ("classification_confidence", "min"),
-        ("impact_score", "median"),
-        ("meets_sla", "mean"),
+        ("classifier_confidence", "mean"),
+        ("classifier_confidence", "min"),
+        ("impact_raw_score", "median"),
+        ("resource_meets_sla", "mean"),
         ("overall_quality", "mean"),
         ("overall_quality", "stdev"),
     ]
 
-    if mlflow.get_experiment_by_name(EXPERIMENT) is None:
-        mlflow.create_experiment(EXPERIMENT)
+    mlflow.set_experiment(EXPERIMENT)        # creates the experiment on first use, then makes it active
 
-    with DominoAgentContext(experiment_name=EXPERIMENT, agent_config_path="config.yaml",
-                            custom_summary_metrics=aggregated) as run:
+    with DominoAgentContext(agent_config_path="config.yaml", custom_summary_metrics=aggregated) as run:
         results = []
         for incident in TEST_INCIDENTS:
             print(f"\nProcessing: {incident['id']} - {incident['title']}")
@@ -493,22 +506,22 @@ if __name__ == "__main__":
 3. Each `triage_pipeline` trace shows the four agent spans, each with its autologged OpenAI call:
 
 ```
-triage_pipeline (AGENT)            scores: classification_confidence, impact_score, ..., overall_quality
-├── classifier_agent (CHAIN)       scores: classification_confidence, valid_category, ...
-│   └── Completions (LLM)
+triage_pipeline (AGENT)
+├── classifier_agent (CHAIN)
+│   └── Completions (CHAT_MODEL)
 ├── impact_agent (CHAIN)
-│   └── Completions (LLM)
+│   └── Completions (CHAT_MODEL)
 ├── resource_agent (CHAIN)
-│   └── Completions (LLM)
+│   └── Completions (CHAT_MODEL)
 └── response_agent (CHAIN)
-    └── Completions (LLM)
+    └── Completions (CHAT_MODEL)
 ```
 
-Only the outermost decorated function's evaluator runs on the whole output; each inner agent's evaluator scores its own span. The run's metrics page shows the aggregates named `<statistic>_<metric>`:
+All five evaluators' metrics appear together on the trace (`classifier_*`, `impact_*`, `resource_*`, `response_*`, `pipeline_*`, `overall_quality`); none is attached to an individual span. The run's metrics page shows the aggregates named `<statistic>_<metric>`:
 
-- `mean_classification_confidence`, `min_classification_confidence`
-- `median_impact_score`
-- `mean_meets_sla`
+- `mean_classifier_confidence`, `min_classifier_confidence`
+- `median_impact_raw_score`
+- `mean_resource_meets_sla`
 - `mean_overall_quality`, `stdev_overall_quality`
 
 Change `config.yaml` (model, temperatures), run the Job again, then select both runs and **Compare**.
@@ -518,6 +531,8 @@ Change `config.yaml` (model, temperatures), run the Job again, then select both 
 ```text
 mlflow==3.2.0
 dominodatalab[data,agents]==2.2.0
+opentelemetry-sdk<1.36
+opentelemetry-api<1.36
 openai==1.97.1
 pyyaml==6.0.2
 ```

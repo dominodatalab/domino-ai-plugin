@@ -22,18 +22,20 @@ reference, use the `domino-genai-tracing` skill.
 
 ## Steps
 
-1. **Check requirements.** Run `python -c "import mlflow, domino.agents; print(mlflow.__version__)"`.
-   The Domino Standard Environment on 6.3 and Cloud ships the agents SDK; if the import fails or
-   the version is below 3.2.0, add both pins to the environment's Dockerfile instructions (or
-   `requirements.txt`). The `agents` extra of dominodatalab 2.2.0 requires mlflow 3.2.x:
+1. **Check requirements.** The Domino Standard Environment on 6.3 and Cloud ships the agents SDK,
+   but the examples need `dominodatalab` 2.1.0 or later (`span_type` on `@add_tracing`), mlflow
+   3.2.x, and `opentelemetry-sdk` below 1.36 (mlflow 3.2.0 cannot end spans with a newer one):
 
-   ```dockerfile
-   RUN pip install mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0"
+   ```bash
+   python -c "import importlib.metadata as m; print({p: m.version(p) for p in ('dominodatalab', 'mlflow', 'opentelemetry-sdk')})"
    ```
 
-   If traces later fail with `Failed to end span ...: 'MlflowV3SpanProcessor' object has no
-   attribute '_shutdown'`, the OpenTelemetry SDK is too new for mlflow 3.2.0; add
-   `"opentelemetry-sdk<1.36" "opentelemetry-api<1.36"` to the same install line.
+   If anything is missing or outside those ranges, add the pinned set to the environment's
+   Dockerfile instructions (or `requirements.txt`); the four pins belong together:
+
+   ```dockerfile
+   RUN pip install mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0" "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
+   ```
 
 2. **Copy helpers** from this skill's `assets/` folder next to the agent's entry point:
    - `assets/tracing_setup.py`: `setup_tracing(framework)`, `create_evaluator()`,
@@ -60,10 +62,10 @@ client = OpenAI()
 def quality_evaluator(span):
     """Span evaluator: span.inputs is a dict of the call's arguments, span.outputs its return value."""
     output = span.outputs or {}
-    return {
-        "response_length": len(output.get("response", "")),
-        "confidence": output.get("confidence", 0.0),
-    }
+    scores = {"response_length": len(output.get("response", ""))}
+    if isinstance(output.get("confidence"), (int, float)):   # report it only when the agent set it
+        scores["confidence"] = float(output["confidence"])
+    return scores
 
 @add_tracing(name="my_agent", span_type="AGENT", evaluator=quality_evaluator)
 def my_agent(query: str) -> dict:
@@ -75,9 +77,9 @@ def my_agent(query: str) -> dict:
 
 if __name__ == "__main__":
     aggregated_metrics = [("response_length", "mean"), ("confidence", "mean"), ("confidence", "min")]
+    mlflow.set_experiment("my-agent-eval")        # creates the experiment if it does not exist
 
     with DominoAgentContext(
-        experiment_name="my-agent-eval",          # optional; must already exist, else omit it
         agent_config_path="config.yaml",
         custom_summary_metrics=aggregated_metrics,
     ) as run:                                      # run is the mlflow ActiveRun
@@ -90,9 +92,10 @@ if __name__ == "__main__":
 Facts the example depends on (dominodatalab 2.2.0, `domino/agents`):
 
 - `add_tracing(name, autolog_frameworks=[], evaluator=None, trace_evaluator=None, eagerly_evaluate_streamed_results=True, span_type="UNKNOWN", attributes=None)`. Put it directly on the function, with no decorator in between.
-- The evaluator receives the finished span and returns `{metric: number}`; a string value is stored as a label. If it raises, the SDK logs the error and records nothing: never return a made-up default score.
+- The evaluator receives the finished span and returns `{metric: number}`; a string value is stored as a label. If it raises, the SDK logs the error and records nothing: never return a made-up default score, and omit a metric whose input is missing.
+- Every evaluator result in a call tree is written to the shared **trace**, not to its span; when decorated functions nest, the outer evaluator runs last and overwrites same-named metrics. Give each function's metrics distinct names.
 - Evaluators run only in development. In a deployed agent (`DOMINO_AGENT_IS_PROD=true`) the SDK skips them; score production traces out of band (`domino-genai-tracing` skill, EVALUATORS.md).
-- `DominoAgentContext` and `DominoRun` take `experiment_name`, `run_id`, `agent_config_path`, `custom_summary_metrics` and nothing else (no `run_name`). `DominoAgentContext` marks the run as an agent version, which the Experiment Manager can deploy when the script ran as a Job. `experiment_name` must name an existing experiment; without it the run goes to the active MLflow experiment.
+- `DominoAgentContext` and `DominoRun` take `experiment_name`, `run_id`, `agent_config_path`, `custom_summary_metrics` and nothing else (no `run_name`). `DominoAgentContext` marks the run as an agent version, which the Experiment Manager can deploy when the script ran as a Job. `experiment_name` must name an experiment that already exists (the SDK raises otherwise); `mlflow.set_experiment(name)` beforehand creates it and makes it the active experiment the run then uses.
 - At exit the context manager logs one run metric per `(metric, statistic)` pair, named `<statistic>_<metric>` (for example `mean_response_length`); statistics are `mean`, `median`, `stdev`, `max`, `min`. Without `custom_summary_metrics` it logs the mean of every metric.
 
 ## Framework autologging

@@ -19,10 +19,10 @@ What differs is the gateway in front of external providers:
 
 | Deployment | Legacy AI Gateway | LLM Gateway 2.0 |
 |---|---|---|
-| **Domino Cloud** | Removed. No Gateway LLMs UI, no `/api/aigateway/*` routes (they return 404), no gateway audit trail. MLflow Deployment Client code against a gateway endpoint fails. | Successor; on request from the Domino field team, deployed as a Domino App. |
+| **Domino Cloud** | Removed: no Gateway LLMs UI, no `/api/aigateway/*` routes, no audit trail; MLflow Deployment Client code against it fails. | Successor; on request from the Domino field team, deployed as a Domino App. |
 | **Domino 6.3** | Present but off by default; works only where an administrator enabled it. | Same as Cloud. |
 
-Find the deployment: `GET $DOMINO_API_HOST/version` (unauthenticated; the route `python-domino` itself uses) returns JSON with a `version` field. `6.3.x` is self-managed 6.3; Cloud reports a later build (`6.4.0` at the time of writing). On 6.3, a `GET $DOMINO_API_HOST/api/aigateway/v1/endpoints` with a bearer token that returns 404 means the gateway is not enabled; do not try to enable it. Below 6.3 this skill does not apply: say so and point to docs.dominodatalab.com for that version. Never tell the user to reinstall or change the plugin.
+Find the deployment: `GET $DOMINO_API_HOST/version` (the route `python-domino` uses; send the bearer) returns JSON with a `version` field. `6.3.x` is self-managed 6.3; Cloud reports a later build (`6.4.0` at the time of writing). On 6.3, whether the legacy gateway is enabled is an administrator setting: confirm it in the UI (**Develop** > **Gateway LLMs** lists endpoints only where it is on) or with the administrator. Do not infer it from a 404: in a run, `DOMINO_API_HOST` may be a sidecar that lacks some `/api/*` routes (`domino-api-intro`, HOSTS.md), so retry the public deployment URL with a PAT before concluding anything, and never try to enable the gateway yourself. Below 6.3 this skill does not apply: say so and point to docs.dominodatalab.com for that version. Never tell the user to reinstall or change the plugin.
 
 Choose Option A for a frontier model when prompts may leave the cluster; choose Option B when external providers are not permitted, data must stay resident, or the model was fine-tuned in-house. Endpoints are OpenAI-compatible, so OpenAI-style client code moves between the two by changing `base_url` and the key. For agents, `@add_tracing` (`domino-genai-tracing` skill) captures every LLM call wherever the model runs.
 
@@ -84,7 +84,7 @@ The OpenAI Responses API is also supported. Keep the URL in a Domino environment
 
 **Legacy AI Gateway** (6.3 only, where enabled): [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md) covers the Gateway LLMs UI, the MLflow Deployment Client calls it supports, the `/api/aigateway/v1` routes with verified bodies, and the audit download.
 
-**Migrate off the legacy AI Gateway:** (1) find `mlflow.deployments.get_deploy_client(...)`, `predict()`, `get_endpoint()`, `list_endpoints()` calls against a Domino gateway and any `/api/aigateway/` URL; all of it fails on Cloud and on a 6.3 deployment with the gateway disabled. (2) Pick LLM Gateway 2.0 for central tracking, budgets or guardrails, otherwise Option A or B. (3) Move the provider keys the gateway vaulted into Project environment variables (or the LLM Gateway 2.0 configuration) and read them with `os.environ`. (4) Update the calls and rerun the affected Jobs, Apps and agents end to end.
+**Migrating off the legacy AI Gateway** (code using the MLflow Deployment Client or `/api/aigateway/` URLs fails on Cloud and on a 6.3 deployment with the gateway disabled): the steps are in [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md#migrating-away).
 
 Before generating API code, confirm routes against the deployment's own reference at `https://<domino-domain>/docs`; the published specs this skill was checked against are listed in [HOST-AN-LLM-API.md](./HOST-AN-LLM-API.md).
 

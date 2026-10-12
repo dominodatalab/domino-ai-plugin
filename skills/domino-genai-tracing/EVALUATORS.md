@@ -30,6 +30,8 @@ Rules:
 - If an evaluator raises, the SDK logs `Inline evaluation failed for evaluator, <name>` and records nothing for that trace. Let failures raise; do not return invented default scores such as 0.5, which would silently pollute the aggregates.
 - Evaluators run only in development. In a deployed agent (`DOMINO_AGENT_IS_PROD=true`) they are skipped; see "Production evaluation" below.
 - Both evaluators may be given; their results are merged (span results win on name clashes).
+- Results are tags on the **trace**, never on an individual span. When decorated functions nest, every evaluator in the call tree writes to the same trace; inner evaluators run first (when their span ends) and the outermost last, so a metric name shared between them keeps only the last value (verified: an inner `impact_score=7.0` was replaced by the outer `0.7`). Prefix metric names per function.
+- Omit a metric when the field it needs is absent from `span.outputs`; a default such as `0.0` would be aggregated as a real score.
 
 Helpers used in the examples below:
 
@@ -74,15 +76,17 @@ def keyword_evaluator(span):
 ```python
 def confidence_evaluator(span):
     output = span.outputs if isinstance(span.outputs, dict) else {}
-    confidence = float(output.get("confidence", 0.0))
     category = output.get("category", "unknown")
-    return {"confidence": confidence, "has_category": 1.0 if category != "unknown" else 0.0,
-            "category": str(category)}        # string: stored as a label
+    scores = {"has_category": 1.0 if category != "unknown" else 0.0,
+              "category": str(category)}        # string: stored as a label
+    if isinstance(output.get("confidence"), (int, float)):
+        scores["confidence"] = float(output["confidence"])    # omitted when the agent did not report one
+    return scores
 ```
 
 ## LLM-as-judge evaluators
 
-The judge's own model call happens after the agent's span has ended. With autologging enabled it would be traced as a separate trace, so pause autologging around it.
+The judge's own model call happens after the agent's span has ended. With autologging enabled it is traced too: as a separate trace when the decorated function was the top of the call tree, or as a child span of the still-open outer trace when it was nested. Pause autologging around the judge call to keep judge traffic out of the agent's traces. The pause is process-wide (MLflow autologging has no per-thread state), so an agent call running concurrently in another thread loses its LLM spans while a judge runs: keep evaluation loops single-threaded, or move LLM judging to a post-hoc Job (see below). The helper assumes `mlflow.openai.autolog()` was enabled at startup; do not use it otherwise, since it would switch autologging on.
 
 ```python
 from contextlib import contextmanager
@@ -90,6 +94,7 @@ import mlflow
 from openai import OpenAI
 
 judge_client = OpenAI()
+mlflow.openai.autolog()          # enabled at startup; autolog_paused() restores this state
 
 @contextmanager
 def autolog_paused():
@@ -178,11 +183,12 @@ VALID = {"bug", "feature", "question", "other"}
 
 def classification_evaluator(span):
     output = span.outputs if isinstance(span.outputs, dict) else {}
-    category = output.get("category", "")
-    confidence = float(output.get("confidence", 0.0))
-    return {"is_valid_category": 1.0 if category in VALID else 0.0,
-            "classification_confidence": confidence,
-            "high_confidence": 1.0 if confidence > 0.8 else 0.0}
+    scores = {"is_valid_category": 1.0 if output.get("category", "") in VALID else 0.0}
+    confidence = output.get("confidence")
+    if isinstance(confidence, (int, float)):
+        scores["classification_confidence"] = float(confidence)
+        scores["high_confidence"] = 1.0 if confidence > 0.8 else 0.0
+    return scores
 ```
 
 ### RAG
@@ -306,8 +312,10 @@ while True:
 def create_threshold_evaluator(threshold: float):
     def evaluator(span):
         output = span.outputs if isinstance(span.outputs, dict) else {}
-        confidence = float(output.get("confidence", 0.0))
-        return {"meets_threshold": 1.0 if confidence >= threshold else 0.0, "confidence": confidence}
+        confidence = output.get("confidence")
+        if not isinstance(confidence, (int, float)):
+            return {}                                   # nothing to score; records nothing
+        return {"meets_threshold": 1.0 if confidence >= threshold else 0.0, "confidence": float(confidence)}
     return evaluator
 
 @add_tracing(name="agent", evaluator=create_threshold_evaluator(0.9))

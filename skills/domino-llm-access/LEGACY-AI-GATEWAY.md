@@ -1,6 +1,6 @@
 # Legacy AI Gateway (Domino 6.3, only where enabled)
 
-Applies to Domino 6.3 **only where an administrator has explicitly enabled the AI Gateway**. It is not enabled by default in 6.3 and has been **removed from Domino Cloud**: on Cloud the Gateway LLMs UI, the `/api/aigateway/*` routes and the gateway audit trail do not exist (a live Cloud deployment returned 404 for `GET /api/aigateway/v1/endpoints` on 2026-10-12, and the Cloud public spec has no `/api/aigateway` path). Before using anything on this page, confirm the deployment is 6.3 (`GET $DOMINO_API_HOST/version`) and that `GET $DOMINO_API_HOST/api/aigateway/v1/endpoints` succeeds with a bearer token. If either check fails, use SKILL.md Option A or B instead; do not try to enable the gateway.
+Applies to Domino 6.3 **only where an administrator has explicitly enabled the AI Gateway**. It is not enabled by default in 6.3 and has been **removed from Domino Cloud**: on Cloud the Gateway LLMs UI, the `/api/aigateway/*` routes and the gateway audit trail do not exist (a live Cloud deployment returned 404 for `GET /api/aigateway/v1/endpoints` on 2026-10-12, and the Cloud public spec has no `/api/aigateway` path). Before using anything on this page, confirm the deployment is 6.3 (`GET $DOMINO_API_HOST/version`, with the bearer) and that the gateway is enabled: **Develop** > **Gateway LLMs** in the UI, or ask the administrator. The routes below are in the 6.3 spec whether or not the gateway is on, and how a disabled gateway answers them has not been observed (it may be 404, an error, or an empty list); a 404 from an in-run host can also mean the sidecar lacks the route (`domino-api-intro`, HOSTS.md), so retry the public deployment URL with a PAT before reading it as "off". If the deployment is not 6.3 or the gateway is not enabled, use SKILL.md Option A or B instead; do not try to enable the gateway.
 
 ## What it is
 
@@ -9,7 +9,7 @@ The legacy AI Gateway is a proxy between Domino executions and external LLM prov
 ## Where it is in the UI
 
 - Users: **Develop** > **Gateway LLMs** lists endpoints (search by name, type, provider or model). Inside a Workspace, the **Gateway LLMs** side panel lists the endpoints available to the user and has a **Copy Code** icon that produces a ready-to-run query snippet.
-- Admins: **Endpoints** > **Gateway LLMs** creates and manages endpoints; the creation modal's second step sets permissions. **Download logs** on that page exports the last six months of endpoint activity as `txt` or `json`.
+- Admins: **Endpoints** > **Gateway LLMs** creates and manages endpoints; the creation modal's second step sets permissions. **Download logs** exports the last six months of endpoint activity as `txt` or `json`; the admin page places the button on **Endpoints** > **Gateway LLMs**, the user page on **Endpoints** > **Gateway Domino endpoints**.
 
 ## How code calls it
 
@@ -32,7 +32,7 @@ There is **no OpenAI-compatible base URL** for the legacy gateway and no `/api/a
 
 Endpoints are addressed by **name**, which must be unique on the deployment.
 
-Create body (required: `endpointName`, `endpointType`, `endpointPermissions`, `modelProvider`, `modelName`, `modelConfig`):
+Create body (required: `endpointName`, `endpointType`, `endpointPermissions`, `modelProvider`, `modelName`, `modelConfig`), taken from the 6.3 spec and not exercised against a live 6.3 deployment:
 
 ```python
 import os
@@ -66,7 +66,12 @@ Admins can also query the audit trail in MongoDB (**Admin** > **Advanced** > **M
 
 ## Migrating away
 
-Cloud has removed the gateway and 6.3 ships it disabled, so treat any gateway code as a migration candidate. Follow "Migrate off the legacy AI Gateway" in SKILL.md: locate MLflow Deployment Client calls, choose LLM Gateway 2.0 (on request), a direct provider SDK, or a Domino-hosted endpoint; move the vaulted credentials to Project environment variables; update the calls; rerun.
+Cloud has removed the gateway and 6.3 ships it disabled, so treat any gateway code as a migration candidate (steps from the LLM Gateway 2.0 docs page):
+
+1. **Find the code.** Search the Project for `mlflow.deployments.get_deploy_client(...)` and for `predict()`, `get_endpoint()` or `list_endpoints()` against a Domino AI Gateway target, and for any `/api/aigateway/` URL. All of it fails on Cloud and on a 6.3 deployment where the gateway is disabled.
+2. **Pick the replacement.** LLM Gateway 2.0 if the team needs centralized tracking, budgets or guardrails; otherwise a provider SDK (SKILL.md Option A) or a Domino-hosted endpoint (Option B).
+3. **Move the credentials.** Provider keys the gateway held in Domino's central vault are no longer reachable through it. Store them as Project environment variables (or as inputs to the LLM Gateway 2.0 configuration) and read them with `os.environ`.
+4. **Update the calls and rerun** the affected Jobs, Apps and agents end to end.
 
 ## Documentation
 

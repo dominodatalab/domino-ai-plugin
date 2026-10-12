@@ -5,9 +5,12 @@ Copy this file next to the agent's entry point. It wraps the Domino agents SDK s
 agent can be traced with @add_tracing, scored by evaluators, and grouped into an
 evaluation run with DominoAgentContext (or DominoRun).
 
-Requirements (pin both; the `agents` extra of dominodatalab 2.2.0 requires mlflow 3.2.x):
+Requirements (pin all four together; the `agents` extra of dominodatalab 2.2.0 requires
+mlflow 3.2.x, and mlflow 3.2.0 cannot end spans with opentelemetry-sdk 1.36 or later):
     mlflow==3.2.0
     dominodatalab[data,agents]==2.2.0
+    opentelemetry-sdk<1.36
+    opentelemetry-api<1.36
 
 Usage:
     from tracing_setup import (setup_tracing, create_evaluator,
@@ -35,6 +38,9 @@ Facts about the SDK (dominodatalab 2.2.0, domino/agents) this file relies on:
     {metric_name: number} (numbers become metrics, strings become labels).
   * If an evaluator raises, the SDK logs the error and records nothing for that trace.
     Do not return made-up default scores on failure.
+  * Evaluator results are tags on the shared trace, not on the span. When decorated functions
+    nest, the outer function's evaluator runs last and overwrites same-named metrics, so give
+    each function's metrics distinct names.
   * Evaluators run only in development: when DOMINO_AGENT_IS_PROD=true (a deployed agent)
     the SDK skips them. Score production traces out of band with search_agent_traces() and
     log_evaluation().
@@ -51,13 +57,17 @@ import mlflow
 
 FRAMEWORKS = ("openai", "anthropic", "langchain")
 DEFAULT_JUDGE_MODEL = "gpt-4o-mini"   # keep in sync with models.judge in config.yaml
+_openai_autolog_enabled = False       # set by setup_tracing("openai"); read by the judge helper
 
 
 def setup_tracing(framework: str = "openai") -> None:
     """Enable MLflow autologging for one LLM framework before any model call is made."""
+    global _openai_autolog_enabled
     if framework not in FRAMEWORKS:
         raise ValueError(f"Unknown framework: {framework!r}. Use one of {FRAMEWORKS}")
     getattr(mlflow, framework).autolog()
+    if framework == "openai":
+        _openai_autolog_enabled = True
     print(f"Enabled {framework} auto-tracing")
 
 
@@ -107,7 +117,17 @@ def create_evaluator(metrics=None):
 
 @contextmanager
 def _openai_autolog_paused():
-    """Keep the judge's own OpenAI call from being traced as a separate trace."""
+    """
+    Keep the judge's own OpenAI call out of the agent's traces.
+
+    Autologging is process-wide: while the judge runs, OpenAI calls in other threads are not
+    traced either. Run evaluation loops single-threaded, or score traces post-hoc in a separate
+    Job (see the domino-genai-tracing skill, EVALUATORS.md). No-op unless setup_tracing("openai")
+    enabled autologging.
+    """
+    if not _openai_autolog_enabled:
+        yield
+        return
     mlflow.openai.autolog(disable=True)
     try:
         yield
