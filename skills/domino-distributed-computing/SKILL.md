@@ -16,7 +16,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-cluste
 
 | Framework | Use for | Not for |
 |---|---|---|
-| Spark | SQL/ETL over large data, MLlib, PySpark | streaming, HDFS-style storage, strict-SLA pipelines (use domino-flows) |
+| Spark | SQL/ETL over large data, MLlib, PySpark | streaming, HDFS-style storage, strict-SLA pipelines (a cluster starts per execution) |
 | Ray | Ray Train, Ray Tune, RLlib, parallel Python | serving (clusters are ephemeral; use a Domino endpoint) |
 | Dask | pandas/NumPy/scikit-learn at scale, custom task graphs | |
 | Open MPI | multi-node, multi-GPU `mpirun` training (Horovod, PyTorch, TF) | Apps, Launchers, endpoints (not supported) |
@@ -32,7 +32,7 @@ Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2
 
 ## Attach a cluster
 
-**UI**: **Workspaces > + Create New Workspace** or **Jobs > Run**, then the **Compute Cluster** step. Settings: **Min / Max workers** (Spark: executors), **Auto-scale workers**, **Worker hardware tier**, **Head / Master / Scheduler hardware tier** (none for MPI), **Cluster compute environment**, **Dedicated local storage per executor** (mounted at `/tmp`, discarded at shutdown). Cluster size is capped by the per-user execution limit minus one slot for the master and one for the execution. Scheduled Jobs take the same settings in their wizard ([domino-jobs](../domino-jobs/SKILL.md)).
+**UI**: **Workspaces > + Create New Workspace** or **Jobs > Run**, then the **Compute Cluster** step. Settings: **Min / Max workers** (Spark: executors), **Auto-scale workers**, **Worker hardware tier**, **Head / Master / Scheduler hardware tier** (none for MPI), **Cluster compute environment**, **Dedicated local storage per executor** (mounted at `/tmp`, discarded at shutdown). Cluster size is capped by the per-user execution limit (master and execution each take a slot). Scheduled Jobs take the same settings in their wizard ([domino-jobs](../domino-jobs/SKILL.md)).
 
 **REST**: `computeCluster` on `POST /api/jobs/v1/jobs` (both specs). Workspaces with clusters are created in the UI.
 
@@ -58,7 +58,7 @@ Required in `computeCluster`: `clusterType`, `computeEnvironmentId`, `workerCoun
 
 ## Connect from your code
 
-Domino injects the connection details; never hard-code hosts.
+Domino injects connection details; never hard-code hosts.
 
 **Spark**: `spark.master` and `spark.driver.host` are preset (do not override); `spark.executor.instances`, `cores` and `memory` follow the cluster settings.
 ```python
@@ -81,22 +81,22 @@ from dask.distributed import Client
 client = Client(f"{os.environ['DASK_SCHEDULER_SERVICE_HOST']}:{os.environ['DASK_SCHEDULER_SERVICE_PORT']}")
 client.wait_for_workers(2)      # optional; client.close() when done, never client.shutdown()
 ```
-`Client()` with no address starts a local cluster inside your container, not the Domino cluster. `client.dashboard_link` does not route through Domino; use the Dask tab.
+`Client()` with no address starts a local cluster in your container, not the Domino cluster. `client.dashboard_link` does not route through Domino; use the Dask tab.
 
 **MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code to the workers; Datasets are already mounted there), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`). Write outputs to a Dataset, not the Project files.
 
-Datasets mounted on the execution are mounted on all cluster nodes at the same path, so a Dataset is the default for distributed reads and writes. Read S3 or another store only where the data already lives: client libraries in both environments, propagated credentials (domino-data-connectivity).
+Datasets mounted on the execution are mounted on all cluster nodes at the same path, so a Dataset is the default for distributed reads and writes. Use S3 or another store only where the data already lives or an outside system reads the output: client libraries in both environments, propagated credentials (domino-data-connectivity).
 
 ## Web UI, autoscaling, lifecycle
 
 - Spark, Ray and Dask web UIs: a dedicated tab in the Workspace, or the Job **Details** tab (needs a data plane enabled for Workspaces on Nexus).
 - Autoscaling scales up when average CPU reaches 80% and down after about 5 minutes of low use (admins can tune); scale-down can discard workers holding intermediate results.
-- The cluster, its `/tmp` storage and anything not written to Datasets, the Project files or external storage are destroyed with the execution.
+- The cluster, its `/tmp` storage and anything not written to a Dataset, the Project files or external storage die with the execution.
 
 ## Troubleshooting
 
 - **Cluster never ready**: the cluster environment lacks the Supported Clusters flag, Python versions differ, the tier has no capacity or is restricted to another cluster type, or the per-user execution limit is hit.
-- **`KeyError` on `RAY_HEAD_SERVICE_HOST` / `DASK_SCHEDULER_SERVICE_HOST`**: no cluster was attached to this execution (a bare `ray.init()` or `Client()` would silently start a local cluster instead).
+- **`KeyError` on `RAY_HEAD_SERVICE_HOST` / `DASK_SCHEDULER_SERVICE_HOST`**: no cluster was attached to this execution (a bare `ray.init()` or `Client()` starts a local cluster instead).
 - **Worker OOM**: bigger worker tier, more workers, fewer shuffles; Spark adds 10% (min 384 MB) overhead per worker on top of the tier memory.
 - **MPI changes not seen on workers**: sync files again; do not run `mpirun` while a sync is in progress.
 

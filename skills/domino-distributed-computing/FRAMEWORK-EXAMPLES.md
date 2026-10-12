@@ -2,13 +2,13 @@
 
 Worked code for Spark, Ray and Dask on Domino on-demand clusters. Connecting to each cluster, environments and cluster settings: [SKILL.md](./SKILL.md). Every example assumes the connection snippet from SKILL.md has run.
 
-Dataset paths: `/mnt/data/<dataset>` in a Git-based Project, `/domino/datasets/local/<dataset>` in a DFS Project; both are mounted on the cluster nodes at the same path. Project files (`/mnt`, `/mnt/code`, `/mnt/artifacts`) exist only on the execution container, never on cluster nodes, so distributed reads and writes use a Dataset. Read object storage (`s3a://`, `s3://`) only for data that already lives there: it needs the connector libraries in both environments and credentials (AWS credential propagation, when enabled, puts a profile on every node; never paste keys into code).
+Dataset paths: `/mnt/data/<dataset>` in a Git-based Project, `/domino/datasets/local/<dataset>` in a DFS Project; both are mounted on the cluster nodes at the same path. Project files (`/mnt`, `/mnt/code`, `/mnt/artifacts`) exist only on the execution container, never on cluster nodes, so distributed reads and writes use a Dataset by default. Use object storage (`s3a://`, `s3://`) only where the data already lives or a system outside Domino reads the output, since a Data Source cannot be used from executors: it needs the connector libraries in both environments and credentials (AWS credential propagation, when enabled, puts a profile on every node; never paste keys into code).
 
 ## Apache Spark
 
 ### Read, transform, write
 
-Spark tasks run on the executors, so read and write Dataset paths (with the `file:///` prefix the docs use), or object storage that already holds the data. Anything that must become a Job result is collected to the driver first.
+Spark tasks run on the executors, so read and write Dataset paths (with the `file:///` prefix the docs use), or object storage that already holds the data or that a system outside Domino reads. Anything that must become a Job result is collected to the driver first.
 
 ```python
 import os
