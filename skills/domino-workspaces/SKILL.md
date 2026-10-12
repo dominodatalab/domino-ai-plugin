@@ -64,11 +64,11 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.
 
 ## Manage Workspaces
 
-**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (compute stops; storage persists and still bills), **Start** to resume (restricted Projects switch to the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (user docs: 10 days stopped, then a 30-day grace period with notifications). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
+**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (compute stops; storage persists and still bills), **Start** to resume (restricted Projects switch to the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (user docs: 10 days stopped, then a 30-day grace period). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
 
 ## Coding assistants and extra apps
 
-- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login; where LLM Gateway 2.0 is installed, route them through it (`domino-llm-gateway`). Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
 - Only the IDE port (8888) is proxied; jupyter-server-proxy (in the DSE) exposes other ports at `https://<browser URL>/<owner>/<project>/notebookSession/$DOMINO_RUN_ID/proxy/<port>/`. The App Preview tab is the way to develop a Domino App.
 
 ## Troubleshooting
