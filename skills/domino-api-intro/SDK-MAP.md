@@ -27,7 +27,7 @@ Domino can route many platform APIs through a run-local listener (port 8763). Wh
 
 **Not** the same as the platform API gateway. AI Gateway proxies calls to external LLM vendors (OpenAI, Bedrock, and others) with Domino-managed keys:
 
-[ai-gateway](../domino-ai-gateway/SKILL.md)
+[domino-llm-access](../domino-llm-access/SKILL.md)
 
 GenAI model products and inference vanity paths: [model-endpoints](../domino-model-endpoints/SKILL.md).
 

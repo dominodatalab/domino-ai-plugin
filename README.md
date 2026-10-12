@@ -345,7 +345,7 @@ Requires `uv`.
 | `domino-governance` | Policies, bundles, and evidence for model risk governance |
 | `domino-flows` | Flyte-based workflow orchestration |
 | `domino-distributed-computing` | Spark, Ray, Dask cluster management |
-| `domino-ai-gateway` | LLM proxy for OpenAI, Bedrock, etc. |
+| `domino-llm-access` | Call LLMs from Domino: provider SDKs, Domino-hosted vLLM endpoints, LLM Gateway 2.0, legacy AI Gateway (6.3) |
 | `domino-launchers` | Parameterized web forms for self-service |
 | `domino-modeling-assistant` | MCP server for AI-assisted model development |
 | `domino-data-connectivity` | S3 Mountpoint, AWS IRSA, Azure credentials |

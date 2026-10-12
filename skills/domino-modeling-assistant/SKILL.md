@@ -1,75 +1,65 @@
 ---
 name: domino-modeling-assistant
-description: Enable AI-assisted model development within Domino by writing needed model and training code and using MCP (Model Context Protocol) servers to execute domino jobs. AI coding assistants like Cursor and GitHub Copilot can execute commands as Domino jobs, maintaining security, governance, and reproducibility. Use when setting up AI code assistants to work with Domino, configuring MCP servers, or enabling vibe modeling workflows.
+description: Enable AI-assisted model development (vibe modeling) in Domino. The assistant writes the data-analysis, model and training code and uses the bundled Domino MCP server to run it as Domino Jobs, check job status and output, and read, upload and sync files for DFS projects, so work stays reproducible, governed and tracked in Experiment Manager. Use when setting up an AI coding assistant to work with Domino, configuring or troubleshooting the Domino MCP server, or when the user asks to analyze a dataset, train or compare models, or run scripts as Domino Jobs from a coding assistant.
+compatibility: Domino 6.3 and Domino Cloud. Inside a Domino Workspace the bundled MCP server calls the platform through DOMINO_API_PROXY with no credentials; outside Domino it needs DOMINO_HOST and DOMINO_TOKEN (a Personal Access Token or service account token).
 ---
 
-# Introduction
+# Modeling assistant
 
-This skill provides comprehensive knowledge for enabling modeling assistant within Domino Data Lab, allowing AI coding assistants to interact with the platform.
+Applies to Domino 6.3 and Domino Cloud.
 
-Vibe modeling refers to using AI code assistants to go beyond pure code generation and assist with:
+This skill enables a modeling assistant within Domino Data Lab: an AI coding assistant that writes code and runs it on the platform through the Domino MCP server.
+
+Vibe modeling means using the assistant beyond code generation, for:
 - Experiment setup and configuration
 - Data analysis and exploration
 - Model training and evaluation
 - Results interpretation
 
-## Key Components
+## Key components
 
 ### MCP (Model Context Protocol)
 
-MCP servers bridge AI coding assistants with the Domino platform APIs we typically need for running jobs (because its better to run analysis and training scripts via jobs than locally), checking job activity and results, saving files to DFS (domino file system) in cases where the project isn't using a git repo.
+The Domino MCP server bridges the coding assistant and the Domino platform APIs needed for running Jobs (analysis and training scripts run better as Jobs than on the local terminal), checking job status and output, and reading, uploading and syncing files of a Domino File System (DFS) project when it does not use a Git repository.
 
-The Domino MCP Server is **bundled with this plugin** and starts automatically when the plugin is installed from its source repository. Skills-only distributions don't include it.
+The server is **bundled with this plugin** (`mcp-servers/domino_mcp_server/`, name `domino_server`) and starts automatically when the plugin is installed from its source repository. Skills-only distributions do not include it.
 
-If the `domino_server` tools (such as `run_domino_job`) aren't available in this session, don't pretend to call them. Tell the user, point them at [SETUP.md](./SETUP.md#register-the-server-manually), and meanwhile use the `domino-jobs` and `domino-python-sdk` skills to run work through the Domino REST API.
+If the `domino_server` tools (such as `run_domino_job`) are not available in this session, do not pretend to call them. Tell the user, point them at [SETUP.md](./SETUP.md#register-the-server-manually), and meanwhile use the `domino-jobs` and `domino-python-sdk` skills to run work through the Domino REST API.
 
-- **Inside a Domino workspace:** Authentication and project detection are fully automatic.
-- **Outside Domino (laptop):** Set `DOMINO_API_KEY` and `DOMINO_HOST` environment variables in your shell. See [SETUP.md](./SETUP.md) for details.
+- **Inside a Domino Workspace:** nothing to configure. The server calls the platform through `DOMINO_API_PROXY` (no `Authorization` header; the proxy adds the user's token) and reads the project from `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_IS_GIT_BASED`. On hosts that start MCP servers with a stripped environment (Codex), it recovers these variables from its parent process.
+- **Outside Domino (laptop, CI):** set `DOMINO_HOST` (the deployment's HTTPS URL) and `DOMINO_TOKEN` (a Personal Access Token or service account token, sent as `Authorization: Bearer`). When the host does not pass environment variables, the server reads `$DOMINO_MCP_ENV_FILE`, else `~/.config/domino-mcp-server/.env`. Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated and not accepted. See [SETUP.md](./SETUP.md).
 
-## Related Documentation
+Tool failures (missing variable, 401/403, conflict, file too large) come back as MCP tool errors whose message says what to fix; relay it to the user instead of retrying blindly.
 
-- [SETUP.md](./SETUP.md) - Complete setup guide for the modeling assistant
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/modeling-assistant (6.3: replace `cloud` with `6.3`).
 
+## Important considerations
 
-## Important Considerations
+You are a Domino Data Lab powered agentic coding tool that helps write code in addition to running tasks on the Domino Data Lab platform on behalf of the user using the tool functions provided by the `domino_server` MCP server. Whenever possible run commands as Domino Jobs rather than on the local terminal.
 
-You are a Domino Data Lab powered agentic coding tool that helps write code in addition to running tasks on the Domino Data Lab platform on behalf of the user using available tool functions provided by the domino_server MCP server. Whenever possible run commands as domino jobs rather than on the local terminal.
+At the start of every session, call `get_domino_environment_info`. It tells you whether you are inside a Domino Workspace or on a laptop, the project owner, name and id, whether the project is Git-based or DFS, which authentication mode is active, and what is missing. Inside a Workspace everything is auto-detected; you do not need `domino_project_settings.md`. Outside Domino, fall back to `domino_project_settings.md` for the project name, user name, and dfs setting.
 
-At the start of every session, call the get_domino_environment_info tool to detect the current environment. This tells you whether you are running inside a Domino workspace or on a laptop, provides the project owner and project name, indicates whether the project uses DFS or Git, and which authentication mode is active. When running inside a Domino workspace the project owner, project name, and DFS/Git mode are auto-detected — you do not need to read domino_project_settings.md. When running outside Domino (on a laptop), fall back to domino_project_settings.md for the project name, user name, and dfs setting.
+After `run_domino_job`, poll `check_domino_job_run_status` with the returned `run_id` until it is `Succeeded` or `Failed`, then read the output with `check_domino_job_run_results` (`stdOut` by default; use `log_type="stdErr"` when a job failed) and briefly explain the conclusions. If the output includes an MLflow or experiment run URL, share it with the user using `open_web_browser`.
 
-When running a job, always check its status and results if completed and briefly explain any conclusions from the result of the job run. If a job result ever includes an mlflow or experiment run URL, always share that with the user using the open_web_browser tool.
+Assume project data is already in the Domino project and accessible from job runs, under `/mnt/data/` or `/mnt/imported/data/` (Git-based) or `/domino/datasets/` (DFS); confirm the full path by running a job that lists the folder contents recursively. Always create scripts to understand and transform data and run them as jobs; print analytical output as plain-text tables on stdout so job results are easy to check. Do not delete analysis scripts; save summary charts as image files in the project.
 
-Any requests related to understanding or manipulating project data should assume a dataset file is already part of the domino project and accessible via job runs. Always create scripts to understand and transform data via job runs. The script can assume all project data is accessible under the '/mnt/data/' directory or the '/mnt/imported/data/' directory, be sure to understand the full path to a dataset file before using it by running a job to list all folder contents recursively. Analytical outputs should be in plain text tabular format sent to stdout, this makes it easier to check results from the job run.
+Always check whether the local project has uncommitted changes. For Git-based projects, commit and push before running any Domino job, otherwise Domino cannot see the new files. For DFS-based projects, use the MCP server file tools instead of git before running any jobs: prefer `smart_sync_file`, which detects conflicts; it never replaces a remote file it has not seen in this session unless `force_overwrite=True`, and a conflict returns the remote content so you can merge. `upload_file_to_domino_project` and `sync_local_file_to_domino` refuse to replace an existing, different file unless `overwrite=True`. Do not force an overwrite without telling the user what will be replaced.
 
-If the project is DFS instead of Git based (auto-detected inside Domino, or dfs=true in domino_project_settings.md when outside Domino), the datasets path is under /domino/datasets/*
+When training a model, use MLflow instrumentation and assume the tracking server is configured by Domino; do not set a tracking URI.
 
-Any scripts used to analyze or transform data within a Domino project should not be deleted. When performing analysis, generate useful summary charts in an image format and save to the project files.
-
-Always check if our local project has uncommitted changes. For Git-based projects, you must commit and push changes before attempting to run any domino jobs otherwise domino can't see the new file changes. For DFS-based projects (auto-detected or dfs=true in domino_project_settings.md), use the MCP Server file sync functions (upload_file_to_domino_project, smart_sync_file, etc.) instead of git before running any jobs.
-
-When training a model use mlflow instrumentation assuming a server is running, no need to set the url or anything, it should just work.
-
-
-If domino_project_settings.md is not present, the owner and project_name can potentially be determined by environment variables if running inside a Domino workspace:
-
-DOMINO_PROJECT_NAME
-DOMINO_PROJECT_OWNER
-
-## MCP Server Tools
-
-The Domino MCP Server (bundled at `mcp-servers/domino_mcp_server/`) provides tools for interacting with jobs and the DFS file system (if not using git).
+## MCP server tools
 
 | Tool | Description |
 |------|-------------|
-| `get_domino_environment_info` | Detect workspace vs laptop, project info, auth mode |
-| `run_domino_job` | Execute commands as Domino jobs |
-| `check_domino_job_run_status` | Check if a job is finished, in-progress, or errored |
-| `check_domino_job_run_results` | Retrieve stdout results from a completed job |
-| `open_web_browser` | Open a URL (e.g. MLflow experiment link) in the browser |
-| `list_domino_project_files` | List files in a DFS project |
-| `upload_file_to_domino_project` | Upload a file to a DFS project |
-| `download_file_from_domino_project` | Download a file from a DFS project |
-| `sync_local_file_to_domino` | Read a local file and upload it to a DFS project |
-| `smart_sync_file` | Upload with conflict detection for DFS projects |
+| `get_domino_environment_info()` | Inside or outside Domino, project owner, name and id, Git-based or DFS, auth mode, what is missing |
+| `run_domino_job(user_name, project_name, run_command, title)` | Start a Job with one command string; returns the `run_id` |
+| `check_domino_job_run_status(run_id, user_name=None, project_name=None)` | Execution status (`Queued`, `Running`, `Succeeded`, `Failed`, ...) |
+| `check_domino_job_run_results(run_id, user_name=None, project_name=None, log_type="stdOut")` | Job output; `log_type` is `stdOut`, `stdErr`, `prepareOutput` or `complete` |
+| `open_web_browser(url)` | Open a URL in the default browser of the machine running the server (no-op in a Workspace) |
+| `list_domino_project_files(user_name, project_name, path="/")` | Files and subdirectories of one directory of a DFS project (not recursive) |
+| `download_file_from_domino_project(...)` | Content of a text file at the latest commit; remembers the version for `smart_sync_file` |
+| `upload_file_to_domino_project(..., overwrite=False)` | Create a text file; replaces an existing one only with `overwrite=True` |
+| `sync_local_file_to_domino(..., overwrite=False)` | Read a local file and upload it (same overwrite rule) |
+| `smart_sync_file(..., force_overwrite=False)` | Upload with conflict detection; `no_change`, uploaded, or conflict with the remote content returned |
 
-Upstream source: https://github.com/dominodatalab/domino_mcp_server
+A job id and a run id are the same value. Files are UTF-8 text up to 2 MiB; paths are project-relative. Full tool reference and routes: `mcp-servers/domino_mcp_server/README.md` in the plugin repository. Upstream source: https://github.com/dominodatalab/domino_mcp_server

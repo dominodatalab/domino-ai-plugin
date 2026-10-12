@@ -1,25 +1,26 @@
 # GenAI Tracing Setup for Domino
 
-This guide covers setting up the environment and SDK for GenAI tracing in Domino Data Lab.
+Environment and SDK setup for GenAI tracing on Domino 6.3 and Domino Cloud.
 
-## Environment Requirements
+## Environment requirements
 
-### Compute Environment Setup
+The agents SDK (`domino.agents`) ships in the Domino Standard Environment from Domino 6.2, together with a compatible MLflow. Check before changing anything:
 
-**IMPORTANT**: Domino Standard Environments (DSEs) include an older MLflow version. You must create a custom environment with MLflow 3.2.0 for GenAI tracing.
+```bash
+python -c "import mlflow, domino.agents; print(mlflow.__version__)"
+```
 
-Add to your Dockerfile:
+If the import fails or MLflow is below 3.2.0, add the pinned pair to a custom Compute Environment. The `agents` extra of `dominodatalab` 2.2.0 requires `mlflow-skinny` and `mlflow-tracing` `>=3.2.0,<3.3.0`, so pin MLflow to 3.2.x alongside it.
+
+Dockerfile instructions:
 
 ```dockerfile
 USER root
 
-# Install MLflow 3.2.0 (required for GenAI tracing)
-RUN pip install mlflow==3.2.0
+# MLflow 3.2.x and the Domino SDK with agents (tracing) support, pinned together
+RUN pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0"
 
-# Install Domino SDK with agents (tracing) support
-RUN pip install --no-cache-dir "dominodatalab[data,agents]==2.2.0"
-
-# Install your LLM framework (choose one or more; latest versions MLflow 3.2.0 autologging supports)
+# Your LLM framework(s); versions that MLflow 3.2.0 autologging supports
 RUN pip install openai==1.97.1
 RUN pip install anthropic==0.59.0
 RUN pip install langchain==0.3.27
@@ -27,10 +28,9 @@ RUN pip install langchain==0.3.27
 USER ubuntu
 ```
 
-### Requirements File Alternative
+`requirements.txt` alternative:
 
 ```text
-# requirements.txt
 mlflow==3.2.0
 dominodatalab[data,agents]==2.2.0
 openai==1.97.1
@@ -38,31 +38,33 @@ anthropic==0.59.0
 langchain==0.3.27
 ```
 
-## Framework Auto-Logging
+Pin the OpenTelemetry SDK too if traces fail to end (see Troubleshooting).
 
-Enable auto-tracing for your LLM framework before making any calls. **Each framework should be in its own try/except** so one failure doesn't block the others:
+## Framework auto-logging
+
+Enable auto-tracing for the LLM framework before the first model call. Either pass the framework to the decorator, which calls `mlflow.<framework>.autolog()` once on the first traced call:
+
+```python
+@add_tracing(name="agent", autolog_frameworks=["openai", "anthropic"])
+```
+
+or call autolog yourself at startup. Each framework in its own `try/except` so one missing package does not block the others:
 
 ```python
 import mlflow
 
-# Each autolog in its own try/except
-try:
-    mlflow.openai.autolog()
-except Exception:
-    pass
-try:
-    mlflow.anthropic.autolog()
-except Exception:
-    pass
-try:
-    mlflow.langchain.autolog()
-except Exception:
-    pass
+for fw in ("openai", "anthropic", "langchain"):
+    try:
+        getattr(mlflow, fw).autolog()
+    except Exception as exc:
+        print(f"autolog({fw}) skipped: {exc}")
 ```
 
-### Where to Call autolog
+Supported values include `openai`, `anthropic`, `langchain`, `pydantic_ai`, `llama_index` and the other MLflow tracing integrations. Anthropic autologging may not capture every call; add manual spans where needed.
 
-**Deployed Apps (FastAPI/Flask):** In the app lifespan, before any requests are handled:
+### Where to call autolog
+
+**Deployed agent (FastAPI or Flask app):** at startup, before requests are handled, and nothing else. No `mlflow.set_experiment()`: the SDK selects `agent_experiment_<app id>` when Domino sets `DOMINO_AGENT_IS_PROD=true` and `DOMINO_APP_ID`.
 
 ```python
 import mlflow
@@ -71,13 +73,8 @@ from fastapi import FastAPI
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Enable autolog — NO mlflow.set_experiment() for deployed apps
     try:
         mlflow.openai.autolog()
-    except Exception:
-        pass
-    try:
-        mlflow.anthropic.autolog()
     except Exception:
         pass
     yield
@@ -85,177 +82,140 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-**Batch scripts / Jobs:** At the top of your script, before any LLM calls:
+**Evaluation scripts and Jobs:** at the top of the script, before any LLM call. `mlflow.set_experiment()` or `experiment_name=` on the context manager is fine here; the run goes to that experiment.
+
+## Verifying setup
 
 ```python
 import mlflow
-
-mlflow.openai.autolog()
-mlflow.anthropic.autolog()
+from domino.agents.tracing import add_tracing, search_traces, search_agent_traces
+from domino.agents.logging import DominoAgentContext, DominoRun, log_evaluation
+print("mlflow", mlflow.__version__)      # 3.2.x
 ```
 
-### Important: Do NOT Call mlflow.set_experiment() in Deployed Apps
-
-Domino auto-creates an experiment named `agent_experiment_{app_id}` for each deployed App. The App Performance tab reads traces from this experiment. If you call `mlflow.set_experiment("my-custom-name")`, traces are redirected to your custom experiment and the Performance tab won't see them.
-
-```python
-# BAD — deployed app, overrides auto-routing
-mlflow.set_experiment("my-agent-experiment")  # Performance tab won't see traces
-
-# GOOD — deployed app, let Domino handle routing
-# Just call autolog, nothing else
-```
-
-For development/evaluation scripts, `mlflow.set_experiment()` is fine — traces go to the Experiments UI.
-
-## Verifying Setup
-
-### Check MLflow Version
-
-```python
-import mlflow
-print(f"MLflow version: {mlflow.__version__}")
-# Should print: MLflow version: 3.2.0
-```
-
-### Check Domino SDK
+Then trace one call. `@add_tracing` creates the trace on its own; no context manager is needed to see it:
 
 ```python
 from domino.agents.tracing import add_tracing
-from domino.agents.logging import DominoRun
-print("Domino SDK with agents support installed successfully")
-```
+from openai import OpenAI
 
-### Test Basic Tracing
-
-```python
-from domino.agents.tracing import add_tracing
+client = OpenAI()
 
 @add_tracing(name="test_agent", span_type="AGENT", autolog_frameworks=["openai"])
 def test_agent(query: str) -> str:
-    from openai import OpenAI
-    client = OpenAI()
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": query}]
-    )
+        model="gpt-4o-mini", messages=[{"role": "user", "content": query}])
     return response.choices[0].message.content
 
-# @add_tracing creates the trace — no DominoRun needed
-result = test_agent("Say hello")
-print(f"Result: {result}")
+print(test_agent("Say hello"))
 ```
 
-## Environment Variables
+In a Workspace the trace lands in the active MLflow experiment; open **Experiments** and look for it.
 
-### API Keys
+## Environment variables
 
-Store API keys as Domino environment variables (never in code):
+### Provider keys
+
+Store API keys as Domino environment variables (Project settings), never in code:
 
 ```python
 import os
-
-# Access in your code
-openai_key = os.environ.get("OPENAI_API_KEY")
-anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+openai_key = os.environ["OPENAI_API_KEY"]
+anthropic_key = os.environ["ANTHROPIC_API_KEY"]
 ```
 
-### Domino-Provided Variables
+### Variables the SDK reads
 
-These are automatically available:
+| Variable | Meaning |
+|----------|---------|
+| `MLFLOW_TRACKING_URI` | Set by Domino in every execution; required by the SDK |
+| `DOMINO_API_HOST` | Set by Domino; the SDK reads `GET $DOMINO_API_HOST/version` to check the platform is 6.2 or later |
+| `DOMINO_AGENT_CONFIG_PATH` | Default agent config path when `agent_config_path` is not passed (`./agent_config.yaml` if unset) |
+| `DOMINO_AGENT_IS_PROD` | `true` in a deployed agent: traces go to the agent experiment and inline evaluators are skipped |
+| `DOMINO_APP_ID` | The deployed agent's id; with `DOMINO_AGENT_IS_PROD` selects `agent_experiment_<id>` |
 
-| Variable | Description |
-|----------|-------------|
-| `DOMINO_STARTING_USERNAME` | User who started the run |
-| `DOMINO_PROJECT_NAME` | Current project name |
-| `DOMINO_RUN_ID` | Domino job run ID |
-| `MLFLOW_TRACKING_URI` | MLflow tracking server URL |
+Also set by Domino: `DOMINO_STARTING_USERNAME`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_ID`, `DOMINO_RUN_ID`.
 
-## Project Structure
+## Project structure
 
-### Deployed App (FastAPI)
+### Deployed agent (FastAPI)
 
 ```
 my-agent-app/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py            # FastAPI app, lifespan with autolog (NO set_experiment)
+│   │   ├── main.py            # FastAPI app, lifespan with autolog (no set_experiment)
 │   │   ├── agent/
-│   │   │   ├── orchestrator.py # @add_tracing on agent function, mlflow.start_span for tools/LLM
-│   │   │   ├── llm_client.py   # LLM calls wrapped in mlflow.start_span(span_type="LLM")
-│   │   │   └── tools.py        # Tool implementations (no tracing decorators)
+│   │   │   ├── orchestrator.py # @add_tracing on the agent function; mlflow.start_span for tools
+│   │   │   ├── llm_client.py   # LLM calls (autologged, or wrapped in an LLM span)
+│   │   │   └── tools.py        # Tool implementations
 │   │   └── routers/
-│   │       └── agent.py        # Route handler — calls traced function directly, NO DominoRun
+│   │       └── agent.py        # Route handler calls the traced function directly
 │   └── requirements.txt
 ├── frontend/
 └── app.sh                      # Domino App entry point
 ```
 
-### Batch Evaluation Script
+### Batch evaluation script
 
 ```
 my-agent-project/
 ├── agents/
-│   ├── __init__.py
 │   ├── classifier.py      # @add_tracing on agent functions
 │   ├── responder.py
-│   └── evaluators.py      # Custom evaluators
+│   └── evaluators.py      # span and trace evaluators
 ├── config/
-│   └── config.yaml        # Agent configuration
-├── main.py                # Entry point with DominoRun
-├── requirements.txt
-└── Dockerfile             # Custom environment
+│   └── config.yaml        # agent configuration, logged by agent_config_path
+├── sample_questions.csv   # evaluation dataset
+├── main.py                # entry point with DominoAgentContext; run as a Job
+└── requirements.txt
 ```
 
 ## Troubleshooting
 
-### Traces Not Appearing in App Performance Tab
+### Traces missing from the deployed agent's Performance tab
 
-1. **Remove `mlflow.set_experiment()`** — it overrides Domino's auto-routing to `agent_experiment_{app_id}`
-2. **Remove `DominoRun()` wrappers** — they redirect traces to the Experiments UI
-3. **Ensure `@add_tracing` is on the agent function** — this is what creates the trace
-4. **Check that autolog is enabled** — call `mlflow.openai.autolog()` / `mlflow.anthropic.autolog()` in the app lifespan
-5. **Verify MLflow 3.2.0** — older versions don't support GenAI tracing
+1. Remove `mlflow.set_experiment()` and any `DominoAgentContext` / `DominoRun` around request handling; the SDK routes production traces itself.
+2. Confirm `@add_tracing` is on the function that handles the request (it creates the trace).
+3. Confirm autolog is enabled (lifespan, or `autolog_frameworks` on the decorator).
+4. Confirm MLflow is 3.2.x.
 
-### Traces Not Appearing in Experiments UI
+### Traces missing from the Experiments UI
 
-1. Verify MLflow tracking URI is set (automatic in Domino)
-2. Ensure `DominoRun` context manager is used (required for Experiments UI)
-3. Check experiment name matches expected format
-4. Verify auto-logging is enabled before LLM calls
+1. The run must be open while the traced functions execute: put the loop inside the `with DominoAgentContext(...)` block.
+2. `experiment_name=` must name an existing experiment; otherwise the SDK raises before the run starts.
+3. Autolog must be enabled before the first LLM call.
 
-### MLflow Version Mismatch
+### Evaluator scores missing
 
-```
-Error: module 'mlflow' has no attribute 'openai'
-```
+- An evaluator that raises is logged by the SDK as `Inline evaluation failed for evaluator, <name>` and records nothing; fix the evaluator.
+- Inline evaluators never run when `DOMINO_AGENT_IS_PROD=true`; score production traces out of band ([EVALUATORS.md](./EVALUATORS.md)).
+- With a generator function and `eagerly_evaluate_streamed_results=False`, inline evaluators are disabled; use `log_evaluation` afterwards.
 
-**Solution**: Upgrade MLflow to 3.2.0:
+### `Failed to end span ...: 'MlflowV3SpanProcessor' object has no attribute '_shutdown'`
+
+MLflow 3.2.0 cannot end spans with a newer `opentelemetry-sdk` (seen with 1.45; works with 1.35). No traces or aggregated metrics are written. Pin it in the environment:
+
 ```bash
-pip install mlflow==3.2.0
+pip install "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
 ```
 
-### Domino SDK Import Error
+### `module 'mlflow' has no attribute 'openai'` or `No module named 'domino.agents'`
 
-```
-ModuleNotFoundError: No module named 'domino.agents'
-```
-
-**Solution**: Install Domino SDK with agents (tracing) support:
 ```bash
-pip install --no-cache-dir "dominodatalab[data,agents]==2.2.0"
+pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0"
 ```
 
-### API Key Issues
+### `This version of Domino doesn't support the agents package`
 
-```
-openai.AuthenticationError: Incorrect API key provided
-```
+The SDK checked `GET $DOMINO_API_HOST/version` and found a platform older than 6.2. The skill targets Domino 6.3 and later; do not try to work around the check.
 
-**Solution**: Set API keys in Domino environment variables, not in code.
+### `openai.AuthenticationError`
 
-## Next Steps
+Set the provider key as a Domino environment variable, not in code; see the `domino-llm-access` skill.
 
-- [ADD-TRACING-DECORATOR.md](./ADD-TRACING-DECORATOR.md) - Learn about @add_tracing, span_type, mlflow.start_span
-- [DOMINO-RUN.md](./DOMINO-RUN.md) - Learn about DominoRun context (development/evaluation only)
-- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md) - See complete example
+## Next steps
+
+- [ADD-TRACING-DECORATOR.md](./ADD-TRACING-DECORATOR.md): `@add_tracing`, span types, manual spans
+- [DOMINO-RUN.md](./DOMINO-RUN.md): evaluation runs, config file, aggregated metrics
+- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md): complete examples

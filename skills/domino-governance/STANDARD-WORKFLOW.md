@@ -57,7 +57,7 @@ curl -s "$BASE/bundles/$BUNDLE_ID" \
 This reveals the policy's stage structure, attachments, and approval status. **Note**: This does NOT return evidenceSet IDs — see Step 6 for how to discover those.
 
 ### Step 5: Attach Evidence
-See [EVIDENCE-WORKFLOW.md](./EVIDENCE-WORKFLOW.md) for full details. Two attachment types are supported:
+See [EVIDENCE-WORKFLOW.md](./EVIDENCE-WORKFLOW.md) for full details. `type` is one of `ModelVersion`, `Report`, `DatasetSnapshotFile`, `Endpoint`, `NetAppVolumeSnapshotFile`, `FlowArtifact`, `FlowArtifactFile`; the two most common:
 
 ```bash
 # Attach a registered model version

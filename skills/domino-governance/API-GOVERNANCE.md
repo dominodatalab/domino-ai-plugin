@@ -21,8 +21,8 @@ BASE="$HOST$GOV"
 curl -s "$BASE$PREFIX" -H "Authorization: Bearer $TOKEN"
 
 # 3) Public deployment (outside run, or 404 on 1 and 2)
-BASE="https://your-deployment.domino.tech$GOV"
-TOKEN="$PAT_OR_SA_TOKEN"
+BASE="<the deployment's HTTPS URL>$GOV"
+TOKEN="$PAT_OR_SA_TOKEN"   # Personal Access Token or service account token; never a legacy API key
 curl -s "$BASE$PREFIX" -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -45,7 +45,10 @@ All endpoints are under `$BASE` (`/api/governance/v1`). See [Configuration](./SK
 | `/bundles/{bundleId}` | GET | Inspect bundle: stages, attachments, status |
 | `/bundles/{bundleId}` | PATCH | Update bundle `state`, primary `stage` name, or `policyId` |
 | `/bundles` | GET | List all bundles (filter by `projectId`) |
-| `/bundles/{bundleId}/attachments` | POST | Attach evidence after create (model versions, reports) |
+| `/bundles/{bundleId}/attachments` | POST | Attach evidence after create (`type`: ModelVersion, Report, DatasetSnapshotFile, Endpoint, NetAppVolumeSnapshotFile, FlowArtifact, FlowArtifactFile) |
+| `/bundles/{bundleId}/attachments/{attachmentID}` | DELETE | Remove an attachment |
+| `/rpc/bulk-add-attachments` | POST | Add attachments to several bundles in one call |
+| `/attachment-overviews` | GET | List attachments across bundles with bundle context (paginated) |
 | `/bundles/{bundleId}/stages/{stageId}` | PATCH | Update stage **assignee** only (not stage completion) |
 | `/rpc/submit-result-to-policy` | POST | Answer policy evidence questions |
 | `/rpc/compute-policy` | POST | Recompute policy for a bundle (returns `ComputedPolicy`) |

@@ -4,7 +4,7 @@ This document explains how to attach evidence, answer policy questions, and crea
 
 ## Setup
 
-Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . **Do not use API keys**.
+Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . In a run use `DOMINO_API_PROXY` or the `localhost:8899` access token; outside a run a Personal Access Token or service account token. Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) are deprecated; never use them.
 
 Use the first base where `GET $BASE/policy-overviews` returns HTTP 200. Try proxy (no header), then in-run gateway + access-token, then public URL + PAT on 404. Details: [SKILL.md Configuration](./SKILL.md#configuration).
 
@@ -21,7 +21,7 @@ TOKEN=""
 # BASE="$HOST$GOV"
 
 # 3) Public deployment — outside run, or 404 on 1 and 2
-# BASE="https://your-deployment.domino.tech$GOV"
+# BASE="<the deployment's HTTPS URL>$GOV"
 # TOKEN="$PAT_OR_SA_TOKEN"
 ```
 
@@ -31,7 +31,23 @@ Attachments may be inline on `POST /bundles` or added via `POST /bundles/{bundle
 
 ## Attachment Types
 
-The attachments API endpoint is `POST /bundles/{bundleId}/attachments`. It supports **two attachment types**:
+The attachments API endpoint is `POST /bundles/{bundleId}/attachments` with body `{"type": ..., "identifier": {...}, "source": "MANUAL"}` (`source` optional: `AUTO` or `MANUAL`). Both public specs (6.3.1 and 6.4.0) define **seven** attachment types:
+
+| `type` | What it links | `identifier` object |
+|--------|---------------|---------------------|
+| `ModelVersion` | A registered model version | `{"name": "<registered model name>", "version": <int>}` (verified below) |
+| `Report` | A file in the project repository (git or DFS) | `{"branch", "commit", "source": "git" or "DFS", "filename"}` (verified below) |
+| `DatasetSnapshotFile` | A file in a Domino Dataset snapshot | `{"datasetId", "snapshotId", "filename"}` (seen on a live deployment; the UI also adds `datasetName`, `snapshotVersion`, `snapshotCreationTime`) |
+| `Endpoint` | A model endpoint (model API) | Not documented in the spec; see below |
+| `NetAppVolumeSnapshotFile` | A file in a NetApp Volume snapshot | Not documented in the spec; see below |
+| `FlowArtifact` | A Domino Flow artifact | Not documented in the spec; see below |
+| `FlowArtifactFile` | A file inside a Flow artifact | Not documented in the spec; see below |
+
+The spec types `identifier` as an opaque object, so the shapes above come from attachments observed on live deployments. For a type whose shape is not listed, attach one example through the Domino UI (bundle > **Attachments**), read it back with `GET /bundles/{bundleId}` (the `attachments[]` array carries `type` and `identifier`), and reuse that shape. Do not guess field names. Endpoints also have dedicated routes: `POST /bundles/{id}/register-endpoint` and `PUT /bundles/{id}/update-endpoint/{endpointID}`.
+
+Other useful routes: `DELETE /bundles/{bundleId}/attachments/{attachmentID}` removes an attachment; `POST /rpc/bulk-add-attachments` adds attachments to several bundles in one call (`{"attachments": [...], "bundleId": ...}` per entry); `GET /attachment-overviews` lists attachments across bundles with their bundle context.
+
+MLflow experiment runs are not an attachment type. To put MLflow results in a bundle, attach the registered model version (register the run's model first) or export the metrics to a file in the project and attach it as a `Report`.
 
 ### ModelVersion
 
@@ -84,13 +100,10 @@ curl -X POST "$BASE/bundles/$BUNDLE_ID/attachments" \
 
 ### Important Notes on Attachment Types
 
-The only valid types are:
-- `ModelVersion` — with `identifier: {"name": "...", "version": N}`
-- `Report` — with `identifier: {"branch": "...", "commit": "...", "source": "git"|"DFS", "filename": "..."}`
-
-The `identifier` field must be a **JSON object**, not a flat string. Types like "File" or "ExternalLink" are not supported by the API.
-
-**`ModelVersion` identifier:** `name` is the **MLflow registered model name**, not a Domino UUID or model API id. `version` is an integer.
+- `type` must be one of the seven enum values in the table above; values such as `File` or `ExternalLink` are rejected. An uploaded document (PDF, validation report) is attached through the bundle UI, not through this API.
+- The `identifier` field must be a **JSON object**, not a flat string.
+- **`ModelVersion` identifier:** `name` is the **MLflow registered model name**, not a Domino UUID or model API id. `version` is an integer.
+- **`Report` identifier:** `source` is `git` for Git-based projects and `DFS` for DFS projects; `commit` is the commit hash the file is read at.
 
 ---
 

@@ -43,7 +43,7 @@
 # ---------------------------------------------------------------------------------------------
 
 # Agents, coding assistants, LLMs  (docs: features/agents, features/coding-assistants, features/llms)
-/skills/domino-ai-gateway/                     @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
+/skills/domino-llm-access/                     @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
 /skills/domino-genai-tracing/                  @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
 /skills/domino-trace-setup/             @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m
 /skills/domino-modeling-assistant/             @DDL-Theo-Linnemann @etanlightstone-domino @ddl-subir-m

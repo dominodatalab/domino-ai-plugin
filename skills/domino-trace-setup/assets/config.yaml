@@ -1,21 +1,21 @@
-# Domino GenAI Agent Configuration
-# Used with: DominoRun(agent_config_path="config.yaml")
+# Domino agent configuration
+# Used with: DominoAgentContext(agent_config_path="config.yaml")  (or DominoRun)
 #
-# This configuration is logged as MLflow parameters for reproducibility.
-# You can recreate any run by checking its parameters in the Domino UI.
+# The SDK flattens this file (dotted keys, for example models.primary) and logs every
+# value as an MLflow parameter on the evaluation run, so any run can be reproduced from
+# its parameters in the Domino UI. Without agent_config_path the SDK reads the path in
+# DOMINO_AGENT_CONFIG_PATH, defaulting to ./agent_config.yaml.
+#
+# Replace the model names with the ones the agent actually calls.
 
-# LLM Models
 models:
-  # Primary model for agent operations
+  # Model the agent calls
   primary: gpt-4o-mini
 
-  # Fallback model if primary fails
-  fallback: gpt-3.5-turbo
+  # Model used by the LLM-as-judge evaluator; must match the judge_model passed to
+  # create_llm_judge_evaluator() (or the JUDGE_MODEL environment variable)
+  judge: gpt-4o-mini
 
-  # Model for LLM-as-judge evaluation
-  judge: gpt-4o
-
-# Agent Configurations
 agents:
   # Default settings for all agents
   default:
@@ -23,44 +23,32 @@ agents:
     max_tokens: 1000
     timeout_seconds: 30
 
-  # Classifier agent settings
   classifier:
     temperature: 0.3
     max_tokens: 500
     system_prompt: "You are a classifier. Categorize inputs accurately."
 
-  # Response generator settings
   responder:
     temperature: 0.7
     max_tokens: 1500
     system_prompt: "You are a helpful assistant. Provide clear, accurate responses."
 
-  # Evaluator agent settings
   evaluator:
-    temperature: 0.1
-    max_tokens: 100
+    temperature: 0
+    max_tokens: 10
     system_prompt: "You are an evaluator. Rate responses objectively."
 
-# Evaluation Settings
 evaluation:
-  # Enable LLM-as-judge evaluation
+  # Add the LLM-as-judge evaluator to @add_tracing
   enable_llm_judge: true
 
-  # Quality thresholds
+  # Quality thresholds your own code can read
   thresholds:
     minimum_quality: 0.7
     minimum_confidence: 0.8
 
-# Operational Settings
 settings:
-  # Number of retries on failure
   retry_count: 3
-
-  # Request timeout in seconds
   timeout_seconds: 30
-
-  # Batch processing size
   batch_size: 10
-
-  # Enable verbose logging
   verbose: false

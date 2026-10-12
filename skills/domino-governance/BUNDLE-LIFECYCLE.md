@@ -17,7 +17,7 @@ Each stage has:
 - **Name**: Human-readable label
 - **Approvals**: Organizations that must sign off before the stage can advance
 - **EvidenceSet**: Form-based questions to be answered (discovered via `GET /policies/{policyId}`)
-- **Attachments**: Files, model versions, and reports linked to the bundle
+- **Attachments**: Model versions, project files (reports), dataset snapshot files, endpoints, NetApp Volume snapshot files and Flow artifacts linked to the bundle (see [EVIDENCE-WORKFLOW.md](./EVIDENCE-WORKFLOW.md#attachment-types))
 
 ### Stage Gating
 

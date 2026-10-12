@@ -1,146 +1,111 @@
 ---
 name: domino-genai-tracing
-description: Trace and evaluate GenAI applications including LLM calls, agents, RAG pipelines, and multi-step AI systems in Domino. Uses the Domino SDK (@add_tracing decorator, DominoRun context) with MLflow 3.2.0. Captures token usage, latency, cost, tool calls, and errors. Supports LLM-as-judge evaluators and custom metrics. Use when building agents, debugging LLM applications, or needing audit trails for GenAI systems.
+description: Trace and evaluate GenAI applications (LLM calls, agents, RAG pipelines, multi-step AI systems) in Domino with the Domino agents SDK, using the @add_tracing decorator, span and trace evaluators, DominoAgentContext / DominoRun evaluation runs with aggregated metrics, manual MLflow spans, and post-hoc or production scoring with search_traces, search_agent_traces and log_evaluation. Captures inputs, outputs, token usage, latency, tool calls and errors per span. Use when building or debugging agents and LLM apps on Domino, adding evaluators or LLM-as-judge scoring, comparing agent versions in Experiment Manager, or scoring the production traces of a deployed agent.
+compatibility: Domino 6.3 and Domino Cloud (the agents SDK requires Domino 6.2 or later and mlflow 3.2.x; pin dominodatalab[data,agents]==2.2.0 with mlflow==3.2.0). Runs inside Domino executions, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set by Domino.
 ---
 
-# Domino GenAI Tracing Skill
+# Domino GenAI Tracing
 
-This skill provides comprehensive knowledge for tracing and evaluating GenAI applications in Domino Data Lab, including LLM calls, agents, RAG pipelines, and multi-step AI systems.
+Applies to Domino 6.3 and Domino Cloud.
 
-## Two Deployment Modes
+Tracing records every call an agentic system makes (LLM calls, tool invocations, retrieval, nested agents) as a trace of spans with evaluator scores attached, so agent versions can be compared in Experiment Manager and production agents monitored. Verified against `dominodatalab` 2.2.0 and mlflow 3.2.0.
 
-GenAI tracing works differently depending on where your code runs:
+## Two modes
 
-| Mode | Where traces appear | When to use |
-|------|-------------------|-------------|
-| **Deployed App** (Production) | App **Performance tab** | FastAPI/Flask apps deployed as Domino Apps |
-| **Development / Evaluation** | **Experiments** UI | Batch scripts, Domino Jobs, Workspaces |
+| Mode | Where traces appear | What the code does |
+|------|---------------------|--------------------|
+| **Development / evaluation**: a script run in a Workspace or, for a deployable agent version, as a Domino Job | **Experiments** > experiment > run (agent version) > **Traces** tab | Wrap the evaluation loop in `DominoAgentContext` (or `DominoRun`); evaluators passed to `@add_tracing` run after every call and the run logs aggregated metrics at exit |
+| **Deployed agent**: a Domino App whose request handler is decorated | The agent's details page: **Performance**, **Usage**, **Monitoring** tabs | `@add_tracing` alone. When Domino sets `DOMINO_AGENT_IS_PROD=true` and `DOMINO_APP_ID`, the SDK routes traces to the experiment `agent_experiment_<app id>` and **skips inline evaluators**; score production traces out of band ([EVALUATORS.md](./EVALUATORS.md)) |
 
-**Critical difference:** In a deployed Domino App, Domino auto-creates an experiment named `agent_experiment_{app_id}` and the Performance tab reads from it. If you call `mlflow.set_experiment()` or wrap calls in `DominoRun()`, traces go to your custom experiment instead — and the Performance tab won't see them.
+Do not call `mlflow.set_experiment()` or wrap requests in `DominoAgentContext` / `DominoRun` inside a deployed agent; the SDK manages the experiment there.
 
-## Key Concepts
+## What gets captured
 
-### What GenAI Tracing Captures
+- The decorated function's arguments (`span.inputs`, a dict by parameter name) and return value (`span.outputs`).
+- Child spans: every autologged LLM call (model, messages, token usage, latency) and every manual `mlflow.start_span` / `@mlflow.trace` span, such as tool calls.
+- Errors: an exception inside the function ends the span with the error and propagates.
+- Evaluator results, stored as trace tags: numeric values as metrics, strings as labels.
 
-The Domino SDK automatically captures:
-- **Token usage** - Input and output tokens per call
-- **Latency** - Time for each operation
-- **Cost** - Estimated cost per call
-- **Tool calls** - Function/tool invocations
-- **Errors** - Exceptions and failure modes
-- **Model parameters** - Temperature, max_tokens, etc.
+The SDK does not compute cost; derive it from the token counts on the LLM spans if needed.
 
-### Core Components
+## Core components
 
-1. **`@add_tracing` decorator** - Wraps agent functions to capture traces (works standalone — no `DominoRun` required)
-2. **`mlflow.start_span()`** - Creates child spans for LLM calls and tool executions inside the agent loop
-3. **`DominoRun` context manager** - Groups traces into runs for development/evaluation (Experiments UI only)
-4. **Evaluators** - Custom functions to score outputs
-5. **MLflow integration** - View traces in Experiment Manager or App Performance tab
+1. **`@add_tracing(name, autolog_frameworks=[], evaluator=None, trace_evaluator=None, eagerly_evaluate_streamed_results=True, span_type="UNKNOWN", attributes=None)`** from `domino.agents.tracing`: starts a span (a new trace, or a child span if a trace is active), records inputs and outputs, runs the evaluators. Place it directly on the function. [ADD-TRACING-DECORATOR.md](./ADD-TRACING-DECORATOR.md)
+2. **Evaluators**: `evaluator(span)` gets the finished `mlflow.entities.Span`; `trace_evaluator(trace)` gets the whole `mlflow.entities.Trace` when this call started the trace. Both return `{name: number | str}`. [EVALUATORS.md](./EVALUATORS.md)
+3. **`DominoAgentContext` / `DominoRun(experiment_name=None, run_id=None, agent_config_path=None, custom_summary_metrics=None)`** from `domino.agents.logging`: starts an MLflow run, logs the agent config YAML as parameters, and at exit logs `<statistic>_<metric>` aggregates (for example `mean_relevancy`) over the run's evaluated traces. No `run_name` parameter; the run id is `run.info.run_id`. [DOMINO-RUN.md](./DOMINO-RUN.md)
+4. **Manual spans**: `mlflow.start_span(name=..., span_type=...)` or `@mlflow.trace(span_type=...)` for tool calls and non-framework LLM calls.
+5. **Post-hoc scoring**: `search_traces(run_id=...)` and `search_agent_traces(agent_id=..., agent_version=...)` from `domino.agents.tracing`, `log_evaluation(trace_id, name, value)` from `domino.agents.logging`.
 
-## Related Documentation
-
-- [TRACING-SETUP.md](./TRACING-SETUP.md) - Environment & SDK setup
-- [ADD-TRACING-DECORATOR.md](./ADD-TRACING-DECORATOR.md) - @add_tracing usage, span_type, autolog_frameworks
-- [DOMINO-RUN.md](./DOMINO-RUN.md) - DominoRun context manager (development/evaluation only)
-- [EVALUATORS.md](./EVALUATORS.md) - LLM-as-judge, custom evaluators
-- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md) - Complete multi-agent example
-
-## Quick Start — Deployed App (Production)
-
-For a FastAPI app deployed as a Domino App. Traces appear in the **App Performance tab**.
+## Quick start: evaluation script
 
 ```python
-# main.py — lifespan: autolog only, NO set_experiment, NO DominoRun
-import mlflow
+import csv
+from domino.agents.tracing import add_tracing
+from domino.agents.logging import DominoAgentContext
+from openai import OpenAI
+
+client = OpenAI()   # OPENAI_API_KEY from a Domino environment variable
+
+def judge(span):
+    answer = span.outputs["answer"]
+    return {"answer_length": len(answer), "non_empty": 1.0 if answer.strip() else 0.0}
+
+@add_tracing(name="single_question_agent", span_type="AGENT", autolog_frameworks=["openai"], evaluator=judge)
+def process_single_question(data_point: dict) -> dict:
+    response = client.chat.completions.create(
+        model="gpt-4o-mini", messages=[{"role": "user", "content": data_point["question"]}])
+    return {"answer": response.choices[0].message.content}
+
+if __name__ == "__main__":
+    with DominoAgentContext(agent_config_path="ai_system_config.yaml",
+                            custom_summary_metrics=[("answer_length", "mean"), ("non_empty", "min")]) as run:
+        with open("sample_questions.csv") as f:
+            for row in csv.DictReader(f):
+                process_single_question(row)        # one trace per row
+        print(run.info.run_id)
+```
+
+Run it as a Domino Job to create a deployable agent version (the Job ties the run to the code commit and config); run from the Workspace only to gut-check.
+
+## Quick start: deployed agent
+
+```python
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Each autolog in its own try/except so one failure doesn't block the other
-    try:
-        mlflow.openai.autolog()
-    except Exception:
-        pass
-    try:
-        mlflow.anthropic.autolog()
-    except Exception:
-        pass
-    yield
-
-app = FastAPI(lifespan=lifespan)
-```
-
-```python
-# orchestrator.py — @add_tracing on the core agent function
-import mlflow
 from domino.agents.tracing import add_tracing
 
-@add_tracing(
-    name="agent_turn",
-    span_type="AGENT",
-    autolog_frameworks=["openai", "anthropic"],
-)
-async def run_agent(messages: list[dict]) -> dict:
-    # LLM calls and tool calls go here (see ADD-TRACING-DECORATOR.md)
-    ...
+app = FastAPI()
 
-# router.py — call the traced function directly, NO DominoRun wrapper
+@add_tracing(name="chat_turn", span_type="AGENT", autolog_frameworks=["openai"])
+async def chat_turn(message: str) -> dict:
+    ...                                   # LLM and tool calls; see ADD-TRACING-DECORATOR.md
+    return {"response": "..."}
+
 @app.post("/chat")
-async def chat(request: ChatRequest):
-    return await run_agent(request.messages)
+async def chat(body: dict):
+    return await chat_turn(body["message"])   # no DominoAgentContext, no set_experiment
 ```
 
-## Quick Start — Development / Evaluation
+## Framework support
 
-For batch scripts, Domino Jobs, or Workspaces. Traces appear in the **Experiments UI**.
+`autolog_frameworks` accepts any `mlflow.<name>.autolog()` integration (`openai`, `anthropic`, `langchain`, `pydantic_ai`, `llama_index`, ...); the SDK calls each once, lazily. Anthropic autologging may miss some calls; add manual spans where needed.
 
-```python
-import mlflow
-from domino.agents.tracing import add_tracing
-from domino.agents.logging import DominoRun
+## Viewing traces
 
-mlflow.openai.autolog()
+- Evaluation: **Experiments** > the experiment > the run > **Traces** tab (span tree, inputs, outputs, scores). Select two to four runs and **Compare** for aggregated metrics side by side. Only Job-originated runs offer **Deploy Agent**.
+- Deployed agent: the agent's details page > **Performance**, **Usage**, **Monitoring**.
 
-@add_tracing(name="my_agent", autolog_frameworks=["openai"])
-def my_agent(query: str) -> str:
-    response = llm.invoke(query)
-    return response
+## Reference files
 
-# DominoRun groups traces into a run visible in Experiments
-with DominoRun() as run:
-    result = my_agent("What is machine learning?")
-```
+- [TRACING-SETUP.md](./TRACING-SETUP.md): environment, pins, environment variables, troubleshooting
+- [ADD-TRACING-DECORATOR.md](./ADD-TRACING-DECORATOR.md): decorator parameters, manual spans, tool-use agent pattern
+- [DOMINO-RUN.md](./DOMINO-RUN.md): `DominoAgentContext` / `DominoRun`, config file, aggregated metrics
+- [EVALUATORS.md](./EVALUATORS.md): span, trace, LLM-as-judge, post-hoc and production evaluators
+- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md): a deployed tool-use agent and a batch-evaluated multi-agent pipeline
 
-## Framework Support
+To scaffold tracing into an existing project, use the `domino-trace-setup` skill. To call the models themselves, use the `domino-llm-access` skill.
 
-| Framework | Auto-log Command |
-|-----------|------------------|
-| OpenAI | `mlflow.openai.autolog()` |
-| Anthropic | `mlflow.anthropic.autolog()` |
-| LangChain | `mlflow.langchain.autolog()` |
+## Documentation
 
-## Viewing Traces
-
-### Deployed Apps (Production)
-
-1. Navigate to your Domino App
-2. Click the **Performance** tab
-3. Traces appear automatically (routed to `agent_experiment_{app_id}`)
-
-### Development / Evaluation
-
-1. Navigate to **Experiments** in your Domino project
-2. Select the experiment
-3. Select a run
-4. View the **Traces** tab for span tree visualization
-
-## Blueprint Reference
-
-Official GenAI Tracing Tutorial:
-https://github.com/dominodatalab/GenAI-Tracing-Tutorial
-
-## Documentation Links
-
-- Domino GenAI Tracing: https://docs.dominodatalab.com/en/cloud/user_guide/fc1922/set-up-and-run-genai-traces/
+- Develop agentic systems: https://docs.domino.ai/cloud/platform-capabilities/features/agents/develop (6.3: replace `cloud` with `6.3`)
+- Experiment Manager, deploy, monitor: `.../features/agents/experiment`, `.../agents/deploy`, `.../agents/monitor`
+- SDK source: https://github.com/dominodatalab/python-domino/tree/Release-2.2.0/domino/agents

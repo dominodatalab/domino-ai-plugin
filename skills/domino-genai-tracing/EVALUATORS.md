@@ -1,498 +1,344 @@
 # GenAI Evaluators Guide
 
-Evaluators are functions that score the outputs of traced functions. They enable quality measurement, comparison, and monitoring of GenAI applications.
+Evaluators score the outputs of traced functions. Scores become metrics on the trace, aggregated per run by `DominoAgentContext` / `DominoRun`, and visible in Experiment Manager.
 
-## Evaluator Function Signature
+## Evaluator signatures
+
+The SDK (`dominodatalab` 2.2.0) calls evaluators with MLflow entities, not with raw inputs and outputs:
 
 ```python
-def evaluator(inputs: dict, output: Any) -> dict:
-    """
-    Args:
-        inputs: Dictionary of argument names to values passed to the traced function
-        output: Return value of the traced function
+from mlflow.entities import Span, Trace
 
-    Returns:
-        Dictionary of metric names to numeric values
-    """
+def span_evaluator(span: Span) -> dict[str, int | float | str]:
+    """Runs after every call of the decorated function.
+    span.inputs: dict of the call's arguments by parameter name.
+    span.outputs: the return value."""
     return {"metric_name": score}
+
+def trace_evaluator(trace: Trace) -> dict[str, int | float | str]:
+    """Runs only when this call started and finished the trace.
+    trace.data.spans: every span, including autologged LLM calls and tool spans."""
+    return {"metric_name": score}
+
+@add_tracing(name="agent", evaluator=span_evaluator, trace_evaluator=trace_evaluator)
+def agent(query: str) -> dict: ...
 ```
 
-## Basic Evaluators
+Rules:
 
-### Simple Length-Based
+- Return a dict. Numeric values are stored as metrics (`domino.prog.metric.<name>` tags on the trace) and can be aggregated; string values are stored as labels. Metric names use letters, digits, `_` and `-`.
+- If an evaluator raises, the SDK logs `Inline evaluation failed for evaluator, <name>` and records nothing for that trace. Let failures raise; do not return invented default scores such as 0.5, which would silently pollute the aggregates.
+- Evaluators run only in development. In a deployed agent (`DOMINO_AGENT_IS_PROD=true`) they are skipped; see "Production evaluation" below.
+- Both evaluators may be given; their results are merged (span results win on name clashes).
+
+Helpers used in the examples below:
 
 ```python
-def length_evaluator(inputs, output):
-    """Evaluate based on response length."""
-    if isinstance(output, str):
-        length = len(output)
-    elif isinstance(output, dict):
-        length = len(str(output))
-    else:
-        length = 0
+def output_text(outputs) -> str:
+    if isinstance(outputs, dict):
+        for key in ("response", "answer", "content", "text"):
+            if key in outputs:
+                return str(outputs[key])
+    return "" if outputs is None else str(outputs)
 
-    return {
-        "response_length": length,
-        "is_substantial": 1.0 if length > 100 else 0.0,
-    }
+def input_text(inputs) -> str:
+    if isinstance(inputs, dict):
+        for key in ("query", "question", "prompt", "message"):
+            if key in inputs:
+                return str(inputs[key])
+    return str(inputs)
 ```
 
-### Keyword Presence
+## Basic evaluators
+
+### Length
 
 ```python
-def keyword_evaluator(inputs, output):
-    """Check for important keywords in response."""
+def length_evaluator(span):
+    length = len(output_text(span.outputs))
+    return {"response_length": length, "is_substantial": 1.0 if length > 100 else 0.0}
+```
+
+### Keyword presence
+
+```python
+def keyword_evaluator(span):
     keywords = ["machine learning", "neural network", "algorithm"]
-    output_lower = str(output).lower()
-
-    matches = sum(1 for kw in keywords if kw in output_lower)
-
-    return {
-        "keyword_count": matches,
-        "keyword_coverage": matches / len(keywords),
-    }
+    text = output_text(span.outputs).lower()
+    matches = sum(1 for kw in keywords if kw in text)
+    return {"keyword_count": matches, "keyword_coverage": matches / len(keywords)}
 ```
 
-### Confidence Extraction
+### Structured output
 
 ```python
-def confidence_evaluator(inputs, output):
-    """Extract confidence from structured output."""
-    if isinstance(output, dict):
-        confidence = output.get("confidence", 0)
-        category = output.get("category", "unknown")
-    else:
-        confidence = 0
-        category = "unknown"
-
-    return {
-        "confidence": confidence,
-        "has_category": 1.0 if category != "unknown" else 0.0,
-    }
+def confidence_evaluator(span):
+    output = span.outputs if isinstance(span.outputs, dict) else {}
+    confidence = float(output.get("confidence", 0.0))
+    category = output.get("category", "unknown")
+    return {"confidence": confidence, "has_category": 1.0 if category != "unknown" else 0.0,
+            "category": str(category)}        # string: stored as a label
 ```
 
-## LLM-as-Judge Evaluators
+## LLM-as-judge evaluators
 
-### Basic LLM Judge
+The judge's own model call happens after the agent's span has ended. With autologging enabled it would be traced as a separate trace, so pause autologging around it.
 
 ```python
+from contextlib import contextmanager
+import mlflow
 from openai import OpenAI
 
-client = OpenAI()
+judge_client = OpenAI()
 
-def llm_judge_evaluator(inputs, output):
-    """Use GPT to evaluate response quality."""
-    judge_prompt = f"""
-    Rate the following response on a scale of 0-10.
-
-    Question: {inputs.get('query', 'N/A')}
-    Response: {output}
-
-    Consider:
-    - Relevance to the question
-    - Completeness of answer
-    - Clarity of explanation
-
-    Respond with only a number 0-10.
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": judge_prompt}],
-        max_tokens=10,
-        temperature=0.1,
-    )
-
+@contextmanager
+def autolog_paused():
+    mlflow.openai.autolog(disable=True)
     try:
-        score = float(response.choices[0].message.content.strip())
-        score = max(0, min(10, score)) / 10  # Normalize to 0-1
-    except:
-        score = 0.5  # Default if parsing fails
+        yield
+    finally:
+        mlflow.openai.autolog()
 
-    return {"llm_judge_score": score}
+def llm_judge_evaluator(span):
+    prompt = (
+        "Rate the following response on a scale of 0-10 for relevance, completeness and clarity.\n\n"
+        f"Question: {input_text(span.inputs)}\nResponse: {output_text(span.outputs)}\n\n"
+        "Respond with only a number 0-10."
+    )
+    with autolog_paused():
+        reply = judge_client.chat.completions.create(
+            model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}],
+            max_tokens=10, temperature=0)
+    text = reply.choices[0].message.content.strip()
+    score = float(text)            # raises on a non-numeric reply: the SDK logs it, no score is recorded
+    return {"llm_judge_score": max(0.0, min(10.0, score)) / 10.0}
 ```
 
-### Multi-Criteria LLM Judge
+### Multi-criteria judge
 
 ```python
 import json
 
-def multi_criteria_judge(inputs, output):
-    """Evaluate multiple dimensions with LLM."""
-    judge_prompt = f"""
-    Evaluate this response on multiple criteria.
-
-    Question: {inputs.get('query', 'N/A')}
-    Response: {output}
-
-    Rate each criterion 0-10:
-    1. relevance: How relevant is the response to the question?
-    2. completeness: How complete is the answer?
-    3. accuracy: How accurate is the information?
-    4. clarity: How clear is the explanation?
-
-    Respond in JSON format:
-    {{"relevance": X, "completeness": X, "accuracy": X, "clarity": X}}
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": judge_prompt}],
-        max_tokens=100,
-        temperature=0.1,
+def multi_criteria_judge(span):
+    prompt = (
+        "Evaluate this response. Rate each criterion 0-10 and reply with JSON only: "
+        '{"relevance": X, "completeness": X, "accuracy": X, "clarity": X}\n\n'
+        f"Question: {input_text(span.inputs)}\nResponse: {output_text(span.outputs)}"
     )
-
-    try:
-        scores = json.loads(response.choices[0].message.content)
-        # Normalize to 0-1
-        return {k: v / 10.0 for k, v in scores.items()}
-    except:
-        return {
-            "relevance": 0.5,
-            "completeness": 0.5,
-            "accuracy": 0.5,
-            "clarity": 0.5,
-        }
+    with autolog_paused():
+        reply = judge_client.chat.completions.create(
+            model="gpt-4o", messages=[{"role": "user", "content": prompt}],
+            max_tokens=100, temperature=0, response_format={"type": "json_object"})
+    scores = json.loads(reply.choices[0].message.content)
+    return {k: float(v) / 10.0 for k, v in scores.items()}
 ```
 
-### Pairwise Comparison Judge
+### Pairwise comparison against a baseline
 
 ```python
-def pairwise_judge(inputs, output, baseline_output):
-    """Compare output against a baseline."""
-    judge_prompt = f"""
-    Compare these two responses to the question.
-
-    Question: {inputs.get('query', 'N/A')}
-
-    Response A (Baseline): {baseline_output}
-    Response B (New): {output}
-
-    Which response is better? Consider relevance, completeness, and clarity.
-
-    Respond with:
-    - "A" if baseline is better
-    - "B" if new is better
-    - "TIE" if equal
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": judge_prompt}],
-        max_tokens=10,
-        temperature=0.1,
-    )
-
-    verdict = response.choices[0].message.content.strip().upper()
-
-    return {
-        "wins_vs_baseline": 1.0 if verdict == "B" else 0.0,
-        "ties_vs_baseline": 1.0 if verdict == "TIE" else 0.0,
-        "loses_vs_baseline": 1.0 if verdict == "A" else 0.0,
-    }
+def make_pairwise_judge(baseline_outputs: dict[str, str]):
+    """baseline_outputs maps a question to the baseline system's answer."""
+    def pairwise_judge(span):
+        question = input_text(span.inputs)
+        baseline = baseline_outputs.get(question)
+        if baseline is None:
+            return {}                                  # nothing to compare; records nothing
+        prompt = (
+            f"Question: {question}\n\nResponse A (baseline): {baseline}\n"
+            f"Response B (new): {output_text(span.outputs)}\n\n"
+            "Which response is better? Reply with A, B or TIE."
+        )
+        with autolog_paused():
+            reply = judge_client.chat.completions.create(
+                model="gpt-4o", messages=[{"role": "user", "content": prompt}], max_tokens=5, temperature=0)
+        verdict = reply.choices[0].message.content.strip().upper()
+        return {"wins_vs_baseline": 1.0 if verdict == "B" else 0.0,
+                "ties_vs_baseline": 1.0 if verdict == "TIE" else 0.0}
+    return pairwise_judge
 ```
 
-## Domain-Specific Evaluators
+## Trace evaluators
 
-### Classification Evaluator
+Use `trace_evaluator` when the score depends on the inner spans, for example tool usage or total tokens:
 
 ```python
-def classification_evaluator(inputs, output):
-    """Evaluate classification results."""
-    expected_categories = ["bug", "feature", "question", "other"]
-
-    if isinstance(output, dict):
-        category = output.get("category", "")
-        confidence = output.get("confidence", 0)
-    else:
-        category = str(output)
-        confidence = 0
-
-    return {
-        "is_valid_category": 1.0 if category in expected_categories else 0.0,
-        "classification_confidence": confidence,
-        "high_confidence": 1.0 if confidence > 0.8 else 0.0,
-    }
+def trace_tool_usage(trace):
+    spans = trace.data.spans
+    tool_spans = [s for s in spans if s.span_type == "TOOL"]
+    llm_spans = [s for s in spans if s.span_type in ("LLM", "CHAT_MODEL")]
+    return {"tool_calls": len(tool_spans), "llm_calls": len(llm_spans), "span_count": len(spans)}
 ```
 
-### RAG Evaluator
+## Domain-specific evaluators
+
+### Classification
 
 ```python
-def rag_evaluator(inputs, output):
-    """Evaluate RAG (Retrieval-Augmented Generation) responses."""
-    query = inputs.get("query", "")
-    context = inputs.get("context", "")
+VALID = {"bug", "feature", "question", "other"}
 
-    if isinstance(output, dict):
-        answer = output.get("answer", "")
-        sources = output.get("sources", [])
-    else:
-        answer = str(output)
-        sources = []
-
-    # Check if answer uses context
-    context_words = set(context.lower().split())
-    answer_words = set(answer.lower().split())
-    context_overlap = len(context_words & answer_words) / max(len(context_words), 1)
-
-    return {
-        "context_utilization": context_overlap,
-        "source_count": len(sources),
-        "has_sources": 1.0 if sources else 0.0,
-        "answer_length": len(answer),
-    }
+def classification_evaluator(span):
+    output = span.outputs if isinstance(span.outputs, dict) else {}
+    category = output.get("category", "")
+    confidence = float(output.get("confidence", 0.0))
+    return {"is_valid_category": 1.0 if category in VALID else 0.0,
+            "classification_confidence": confidence,
+            "high_confidence": 1.0 if confidence > 0.8 else 0.0}
 ```
 
-### Safety Evaluator
+### RAG
 
 ```python
-def safety_evaluator(inputs, output):
-    """Check for safety issues in output."""
-    output_str = str(output).lower()
-
-    # Simple keyword-based safety check
-    unsafe_patterns = [
-        "i cannot", "i'm not able to", "harmful", "illegal",
-        "violence", "hate", "discriminat"
-    ]
-
-    safety_flags = sum(1 for p in unsafe_patterns if p in output_str)
-
-    return {
-        "safety_flag_count": safety_flags,
-        "is_safe": 1.0 if safety_flags == 0 else 0.0,
-    }
+def rag_evaluator(span):
+    inputs = span.inputs or {}
+    output = span.outputs if isinstance(span.outputs, dict) else {}
+    context_words = set(str(inputs.get("context", "")).lower().split())
+    answer = str(output.get("answer", ""))
+    overlap = len(context_words & set(answer.lower().split())) / max(len(context_words), 1)
+    sources = output.get("sources", [])
+    return {"context_utilization": overlap, "source_count": len(sources),
+            "has_sources": 1.0 if sources else 0.0, "answer_length": len(answer)}
 ```
 
-## Composite Evaluators
-
-### Combining Multiple Evaluators
+### Safety (simple keyword check; replace with a real classifier for production use)
 
 ```python
-def composite_evaluator(inputs, output):
-    """Combine multiple evaluation methods."""
+UNSAFE = ("harmful", "illegal", "violence", "hate")
+
+def safety_evaluator(span):
+    text = output_text(span.outputs).lower()
+    flags = sum(1 for p in UNSAFE if p in text)
+    return {"safety_flag_count": flags, "is_safe": 1.0 if flags == 0 else 0.0}
+```
+
+## Composite and conditional evaluators
+
+```python
+def composite_evaluator(span):
     scores = {}
+    scores.update(length_evaluator(span))
+    scores.update(safety_evaluator(span))
+    scores.update(llm_judge_evaluator(span))
+    scores["overall_score"] = (scores["llm_judge_score"] * 0.5 + scores["is_safe"] * 0.3
+                               + min(scores["response_length"] / 500, 1.0) * 0.2)
+    return scores
 
-    # Length metrics
-    scores.update(length_evaluator(inputs, output))
-
-    # Safety metrics
-    scores.update(safety_evaluator(inputs, output))
-
-    # LLM judge metrics
-    scores.update(llm_judge_evaluator(inputs, output))
-
-    # Compute overall score
-    scores["overall_score"] = (
-        scores.get("llm_judge_score", 0) * 0.5 +
-        scores.get("is_safe", 1) * 0.3 +
-        min(scores.get("response_length", 0) / 500, 1.0) * 0.2
-    )
-
+def conditional_evaluator(span):
+    query_type = (span.inputs or {}).get("query_type", "general")
+    scores = {"response_length": len(output_text(span.outputs))}
+    if query_type == "classification":
+        scores.update(classification_evaluator(span))
+    elif query_type == "rag":
+        scores.update(rag_evaluator(span))
     return scores
 ```
 
-### Conditional Evaluator
+Keep the metric set stable across calls so aggregates are comparable between runs.
+
+## Post-hoc evaluation of an evaluation run
+
+Score traces after a run finished. `search_traces` returns `SearchTracesResponse(data: list[TraceSummary], page_token)`; each `TraceSummary` has `id`, `name`, `spans` (list of `SpanSummary` with `inputs` and `outputs`; `spans[0]` is the decorated function's span) and `evaluation_results`.
 
 ```python
-def conditional_evaluator(inputs, output):
-    """Apply different evaluation based on input type."""
-    query_type = inputs.get("query_type", "general")
+from domino.agents.tracing import search_traces
+from domino.agents.logging import log_evaluation
 
-    base_scores = {
-        "response_length": len(str(output)),
-    }
-
-    if query_type == "classification":
-        base_scores.update(classification_evaluator(inputs, output))
-    elif query_type == "qa":
-        base_scores.update(llm_judge_evaluator(inputs, output))
-    elif query_type == "rag":
-        base_scores.update(rag_evaluator(inputs, output))
-
-    return base_scores
+def add_post_hoc_evaluations(run_id: str):
+    page_token = None
+    while True:
+        page = search_traces(run_id=run_id, page_token=page_token)
+        for trace in page.data:
+            root = trace.spans[0]
+            score = my_scoring_function(root.inputs, root.outputs)
+            log_evaluation(trace_id=trace.id, name="combined_quality_score", value=round(score, 2))
+        page_token = page.page_token
+        if not page_token:
+            break
 ```
 
-## Post-Hoc Evaluation
+`search_traces(run_id, trace_name=None, start_time=None, end_time=None, page_token=None, max_results=None)` filters by the run and optionally by trace name and time window (`datetime` values).
 
-### Adding Evaluations to Existing Traces
+### Human-in-the-loop
 
 ```python
-from domino.agents.tracing import search_traces, log_evaluation
-
-def add_post_hoc_evaluations(run_id):
-    """Add evaluations to traces after the fact."""
-    # Retrieve traces from run
-    traces = search_traces(run_id=run_id)
-
-    for trace in traces.data:
-        # Get trace inputs and outputs
-        inputs = trace.inputs
-        output = trace.outputs
-
-        # Calculate new evaluation
-        combined_score = calculate_combined_score(inputs, output)
-
-        # Log evaluation to existing trace
-        log_evaluation(
-            trace_id=trace.id,
-            name="combined_quality_score",
-            value=round(combined_score, 2)
-        )
-
-# Usage after a run completes
-add_post_hoc_evaluations(run_id="abc123")
+for trace in search_traces(run_id=run_id).data:
+    root = trace.spans[0]
+    print("Input:", root.inputs)
+    print("Output:", root.outputs)
+    rating = input("Rate 1-5: ")
+    log_evaluation(trace_id=trace.id, name="human_rating", value=float(rating) / 5.0)
 ```
 
-### Human-in-the-Loop Evaluation
+Reviewers can also add metrics and labels per trace in the UI (**Add Metric/Label** on the Traces tab).
+
+## Production evaluation of a deployed agent
+
+Inline evaluators do not run in production. Write a separate script that fetches the deployed agent's traces, scores them, and logs the scores back; schedule it as a Domino Job so the agent's latency is unaffected. The agent id and version come from the agent's **Evaluation setup** button in the UI.
 
 ```python
-from domino.agents.tracing import search_traces, log_evaluation
+from domino.agents.tracing import search_agent_traces
+from domino.agents.logging import log_evaluation
 
-def collect_human_feedback(run_id):
-    """Collect human feedback for traces."""
-    traces = search_traces(run_id=run_id)
+AGENT_ID = "<agent id>"
+VERSION = "<agent version id>"
 
-    for trace in traces.data:
-        # Display to human reviewer
-        print(f"Input: {trace.inputs}")
-        print(f"Output: {trace.outputs}")
-
-        # Collect feedback
-        rating = input("Rate 1-5: ")
-
-        # Log human evaluation
-        log_evaluation(
-            trace_id=trace.id,
-            name="human_rating",
-            value=float(rating) / 5.0
-        )
+page_token = None
+while True:
+    page = search_agent_traces(agent_id=AGENT_ID, agent_version=VERSION, page_token=page_token)
+    for trace in page.data:
+        root = trace.spans[0]
+        already = {r.name for r in trace.evaluation_results}
+        if "my_eval_metric" in already:
+            continue                                    # idempotent re-runs
+        score = my_evaluate(root.inputs, root.outputs)
+        log_evaluation(trace_id=trace.id, name="my_eval_metric", value=score)
+    page_token = page.page_token
+    if not page_token:
+        break
 ```
 
-## Evaluator Patterns
+`search_agent_traces(agent_id, agent_version=None, trace_name=None, start_time=None, end_time=None, page_token=None, max_results=None)`; omit `agent_version` to search every version. Scores appear on the agent's **Performance** tab.
 
-### Factory Pattern
+## Patterns
+
+### Factory with parameters
 
 ```python
 def create_threshold_evaluator(threshold: float):
-    """Create evaluator with custom threshold."""
-    def evaluator(inputs, output):
-        confidence = output.get("confidence", 0) if isinstance(output, dict) else 0
-        return {
-            "meets_threshold": 1.0 if confidence >= threshold else 0.0,
-            "confidence": confidence,
-        }
+    def evaluator(span):
+        output = span.outputs if isinstance(span.outputs, dict) else {}
+        confidence = float(output.get("confidence", 0.0))
+        return {"meets_threshold": 1.0 if confidence >= threshold else 0.0, "confidence": confidence}
     return evaluator
 
-# Usage
-high_confidence_evaluator = create_threshold_evaluator(0.9)
-medium_confidence_evaluator = create_threshold_evaluator(0.7)
-
-@add_tracing(name="agent", evaluator=high_confidence_evaluator)
-def my_agent(query):
-    pass
+@add_tracing(name="agent", evaluator=create_threshold_evaluator(0.9))
+def my_agent(query: str) -> dict: ...
 ```
 
-### Caching Pattern for Expensive Evaluations
+### Caching expensive judge calls
 
 ```python
 from functools import lru_cache
 
 @lru_cache(maxsize=1000)
-def cached_llm_judge(query: str, output: str) -> float:
-    """Cache LLM judge results to avoid redundant calls."""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": f"Rate 0-10: {query} -> {output}"}],
-        max_tokens=10,
-    )
-    return float(response.choices[0].message.content.strip()) / 10
+def cached_judge(question: str, answer: str) -> float:
+    with autolog_paused():
+        reply = judge_client.chat.completions.create(
+            model="gpt-4o-mini", messages=[{"role": "user", "content": f"Rate 0-10: {question} -> {answer}"}],
+            max_tokens=5, temperature=0)
+    return float(reply.choices[0].message.content.strip()) / 10
 
-def efficient_evaluator(inputs, output):
-    query = inputs.get("query", "")
-    output_str = str(output)
-
-    # Use cached evaluation
-    score = cached_llm_judge(query, output_str)
-
-    return {"quality_score": score}
+def efficient_evaluator(span):
+    return {"quality_score": cached_judge(input_text(span.inputs), output_text(span.outputs))}
 ```
 
-## Best Practices
+## Best practices
 
-### 1. Return Consistent Metrics
+1. **Stable metric names** across calls and runs, so aggregates and comparisons line up.
+2. **Fail loudly**: let parsing and API errors raise; the SDK logs them and the trace simply has no score, which is visible. A fabricated default is not.
+3. **Keep inline evaluators fast**; reserve LLM judges for the metrics that need them, or move them to a post-hoc Job.
+4. **Document the metrics** an evaluator returns and their ranges (0-1 is easiest to compare).
+5. **Pause autologging** inside judge calls so judge traffic does not appear as agent traces.
 
-```python
-# Good: Always return same metrics
-def consistent_evaluator(inputs, output):
-    return {
-        "quality": calculate_quality(output),
-        "relevance": calculate_relevance(inputs, output),
-    }
+## Next steps
 
-# Bad: Different metrics based on condition
-def inconsistent_evaluator(inputs, output):
-    if condition:
-        return {"quality": 1.0}
-    else:
-        return {"relevance": 0.5}  # Different metric!
-```
-
-### 2. Handle Edge Cases
-
-```python
-def robust_evaluator(inputs, output):
-    try:
-        if output is None:
-            return {"quality": 0.0, "error": 1.0}
-
-        if isinstance(output, dict):
-            text = output.get("response", "")
-        else:
-            text = str(output)
-
-        return {
-            "quality": calculate_quality(text),
-            "error": 0.0,
-        }
-    except Exception as e:
-        return {"quality": 0.0, "error": 1.0}
-```
-
-### 3. Keep Evaluators Fast
-
-```python
-# Good: Fast local evaluation
-def fast_evaluator(inputs, output):
-    return {"length": len(str(output))}
-
-# Use sparingly: Slow LLM evaluation
-def slow_evaluator(inputs, output):
-    # Only for critical metrics
-    return {"llm_score": expensive_llm_call(output)}
-```
-
-### 4. Document Expected Metrics
-
-```python
-def documented_evaluator(inputs, output):
-    """
-    Evaluates agent responses.
-
-    Returns:
-        quality_score (float): 0-1 overall quality
-        relevance (float): 0-1 relevance to query
-        completeness (float): 0-1 answer completeness
-        is_safe (float): 1.0 if safe, 0.0 if unsafe
-    """
-    return {
-        "quality_score": ...,
-        "relevance": ...,
-        "completeness": ...,
-        "is_safe": ...,
-    }
-```
-
-## Next Steps
-
-- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md) - See evaluators in action
+- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md): evaluators in a complete pipeline

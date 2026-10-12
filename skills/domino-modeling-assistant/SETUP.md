@@ -1,53 +1,61 @@
 # Complete Modeling Assistant Setup Guide
 
-This guide covers setup for the Domino modeling assistant. When the plugin is installed from the source repository (Claude Code, or Codex from a local marketplace), the Domino MCP Server is **bundled with the plugin** and starts automatically — no manual cloning, installation, or MCP configuration is required. Skills-only distributions (such as the ChatGPT plugin directory) don't include the server; see [Register the server manually](#register-the-server-manually).
+This guide covers setup for the Domino modeling assistant. When the plugin is installed from the source repository (for example Claude Code, or Codex from a local marketplace), the Domino MCP server is **bundled with the plugin** and starts automatically: no manual cloning, installation, or MCP configuration is required. Skills-only distributions (such as the ChatGPT plugin directory) don't include the server; see [Register the server manually](#register-the-server-manually).
 
-**Inside a Domino workspace:** Everything is auto-detected (project, auth, DFS/Git mode). Skip straight to [Step 3: Test the Integration](#step-3-test-the-integration).
+**Inside a Domino Workspace:** everything is auto-detected (project, authentication, DFS/Git mode). Skip straight to [Step 3: Test the integration](#step-3-test-the-integration).
 
-**Outside Domino (laptop):** You need to set two environment variables and create a project settings file. Follow the full guide below.
+**Outside Domino (laptop, CI):** set two environment variables and create a project settings file. Follow the full guide below.
 
 ## Prerequisites
 
-- Domino Data Lab account with API access
-- An MCP-enabled coding assistant, such as Claude Code, Codex, or Cursor
+- A Domino account with access to the project
+- An MCP-enabled coding assistant (for example Claude Code, Codex, Cursor, or another host that can register a stdio MCP server)
 - Python 3.11+
 - `uv` package manager ([install guide](https://github.com/astral-sh/uv))
 - Git
 
-## Step 1: Set Domino Credentials (Laptop Only)
+## Step 1: Set Domino credentials (laptop only)
 
-> **Skip this step if you are working inside a Domino workspace.** Authentication is handled automatically via ephemeral tokens.
+> **Skip this step inside a Domino Workspace.** There the server calls the platform through `DOMINO_API_PROXY`, which Domino sets and which adds the user's token; no credential is configured or sent.
 
-### Generate API Key
+### Create a Personal Access Token
 
-1. Log into Domino
-2. Go to **Account Settings** (click your profile icon)
-3. Navigate to **API Keys**
-4. Click **Generate New Key**
-5. Copy and save the key securely
+1. Log into Domino.
+2. Go to **Account** > **Account settings** > **Personal Access Token**.
+3. Click **Generate new Token**, give it a name and an expiration, and click **Create token**.
+4. Copy the token now; it is shown only once. Store it in a password manager.
 
-### Set Environment Variables
+Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication (6.3: replace `cloud` with `6.3`). A Personal Access Token carries your identity and expires; rotate it before it does. For unattended automation use a Domino service account token instead. Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated and the server does not accept them: if `DOMINO_API_KEY` is set without `DOMINO_TOKEN`, every API tool fails with a message telling you to set `DOMINO_TOKEN`.
 
-Add these to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+### Set environment variables
+
+The server reads two variables:
+
+| Variable | Value |
+|---|---|
+| `DOMINO_HOST` | The deployment's HTTPS URL (the one in your browser's address bar); `DOMINO_API_HOST` is accepted as a fallback |
+| `DOMINO_TOKEN` | The Personal Access Token or service account token, sent as `Authorization: Bearer` |
+
+Either export them in your shell profile (`~/.bashrc`, `~/.zshrc`, or equivalent):
 
 ```bash
-export DOMINO_API_KEY="your_api_key_here"
-export DOMINO_HOST="https://your-domino.company.com"
+export DOMINO_HOST="https://<your Domino domain>"
+export DOMINO_TOKEN="<your Personal Access Token>"
 ```
 
-Then reload your shell:
+or, for hosts that start MCP servers with a stripped environment (Codex on a laptop does), put them in an env file the server reads when the host passes neither variable: `$DOMINO_MCP_ENV_FILE` if set, else `$XDG_CONFIG_HOME/domino-mcp-server/.env`, else `~/.config/domino-mcp-server/.env` (`KEY=value` lines; existing environment variables win):
 
 ```bash
-source ~/.zshrc  # or ~/.bashrc
+mkdir -p ~/.config/domino-mcp-server
+printf 'DOMINO_HOST=https://<your Domino domain>\nDOMINO_TOKEN=<your Personal Access Token>\n' > ~/.config/domino-mcp-server/.env
+chmod 600 ~/.config/domino-mcp-server/.env
 ```
 
-The plugin's bundled MCP server reads these from its environment — no `.env` file is needed. If your assistant doesn't forward your shell environment to MCP servers, pass `DOMINO_API_KEY` and `DOMINO_HOST` explicitly when you register the server (see below).
+A `.env` in the project directory is not read. Never commit the token or paste it into a shared configuration file.
 
-## Step 2: Configure Your Project (Laptop Only)
+## Step 2: Configure your project (laptop only)
 
-> **Skip this step if you are working inside a Domino workspace.** The project owner, project name, and DFS/Git mode are auto-detected from platform environment variables.
-
-### Create Project Settings
+> **Skip this step inside a Domino Workspace.** The project owner, project name, id and DFS/Git mode are auto-detected from platform environment variables.
 
 In your Domino project directory, create `domino_project_settings.md`:
 
@@ -59,7 +67,7 @@ In your Domino project directory, create `domino_project_settings.md`:
 - **Project Name**: your-project-name
 
 ## Default Configuration
-- **Compute Environment**: Default Python 3.10
+- **Compute Environment**: the Domino Standard Environment, or your project's default
 - **Hardware Tier**: small-k8s
 
 ## Data Locations
@@ -72,9 +80,11 @@ In your Domino project directory, create `domino_project_settings.md`:
 - Use MLflow for experiment tracking
 ```
 
-## Step 3: Test the Integration
+For a DFS-based project add `- **DFS**: true` so the assistant uses the file tools instead of git.
 
-### Create a Test Script
+## Step 3: Test the integration
+
+### Create a test script
 
 In your project, create `test_domino.py`:
 
@@ -85,7 +95,7 @@ print(f"Project: {os.environ.get('DOMINO_PROJECT_NAME', 'unknown')}")
 print(f"User: {os.environ.get('DOMINO_STARTING_USERNAME', 'unknown')}")
 ```
 
-### Commit the Script
+### Commit the script (Git-based projects)
 
 ```bash
 git add test_domino.py
@@ -93,116 +103,79 @@ git commit -m "Add test script for modeling assistant"
 git push
 ```
 
-### Run via Your AI Assistant
+For a DFS-based project, ask the assistant to sync the file instead (`smart_sync_file`).
+
+### Run it through your AI assistant
 
 Prompt:
+
 ```
 Run test_domino.py as a Domino job
 ```
 
-The MCP server should:
-1. Create a Domino job
-2. Execute the script
-3. Return the output
+The assistant should call `run_domino_job`, poll `check_domino_job_run_status` with the returned `run_id`, and read the output with `check_domino_job_run_results`.
 
-## Step 4: Set Up Domino Environment (Optional)
+## Step 4: Choose a compute environment
 
-### Option A: Domino Standard Environment with AI Tools (Recommended)
+Use the **Domino Standard Environment** for the project (**Settings** > **Compute Environment**). On Domino 6.3 and Cloud it ships with the coding assistants, the Domino skills, MLflow, and the common ML libraries. If your organization needs a different assistant, pinned versions, or extra tools, build a custom environment as described at https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/custom-environments (6.3: replace `cloud` with `6.3`).
 
-If your Domino instance has the **Standard Environment with AI Tools** available, use that — it comes preconfigured with everything needed for the modeling assistant workflow. No additional setup required.
+## Workflow example
 
-In your Domino project:
+1. **Start in your AI assistant** with your project open.
+2. **Analyze data** (prompt): `Load the sales data from /mnt/data/sales.csv and show me a summary of the key metrics`.
+3. **The assistant creates a script**, commits (or syncs) it, and runs it as a Domino Job.
+4. **Review results** returned through MCP.
+5. **Iterate** (prompt): `Now create a visualization of sales by region and save it to /mnt/artifacts/sales_by_region.png`.
+6. **Train a model** (prompt): `Train a random forest model to predict sales using the processed data. Log the results to MLflow.`
+7. **All work is tracked** in Experiment Manager; register the best run from the **Experiments** view.
 
-1. Go to **Settings** → **Compute Environment**
-2. Select the **Standard Environment with AI Tools** from the list
-
-### Option B: Custom Vibe Modeling Image (Fallback)
-
-If you don't have access to the Standard Environment with AI Tools, use the custom Docker image instead.
-
-In your Domino project:
-
-1. Go to **Settings** → **Compute Environment**
-2. Create new environment with base image:
-   ```
-   quay.io/domino/field:vibe-modeling
-   ```
-
-This image includes:
-- MCP server dependencies
-- Common ML libraries
-- Preconfigured for modeling assistant workflows
-
-## Workflow Example
-
-### Complete Modeling Assistant Session
-
-1. **Start in your AI assistant** with your project open
-
-2. **Analyze data** (prompt):
-   ```
-   Load the sales data from /mnt/data/sales.csv and show me
-   a summary of the key metrics
-   ```
-
-3. **Assistant creates script**, commits, runs in Domino
-
-4. **Review results** returned through MCP
-
-5. **Iterate on analysis** (prompt):
-   ```
-   Now create a visualization of sales by region and save it
-   to /mnt/artifacts/sales_by_region.png
-   ```
-
-6. **Train a model** (prompt):
-   ```
-   Train a random forest model to predict sales using the
-   processed data. Log the results to MLflow.
-   ```
-
-7. **All work is tracked** in Domino's experiment manager
+The documented end-to-end walkthrough: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/modeling-assistant.
 
 ## Troubleshooting
 
 ### "MCP server not found" or tools not appearing
 
-1. Ensure `uv` is installed and in your PATH
-2. Restart your assistant after installing the plugin
+1. Ensure `uv` is installed and in your PATH.
+2. Restart your assistant after installing the plugin.
 3. Check the plugin and server are enabled:
-   - **Claude Code:** `/plugin` → Installed tab; run `claude --debug` to see MCP server initialization errors
-   - **Codex:** `/mcp` in a session, or `codex mcp list`, should show `domino_server`
-4. If the server isn't listed at all, your plugin distribution may be skills-only; register it manually as described below
+   - **Claude Code:** `/plugin` > Installed tab; `claude --debug` shows MCP server initialization errors.
+   - **Codex:** `/mcp` in a session, or `codex mcp list`, should show `domino_server`.
+   - **Other hosts:** open the host's MCP server list and confirm `domino_server` is connected.
+4. If the server isn't listed at all, your plugin distribution may be skills-only; register it manually as described below.
 
 ### Register the server manually
 
-Clone the plugin repository, then point your assistant at `mcp-servers/domino_mcp_server`. For Codex:
+Clone the plugin repository, then point your assistant at `mcp-servers/domino_mcp_server` as a stdio server. Inside a Domino Workspace no environment variables are needed. Outside Domino pass `DOMINO_HOST` and `DOMINO_TOKEN`, or rely on the env file from Step 1. For Codex:
 
 ```bash
 codex mcp add domino_server \
-  --env DOMINO_API_KEY="$DOMINO_API_KEY" --env DOMINO_HOST="$DOMINO_HOST" \
   -- uv --directory /path/to/domino-ai-plugin/mcp-servers/domino_mcp_server run domino_mcp_server.py
 ```
 
-This stores the key in your personal Codex config, so never run it with a key you share. For other assistants, register a stdio server with the same `uv` command.
+Codex strips the shell environment from MCP servers, so on a laptop use the env file (`~/.config/domino-mcp-server/.env`) rather than `--env`, which would store the token in your Codex config. For Claude Code, `claude mcp add domino_server -- uv --directory ... run domino_mcp_server.py` works the same way and inherits your shell environment. For other assistants, register a stdio server with the same `uv` command and pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file.
 
-### "Unauthorized" errors
+### "Unauthorized" or "DOMINO_TOKEN is not set" errors
 
-1. **Workspace:** This shouldn't happen — auth is automatic. Restart the workspace if it persists.
-2. **Laptop:** Verify `DOMINO_API_KEY` and `DOMINO_HOST` are set in your shell environment (`echo $DOMINO_API_KEY`)
+1. **Workspace:** this should not happen; the API proxy authenticates. Restart the Workspace if it persists.
+2. **Laptop:** the error names the variable to fix. Verify `DOMINO_HOST` and `DOMINO_TOKEN` are set in the environment the server runs in (or in the env file), that `DOMINO_HOST` starts with `https://`, and that the Personal Access Token has not expired or been revoked (**Account settings** > **Personal Access Token** shows its status). Remove any `DOMINO_API_KEY`; it is not accepted.
 
 ### "Project not found"
 
-1. **Workspace:** Project info is auto-detected. Check that `DOMINO_PROJECT_OWNER` and `DOMINO_PROJECT_NAME` env vars are set.
-2. **Laptop:** Check that `domino_project_settings.md` exists in your project root with the correct owner and project name.
+1. **Workspace:** project info is auto-detected. Check that `DOMINO_PROJECT_OWNER` and `DOMINO_PROJECT_NAME` are set.
+2. **Laptop:** check that `domino_project_settings.md` exists in your project root with the correct owner and project name.
+
+### File conflicts on DFS projects
+
+`smart_sync_file` reports a conflict, with the remote content, when the remote file changed since this session last saw it (or was never seen). Review and merge, then sync again; pass `force_overwrite=True` only when the remote version should be discarded. `upload_file_to_domino_project` and `sync_local_file_to_domino` need `overwrite=True` to replace an existing, different file.
 
 ### Jobs fail immediately
 
-1. Check compute environment is available
-2. Verify hardware tier is valid
-3. Review Domino job logs for errors
+1. Check the compute environment is available.
+2. Verify the hardware tier is valid.
+3. Read the job's `stdErr` with `check_domino_job_run_results(run_id, log_type="stdErr")`.
 
-## Next Steps
+## Next steps
 
-- [SKILL.md](./SKILL.md) - Overview of modeling assistant capabilities and MCP server tool reference
-- [Domino Blueprints](https://domino.ai/resources/blueprints/vibe-modeling) - Official documentation
+- [SKILL.md](./SKILL.md): overview of modeling assistant capabilities and the MCP server tool reference
+- `mcp-servers/domino_mcp_server/README.md` in the plugin repository: full tool, route and environment-variable reference
+- https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/domino-skills: the other Domino skills the assistant can use

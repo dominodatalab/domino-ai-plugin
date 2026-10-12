@@ -1,358 +1,200 @@
-# DominoRun Context Manager Guide
+# DominoAgentContext and DominoRun
 
-The `DominoRun` context manager groups traces into runs, enabling aggregation, configuration tracking, and organized experiment viewing.
-
-## When to Use DominoRun (and When NOT To)
-
-| Context | Use DominoRun? | Why |
-|---------|---------------|-----|
-| Batch evaluation scripts | Yes | Groups traces into a named run in Experiments UI |
-| Domino Jobs | Yes | Run-level aggregation and config tracking |
-| **Deployed Domino Apps** | **No** | `DominoRun` overrides Domino's auto-routing. Traces go to a custom experiment instead of `agent_experiment_{app_id}`, and the **App Performance tab won't see them**. |
-| Workspaces (interactive) | Optional | Useful for development, but not required |
-
-**For deployed Apps:** Let `@add_tracing` create traces directly (no `DominoRun` wrapper, no `mlflow.set_experiment()`). Domino auto-routes traces to the app's `agent_experiment_{app_id}` experiment, which the Performance tab reads from.
+`domino.agents.logging` provides two context managers with the same signature:
 
 ```python
-# DEPLOYED APP — do NOT use DominoRun
-@router.post("/chat")
-async def chat(request: ChatRequest):
-    return await run_agent_turn(request)  # @add_tracing handles tracing
+DominoAgentContext(experiment_name=None, run_id=None, agent_config_path=None, custom_summary_metrics=None)
+DominoRun(experiment_name=None, run_id=None, agent_config_path=None, custom_summary_metrics=None)
+```
 
-# BATCH EVALUATION — use DominoRun
-with DominoRun(run_name="evaluation-batch") as run:
+Both start an MLflow run, log the agent configuration YAML as run parameters (and as an MLflow external model of type `Agent`), and at exit compute aggregated metrics over the evaluated traces created inside the block. `DominoAgentContext` additionally tags the run as an agent version (`domino.internal.run.is_agent=true`); use it for agent evaluation scripts, which Experiment Manager can then deploy when they ran as a Job. `DominoRun` is the same for non-agent evaluations.
+
+There is **no `run_name` parameter**; passing one raises `TypeError`. The object returned by `with ... as run` is the `mlflow.ActiveRun`, so the run id is `run.info.run_id`.
+
+| Parameter | Meaning |
+|-----------|---------|
+| `experiment_name` | Name of an **existing** MLflow experiment to log to. The SDK raises if it does not exist (create it first with `mlflow.create_experiment` or in the UI). Omitted: the active experiment (`mlflow.set_experiment`, else MLflow's default). |
+| `run_id` | Continue logging to an existing run instead of starting a new one. |
+| `agent_config_path` | YAML file to log as parameters. Omitted: `DOMINO_AGENT_CONFIG_PATH`, else `./agent_config.yaml`. A missing file logs a warning and no parameters. |
+| `custom_summary_metrics` | List of `(metric_name, statistic)` tuples; statistics are `mean`, `median`, `stdev`, `max`, `min`. Omitted: the mean of every evaluator metric found. |
+
+Not thread-safe: use one context per thread; parallel work inside one context is fine.
+
+## When to use it
+
+| Context | Use it? | Why |
+|---------|---------|-----|
+| Evaluation script run as a Domino Job | Yes (`DominoAgentContext`) | Creates a deployable agent version with code, config and traces linked |
+| Evaluation script run in a Workspace | Yes | Same grouping, for quick checks; not deployable |
+| Non-agent batch evaluation | Yes (`DominoRun`) | Run-level aggregation and config tracking |
+| **Deployed agent** (Domino App) | **No** | `@add_tracing` alone is sufficient; the SDK routes production traces to `agent_experiment_<app id>` and skips inline evaluators there |
+
+```python
+# DEPLOYED AGENT: no context manager
+@app.post("/chat")
+async def chat(body: dict):
+    return await run_agent_turn(body["message"])     # @add_tracing handles tracing
+
+# EVALUATION: context manager around the loop
+with DominoAgentContext(agent_config_path="config.yaml") as run:
     for item in test_data:
-        result = run_agent_turn(item)
+        run_agent_turn(item["question"])
 ```
 
-## Basic Usage
-
-### Simple Run
+## Basic usage
 
 ```python
-from domino.agents.logging import DominoRun
+import mlflow
+from domino.agents.logging import DominoAgentContext
 
-with DominoRun() as run:
-    result = my_traced_function(input_data)
-    print(f"Run ID: {run.run_id}")
+mlflow.set_experiment("support-agent-eval")        # or pass experiment_name=
+
+with DominoAgentContext(agent_config_path="config.yaml") as run:
+    for question in questions:
+        my_traced_agent(question)
+    print(f"Run ID: {run.info.run_id}")
 ```
 
-### With Run Name
+Continue an earlier run:
 
 ```python
-with DominoRun(run_name="production-evaluation-2024") as run:
-    for item in test_data:
-        result = my_agent(item)
+with DominoAgentContext(run_id="<existing run id>") as run:
+    my_traced_agent("one more question")
 ```
 
-### Resilient Wrapper Pattern
+### Resilient wrapper for shared code
 
-In production code, wrap `DominoRun` to tolerate import failures and broken MLflow state:
+Code that also runs outside Domino can tolerate a missing SDK:
 
 ```python
 from contextlib import contextmanager
 
 try:
-    from domino.agents.logging import DominoRun as _DominoRun
-    _HAS_DOMINO_SDK = True
+    from domino.agents.logging import DominoAgentContext as _Ctx
 except ImportError:
-    _HAS_DOMINO_SDK = False
-    _DominoRun = None
+    _Ctx = None
 
 @contextmanager
-def DominoRun():
-    """DominoRun that tolerates broken MLflow tracking state."""
-    if _DominoRun is None:
+def evaluation_run(**kwargs):
+    if _Ctx is None:
         yield None
         return
-    try:
-        with _DominoRun() as run:
-            yield run
-    except Exception:
-        yield None
+    with _Ctx(**kwargs) as run:
+        yield run
 ```
 
-## Configuration File
+## Configuration file
 
-### Loading Agent Configuration
-
-Use `agent_config_path` to log configuration as MLflow parameters:
-
-```python
-from domino.agents.logging import DominoRun
-
-with DominoRun(agent_config_path="config.yaml") as run:
-    result = my_agent(query)
-```
-
-### config.yaml Example
+`agent_config_path` points at a YAML file. The SDK flattens nested keys with dots and logs every leaf as an MLflow parameter, so the run records exactly which models, prompts and settings produced its traces.
 
 ```yaml
-# Agent configuration
 models:
   primary: gpt-4o-mini
-  fallback: gpt-3.5-turbo
-  judge: gpt-4o
+  judge: gpt-4o-mini
 
 agents:
   classifier:
     temperature: 0.3
     max_tokens: 500
-    system_prompt: "You are a classifier..."
-
+    system_prompt: "You are a classifier."
   responder:
     temperature: 0.7
     max_tokens: 1500
-    system_prompt: "You are a helpful assistant..."
-
-  evaluator:
-    temperature: 0.1
-    max_tokens: 100
+    system_prompt: "You are a helpful assistant."
 
 settings:
   retry_count: 3
   timeout_seconds: 30
-  batch_size: 10
 ```
 
-### Accessing Configuration in Code
+Logged parameters: `models.primary`, `models.judge`, `agents.classifier.temperature`, and so on. Read the same file in your code so the logged values are the ones in use:
 
 ```python
-import yaml
+from domino.agents import read_agent_config
 
-with open("config.yaml") as f:
-    config = yaml.safe_load(f)
-
-classifier_temp = config["agents"]["classifier"]["temperature"]
+config = read_agent_config("config.yaml")
+temperature = config["agents"]["classifier"]["temperature"]
 ```
 
-## Aggregated Metrics
+Switching models is then a config change, visible per run in the UI.
 
-### Defining Summary Metrics
+## Aggregated metrics
 
-Use `custom_summary_metrics` to aggregate metrics across all traces in a run:
+Evaluators attach metrics to each trace. At exit the context manager reads every evaluated trace of the run and logs one run metric per `(metric, statistic)` pair, named **`<statistic>_<metric>`**:
 
 ```python
-from domino.agents.logging import DominoRun
-
-aggregated_metrics = [
+aggregated = [
     ("classification_confidence", "mean"),
+    ("classification_confidence", "min"),
     ("impact_score", "median"),
     ("response_quality", "stdev"),
     ("processing_time", "max"),
-    ("token_count", "min"),
 ]
 
-with DominoRun(
-    agent_config_path="config.yaml",
-    custom_summary_metrics=aggregated_metrics
-) as run:
+with DominoAgentContext(agent_config_path="config.yaml", custom_summary_metrics=aggregated) as run:
     for item in batch:
-        result = triage_incident(item)
+        triage_incident(item)
 ```
 
-### Aggregation Types
+Run metrics: `mean_classification_confidence`, `min_classification_confidence`, `median_impact_score`, `stdev_response_quality`, `max_processing_time`. Without `custom_summary_metrics`, the SDK logs `mean_<metric>` for every metric it finds. Only numeric evaluator results are aggregated; string results are labels. Re-entering the same run with `run_id=` recomputes the aggregates already present on it.
 
-| Type | Description |
-|------|-------------|
-| `mean` | Average of all values |
-| `median` | Middle value (50th percentile) |
-| `stdev` | Standard deviation |
-| `min` | Minimum value |
-| `max` | Maximum value |
-
-### How Aggregation Works
-
-1. Each traced function logs individual metrics via evaluators
-2. At run end, `DominoRun` aggregates metrics across all traces
-3. Aggregated metrics appear in the run's metrics in Domino UI
-
-Example:
-```python
-# If these traces occurred:
-# Trace 1: response_quality = 0.8
-# Trace 2: response_quality = 0.9
-# Trace 3: response_quality = 0.85
-
-# With aggregation: ("response_quality", "mean")
-# Run metric: response_quality_mean = 0.85
-```
-
-## Complete Example with All Features
+## Complete example
 
 ```python
 import mlflow
 from domino.agents.tracing import add_tracing
-from domino.agents.logging import DominoRun
+from domino.agents.logging import DominoAgentContext
 from openai import OpenAI
 
-mlflow.openai.autolog()
 client = OpenAI()
 
-def quality_evaluator(inputs, output):
+def quality_evaluator(span):
+    output = span.outputs or {}
     return {
         "response_length": len(output.get("response", "")),
-        "confidence": output.get("confidence", 0),
+        "confidence": float(output.get("confidence", 0.0)),
     }
 
-@add_tracing(name="qa_agent", evaluator=quality_evaluator)
+@add_tracing(name="qa_agent", span_type="AGENT", autolog_frameworks=["openai"], evaluator=quality_evaluator)
 def qa_agent(question: str) -> dict:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": question}]
-    )
-    return {
-        "response": response.choices[0].message.content,
-        "confidence": 0.9,
-    }
+        model="gpt-4o-mini", messages=[{"role": "user", "content": question}])
+    return {"response": response.choices[0].message.content, "confidence": 0.9}
 
-# Define aggregations
-aggregated_metrics = [
-    ("response_length", "mean"),
-    ("response_length", "max"),
-    ("confidence", "mean"),
-    ("confidence", "min"),
-]
+aggregated = [("response_length", "mean"), ("response_length", "max"),
+              ("confidence", "mean"), ("confidence", "min")]
 
-# Run with full configuration
-with DominoRun(
-    run_name="qa-evaluation-batch",
-    agent_config_path="config.yaml",
-    custom_summary_metrics=aggregated_metrics
-) as run:
-    questions = [
-        "What is machine learning?",
-        "How do neural networks work?",
-        "What is deep learning?",
-    ]
-
-    for question in questions:
+mlflow.set_experiment("qa-agent-eval")
+with DominoAgentContext(agent_config_path="config.yaml", custom_summary_metrics=aggregated) as run:
+    for question in ["What is machine learning?", "How do neural networks work?"]:
         result = qa_agent(question)
-        print(f"Q: {question}")
-        print(f"A: {result['response'][:100]}...")
-
-    print(f"\nRun ID: {run.run_id}")
+        print(f"Q: {question}\nA: {result['response'][:100]}...")
+    print(f"Run ID: {run.info.run_id}")
 ```
 
-## Batch Processing Pattern
-
-### Processing Large Datasets
+## Batch processing pattern
 
 ```python
-from domino.agents.logging import DominoRun
-
 def process_batch(items, batch_name):
-    aggregated_metrics = [
-        ("accuracy", "mean"),
-        ("latency", "mean"),
-        ("error_count", "max"),
-    ]
-
-    with DominoRun(
-        run_name=f"batch-{batch_name}",
-        custom_summary_metrics=aggregated_metrics
-    ) as run:
+    with DominoAgentContext(experiment_name=f"eval-{batch_name}",     # experiment must exist
+                            custom_summary_metrics=[("accuracy", "mean"), ("latency", "max")]) as run:
         results = []
         for item in items:
             try:
-                result = process_item(item)
-                results.append(result)
-            except Exception as e:
-                print(f"Error processing {item}: {e}")
+                results.append(process_item(item))     # a traced function
+            except Exception as exc:
+                print(f"Error processing {item}: {exc}")   # the failed trace keeps the error
         return results
-
-# Process multiple batches
-for i, batch in enumerate(batches):
-    results = process_batch(batch, f"batch-{i}")
 ```
 
-## Error Handling
+## Best practices
 
-### Graceful Error Handling
+1. **One run per evaluation configuration.** Compare runs in Experiment Manager (select two to four, **Compare**); for example `mlflow.set_experiment("model-comparison-gpt-vs-claude")` with one run per model, selected through the config file.
+2. **Run as a Job** when the result should be deployable; a Workspace run has no code commit lineage.
+3. **Keep runs focused**: separate runs for accuracy and latency evaluations rather than one run that does everything.
+4. **No context manager in deployed agents**, and no `mlflow.set_experiment()` there either.
 
-```python
-from domino.agents.logging import DominoRun
+## Next steps
 
-with DominoRun() as run:
-    for item in data:
-        try:
-            result = my_agent(item)
-        except Exception as e:
-            # Error is logged in trace
-            print(f"Error: {e}")
-            continue  # Continue with next item
-```
-
-## Best Practices
-
-### 1. Use Descriptive Run Names
-
-```python
-# Good
-with DominoRun(run_name="customer-support-eval-2024-01-15"):
-with DominoRun(run_name="model-comparison-gpt4-vs-claude"):
-
-# Bad
-with DominoRun(run_name="test"):
-with DominoRun():  # No name at all
-```
-
-### 2. Don't Use DominoRun in Deployed Apps
-
-```python
-# BAD — traces won't appear in App Performance tab
-@router.post("/chat")
-async def chat(request):
-    with DominoRun():  # Don't do this in a deployed app
-        return await run_agent(request)
-
-# GOOD — @add_tracing handles tracing, Domino auto-routes to Performance tab
-@router.post("/chat")
-async def chat(request):
-    return await run_agent(request)  # run_agent has @add_tracing
-```
-
-### 3. Don't Call mlflow.set_experiment() in Deployed Apps
-
-```python
-# BAD — overrides Domino's auto-routing
-@asynccontextmanager
-async def lifespan(app):
-    mlflow.set_experiment("my-custom-experiment")  # Don't do this
-    yield
-
-# GOOD — just enable autolog, let Domino handle experiment routing
-@asynccontextmanager
-async def lifespan(app):
-    try:
-        mlflow.openai.autolog()
-    except Exception:
-        pass
-    try:
-        mlflow.anthropic.autolog()
-    except Exception:
-        pass
-    yield
-```
-
-### 4. Keep Runs Focused (Evaluation Mode)
-
-```python
-# Good: One run per evaluation type
-with DominoRun(run_name="accuracy-evaluation"):
-    evaluate_accuracy(data)
-
-with DominoRun(run_name="latency-evaluation"):
-    evaluate_latency(data)
-
-# Bad: Everything in one run
-with DominoRun():
-    evaluate_accuracy(data)
-    evaluate_latency(data)
-    do_other_stuff()
-```
-
-## Next Steps
-
-- [EVALUATORS.md](./EVALUATORS.md) - Create custom evaluators
-- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md) - Complete example
+- [EVALUATORS.md](./EVALUATORS.md): writing evaluators
+- [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md): complete example
