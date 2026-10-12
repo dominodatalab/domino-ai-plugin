@@ -12,28 +12,28 @@ Applies to Domino 6.3 and Domino Cloud. One section differs between them (the le
 
 Four ways exist; pick in this order:
 
-1. **LLM Gateway 2.0** (Cloud and 6.3, early access): where an administrator has deployed it as a Domino App, use it; callers authenticate with their Domino identity and administrators hold the provider keys, grants, budgets and guardrails. Everything about it is in the `domino-llm-gateway` skill.
+1. **LLM Gateway 2.0** (Cloud and 6.3, early access): where an administrator has installed it as a Domino App, use it; callers authenticate with their Domino identity and administrators hold the provider keys, grants, budgets and guardrails. It is an extension, so `GET /version` cannot reveal it: find the gateway App's URL in a Project or user environment variable, else ask; `GET <base>/v1/models` with the bearer confirms it. The rest is in the `domino-llm-gateway` skill.
 2. **Option A: external provider**, where no gateway is deployed. Code calls OpenAI, Anthropic, Bedrock, Azure OpenAI or Vertex AI through the provider's SDK; Domino injects the API key as an environment variable.
 3. **Option B: Domino-hosted endpoint.** Domino serves a registered model (from Hugging Face or an experiment run) with vLLM on a GPU hardware tier behind an OpenAI-compatible URL.
 4. **Legacy AI Gateway**: Domino 6.3 only, where an administrator enabled it (off by default); removed from Cloud, where its UI and `/api/aigateway/*` routes are gone.
 
-Options A and B are identical on both targets; only the gateways vary by deployment.
+Options A and B apply to both targets (the Bedrock credential-propagation path is a 6.3 feature); the gateways vary by deployment.
 
-Find the deployment: `GET $DOMINO_API_HOST/version` (send the bearer) returns JSON with a `version` field. `6.3.x` is self-managed 6.3; Cloud reports a later build (`6.4.0` at the time of writing). On 6.3, whether the legacy gateway is enabled is an administrator setting: confirm it in the UI (**Develop** > **Gateway LLMs** lists endpoints only where it is on) or with the administrator. Do not infer it from a 404: in a run, `DOMINO_API_HOST` may be a sidecar that lacks some `/api/*` routes (`domino-api-intro`, HOSTS.md), so retry the public deployment URL with a PAT before concluding anything, and never try to enable the gateway yourself. Below 6.3 this skill does not apply: say so and point to docs.dominodatalab.com for that version. Never tell the user to reinstall or change the plugin.
+Find the deployment: `GET $DOMINO_API_HOST/version` (send the bearer) returns `version`. `6.3.x` is self-managed 6.3; Cloud reports a later build (`6.4.0` today). On 6.3, whether the legacy gateway is enabled is an administrator setting: confirm it in the UI (**Develop** > **Gateway LLMs** lists endpoints only where it is on) or with the administrator. Do not infer it from a 404: in a run, `DOMINO_API_HOST` may be a sidecar that lacks some `/api/*` routes (`domino-api-intro`, HOSTS.md), so retry the deployment URL with a PAT first, and never enable the gateway yourself. Below 6.3 this skill does not apply: say so and point to docs.dominodatalab.com for that version. Never tell the user to reinstall or change the plugin.
 
-Choose Option A for a frontier model when prompts may leave the cluster; choose Option B when external providers are not permitted, data must stay resident, or the model was fine-tuned in-house. Endpoints are OpenAI-compatible, so OpenAI-style client code moves between the two by changing `base_url` and the key. For agents, `@add_tracing` (`domino-genai-tracing` skill) captures every LLM call wherever the model runs.
+Choose Option A for a frontier model when prompts may leave the cluster; choose Option B when external providers are not permitted, data must stay resident, or the model was fine-tuned in-house. Endpoints are OpenAI-compatible, so client code moves between them by changing `base_url` and the key. For agents, `@add_tracing` (`domino-genai-tracing` skill) captures every LLM call wherever the model runs.
 
 ## Option A: call an external provider
 
 1. Install the provider's SDK in the Compute Environment (Dockerfile instruction such as `RUN pip install openai`) or in the Workspace.
-2. Store the API key as a Domino environment variable in the Project's settings. Domino injects Project environment variables into Workspaces and Jobs, so the key stays out of code and version control.
+2. Store the API key as a Project environment variable; Domino injects it into Workspaces and Jobs, so it stays out of code and version control.
 3. Read it with `os.environ` and call the SDK as anywhere else.
 
 | Provider | Package | Environment variable(s) |
 |---|---|---|
 | OpenAI | `openai` | `OPENAI_API_KEY` |
 | Anthropic | `anthropic` | `ANTHROPIC_API_KEY` |
-| AWS Bedrock | `boto3` | none with AWS credential propagation (`domino-data-connectivity`); else `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| AWS Bedrock | `boto3` | `AWS_PROFILE` naming the propagated role, with AWS credential propagation (6.3; on Cloud ask Domino Support; `domino-data-connectivity`); else `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
 | Azure OpenAI | `openai` | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
 | Google Vertex AI | `google-cloud-aiplatform` | Service account credentials |
 
@@ -73,15 +73,15 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-The OpenAI Responses API is also supported. Keep the URL in a Domino environment variable such as `LLM_ENDPOINT_URL` so promoting from a development to a production endpoint is a configuration change. The access token is short-lived and exists only inside a Domino execution; code outside Domino uses a Personal Access Token as the bearer. Legacy user API keys are deprecated; do not use them.
+The OpenAI Responses API is also supported. Keep the URL in a Domino environment variable such as `LLM_ENDPOINT_URL` so promotion to a production endpoint is a configuration change. The access token is short-lived and exists only inside a Domino execution; code outside Domino uses a Personal Access Token as the bearer. Legacy user API keys are deprecated; do not use them.
 
 ## Gateways
 
-**LLM Gateway 2.0** (Cloud and 6.3, early access) is the successor to the legacy AI Gateway: one OpenAI-compatible base URL in front of external providers and Domino-hosted models, with usage tracking, budgets and guardrails. Domino distributes it as a Domino App through the Domino field representative; there is no self-service install. Calling it, coding assistants through it, and what the administrator configures: `domino-llm-gateway` skill.
+**LLM Gateway 2.0**: the successor to the legacy AI Gateway, one OpenAI-compatible base URL in front of external providers and Domino-hosted models; distributed through the Domino field representative, no self-service install. Calling it, coding assistants through it and the administrator's setup: `domino-llm-gateway` skill.
 
 **Legacy AI Gateway** (6.3 only, where enabled): [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md) covers the Gateway LLMs UI, the MLflow Deployment Client calls it supports, the `/api/aigateway/v1` routes with verified bodies, and the audit download.
 
-**Migrating off the legacy AI Gateway** (code using the MLflow Deployment Client or `/api/aigateway/` URLs fails on Cloud and on a 6.3 deployment with the gateway disabled): the steps are in [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md#migrating-away).
+**Migrating off the legacy AI Gateway** (code using the MLflow Deployment Client or `/api/aigateway/` URLs fails on Cloud and on a 6.3 deployment with the gateway disabled): steps in [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md#migrating-away).
 
 Before generating API code, confirm routes against the deployment's own reference at `https://<domino-domain>/docs` (specs checked: [HOST-AN-LLM-API.md](./HOST-AN-LLM-API.md)).
 
