@@ -33,7 +33,7 @@ json.dump({"containerRepository": "<org>/<team>/<container-repo>", "tag": "1.4.0
 | `tag` | no (cluster reference) | alphanumerics, underscores, periods, dashes |
 | `helmRepository` | yes | existing private NGC Helm repository, same character rules |
 | `helmVersion` | yes | semver |
-| `ngcApiKey` | yes | NGC API key; generate it in NGC, keep it in a secret store |
+| `ngcApiKey` | yes | NGC API key; generate it in NGC, keep it in a Project or user environment variable and read it by name (`os.environ["NGC_API_KEY"]`); a CI runner outside Domino holds its own copy |
 
 Constraints from the product page:
 

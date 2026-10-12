@@ -120,7 +120,7 @@ In a Workspace the trace lands in the active MLflow experiment; open **Experimen
 
 ### Provider keys
 
-Store API keys as Domino environment variables (Project settings), never in code:
+Store API keys as Domino environment variables (**Project > Settings > Environment variables** for a key the Project shares, **Account > Account Settings > User environment variables** for a personal one), never in code, and read them by name:
 
 ```python
 import os

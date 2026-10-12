@@ -28,6 +28,18 @@ future versions", and the environment-variable glossary marks `DOMINO_USER_API_K
 sunsetting. Never recommend them, not even as a fallback. `DOMINO_TOKEN_FILE` no longer
 exists as an environment variable.
 
+Other secrets a Domino execution needs (provider API keys, tokens for other systems) are
+Domino environment variables, nothing else: a **user** variable (**Account > Account
+Settings > User environment variables**) for a personal credential, injected into every
+Workspace, Job and App that user starts and invisible to other users; a **Project** variable
+(**Project > Settings > Environment variables**) for a credential the Project's executions
+share. User overrides Project, which overrides the Compute Environment. Neither reaches a
+Model API: set those under the endpoint's own **Settings**. Code reads them by name
+(`os.environ["NAME"]`) and never prints them. Outside Domino (CI, Airflow, a laptop) these
+variables are not readable; the external system holds its own copy of a token created in
+Domino. Docs: https://docs.domino.ai/cloud/admin/security-and-compliance/protecting-tokens-api-keys
+(same under `/6.3/`).
+
 ```bash
 # Inside a run (preferred)
 curl -s "$DOMINO_API_PROXY/api/users/v1/self"

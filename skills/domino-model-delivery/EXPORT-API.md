@@ -19,7 +19,7 @@ A CI/CD runner is outside Domino, so use the deployment URL and a Bearer token:
 
 ```bash
 BASE="$DOMINO_API_HOST"                      # outside Domino: export DOMINO_API_HOST=<deployment URL users open in a browser>
-AUTH="Authorization: Bearer $DOMINO_TOKEN"   # Personal Access Token or service-account token from the CI secret store
+AUTH="Authorization: Bearer $DOMINO_TOKEN"   # PAT or service-account token created in Domino; the CI system's own secret holds the runner's copy (Domino variables are not readable there)
 ```
 
 Inside a Domino run use `$DOMINO_API_PROXY` with no header instead. Do not use
@@ -143,9 +143,10 @@ echo "quay.io/acme/credit-risk:$TAG"
 
 ### GitHub Actions job that runs it
 
-Secrets hold the Domino token (a Personal Access Token, or a service-account token for a
-pipeline that acts as nobody in particular) and the registry credentials; repository variables
-hold the ids. No API key anywhere.
+GitHub secrets hold the Domino token (a Personal Access Token, or a service-account token for a
+pipeline that acts as nobody in particular) and the registry credentials, because a runner
+outside Domino cannot read Domino Project or user environment variables; the token is created
+in Domino and copied there once. Repository variables hold the ids. No API key anywhere.
 
 ```yaml
 name: export-model

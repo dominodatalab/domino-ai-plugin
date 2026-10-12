@@ -114,15 +114,17 @@ The list route `GET .../tokens` returns `{"tokens": [...], "metadata"}` with the
 fields only, never `token`. Neither spec describes the permission beyond `401`/`403`;
 the docs restrict service-account management to Administrators, so expect `403` for
 anyone else. Tokens inherit the service account's roles at creation and expire after
-four months by default (docs). Store the value in your secret manager rather than
-re-reading it, and invalidate or delete a token that leaked.
+four months by default (docs). Give the value to its consumer once rather than re-reading
+it: a Project or user environment variable for Domino executions, or the CI system's own
+secret for a runner outside Domino, where Domino variables are not readable. Invalidate or
+delete a token that leaked.
 
 ```python
 sa = requests.post(f"{base_url}/api/serviceAccounts/v1/serviceAccounts", headers=headers,
                    json={"username": "github-actions", "email": "mlops@example.com"}).json()["serviceAccount"]
 token = requests.post(f"{base_url}/api/serviceAccounts/v1/serviceAccounts/{sa['idpId']}/tokens",
                       headers=headers, json={"name": "ci-token"}).json()
-secret = token["token"]   # store in your CI secret manager
+secret = token["token"]   # hand to the consumer once: a Project or user environment variable in Domino, or the CI system's own secret outside
 
 # Later, an administrator can read it again by name:
 secret = requests.get(f"{base_url}/api/serviceAccounts/v1/serviceAccounts/{sa['idpId']}/tokens/ci-token",

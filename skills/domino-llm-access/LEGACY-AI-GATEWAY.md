@@ -4,7 +4,7 @@ Applies to Domino 6.3 **only where an administrator has explicitly enabled the A
 
 ## What it is
 
-The legacy AI Gateway is a proxy between Domino executions and external LLM providers such as OpenAI or AWS Bedrock, built on an MLflow Deployments Server. Each **endpoint** forwards requests to one provider model. Provider credentials given at endpoint creation are stored in Domino's central vault and never exposed to callers. Access is per endpoint: everyone, or specific users and organizations. All endpoint activity is logged to Domino's central audit system.
+The legacy AI Gateway is a proxy between Domino executions and external LLM providers such as OpenAI or AWS Bedrock, built on an MLflow Deployments Server. Each **endpoint** forwards requests to one provider model. Provider credentials given at endpoint creation are held by the gateway, managed by Domino, and never exposed to callers. Access is per endpoint: everyone, or specific users and organizations. All endpoint activity is logged to Domino's central audit system.
 
 ## Where it is in the UI
 
@@ -47,7 +47,7 @@ body = {
     "endpointType": "llm/v1/chat",          # the MLflow Deployments Server endpoint type
     "modelProvider": "openai",              # an MLflow Deployments Server provider name
     "modelName": "gpt-4o",
-    "modelConfig": {"openai_api_key": os.environ["OPENAI_API_KEY"]},   # provider-specific keys, vaulted by Domino
+    "modelConfig": {"openai_api_key": os.environ["OPENAI_API_KEY"]},   # provider key read from a Project or user environment variable; the gateway keeps it afterwards
     "endpointPermissions": {"isEveryoneAllowed": False, "userIds": ["<user id>"]},
 }
 requests.post(f"{base_url}/api/aigateway/v1/endpoints", headers=headers, json=body)
@@ -70,7 +70,7 @@ Cloud has removed the gateway and 6.3 ships it disabled, so treat any gateway co
 
 1. **Find the code.** Search the Project for `mlflow.deployments.get_deploy_client(...)` and for `predict()`, `get_endpoint()` or `list_endpoints()` against a Domino AI Gateway target, and for any `/api/aigateway/` URL. All of it fails on Cloud and on a 6.3 deployment where the gateway is disabled.
 2. **Pick the replacement.** LLM Gateway 2.0 if the team needs centralized tracking, budgets or guardrails; otherwise a provider SDK (SKILL.md Option A) or a Domino-hosted endpoint (Option B).
-3. **Move the credentials.** Provider keys the gateway held in Domino's central vault are no longer reachable through it. Store them as Project environment variables (or as inputs to the LLM Gateway 2.0 configuration) and read them with `os.environ`.
+3. **Move the credentials.** Provider keys the gateway held centrally are no longer reachable through it. Store them as Project environment variables (user environment variables for a personal key; or as inputs to the LLM Gateway 2.0 configuration) and read them by name with `os.environ`.
 4. **Update the calls and rerun** the affected Jobs, Apps and agents end to end.
 
 ## Documentation

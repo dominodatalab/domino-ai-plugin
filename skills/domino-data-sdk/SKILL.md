@@ -9,8 +9,8 @@ compatibility: Domino 6.3 and Domino Cloud. Requires dominodatalab-data 6.7.4 or
 Applies to Domino 6.3 and Domino Cloud.
 
 `dominodatalab-data` is the Python half of the Domino Data API. It talks to the Data Source
-proxy that Domino injects into every execution, so credentials stay in Domino's secret store and
-never appear in code. Docs: https://docs.domino.ai/cloud/reference/api/data_api (same path under
+proxy that Domino injects into every execution, so the Data Source credentials stay with the
+Data Source, managed by Domino, and never appear in code. Docs: https://docs.domino.ai/cloud/reference/api/data_api (same path under
 `/6.3/`). Source: https://github.com/dominodatalab/domino-data. Both docs sets require
 `dominodatalab-data>=6.7.4`; 6.7.4 is the current PyPI release and needs Python 3.10 or later.
 

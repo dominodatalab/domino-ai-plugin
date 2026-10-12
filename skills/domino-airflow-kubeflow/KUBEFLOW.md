@@ -17,7 +17,9 @@ needs. The real work is the Domino Job, versioned in the Domino project.
 
 Create a Kubernetes Secret in the namespace where the pipeline's pods run (in multi-user KFP
 that is the user's profile namespace, not `kubeflow`) holding a Personal Access Token or a
-service-account token, not a legacy API key (the product page still mentions one):
+service-account token, not a legacy API key (the product page still mentions one). The token is
+created in Domino; the Secret is the pipeline's own copy, because its pods cannot read Domino
+Project or user environment variables:
 
 ```bash
 kubectl -n <pipeline namespace> create secret generic domino-token --from-literal=token='<PAT or service-account token>'

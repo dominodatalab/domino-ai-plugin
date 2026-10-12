@@ -13,7 +13,7 @@ Outside Domino there is no API proxy and no access-token sidecar. The worker nee
 | Variable | Value |
 |---|---|
 | `DOMINO_API_HOST` | the deployment URL users open in a browser (python-domino reads the same variable) |
-| `DOMINO_TOKEN_FILE` | path to a file whose first line is a Personal Access Token or service-account token, mounted from the secret store |
+| `DOMINO_TOKEN_FILE` | path to a file whose first line is a Personal Access Token or service-account token created in Domino; the worker mounts it from Airflow's own secret mechanism, since Domino Project and user environment variables are not readable outside Domino |
 
 Airflow Variables are fine for the host; keep the token out of Variables unless the Variable is
 backed by a secrets backend. Legacy API keys (`DOMINO_USER_API_KEY`, `X-Domino-Api-Key`) are

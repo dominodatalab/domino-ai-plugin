@@ -46,9 +46,10 @@ Domino and which project this is, and `search_domino` (`domino_docs`) searches t
 
 1. Read the matching skill before creating files; follow its procedure and its templates
    (`assets/`) rather than inventing a layout.
-2. Credentials: never hard-code them. Domino injects Project and User environment variables into
-   every execution, so store secrets there (Project settings, **Environment variables**) and read
-   them with `os.environ`.
+2. Credentials: never hard-code them. Domino injects Project and user environment variables into
+   every execution, so store secrets there (**Project > Settings > Environment variables** for
+   credentials the Project shares; **Account > Account Settings > User environment variables**
+   for personal ones) and read them by name with `os.environ`, never printing the values.
 3. Authenticate as `domino-api-intro` says: inside a Domino execution call
    `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop, CI), send a Personal Access
    Token or service account token as `Authorization: Bearer`. Never use legacy API keys.

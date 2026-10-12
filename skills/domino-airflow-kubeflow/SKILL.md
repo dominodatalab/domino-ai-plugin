@@ -27,9 +27,10 @@ lives in the Domino project. Domino keeps reproducibility, the orchestrator keep
    browser), exported as `DOMINO_API_HOST` on the worker. Nothing from inside a run
    (`DOMINO_API_PROXY`, `localhost:8899`, `127.0.0.1:8763`) exists on an Airflow worker or a KFP pod.
 2. **A token**: a Personal Access Token for a pipeline that acts as you, or a service-account
-   token for unattended automation, kept in the orchestrator's secret store. Legacy user API
-   keys are deprecated; the product page and python-domino's example still show
-   `DOMINO_API_KEY` / `DOMINO_USER_API_KEY`, do not copy that.
+   token for unattended automation, created in Domino and held in the orchestrator's own secret
+   mechanism (Domino variables are not readable there). Legacy user API keys are deprecated; do
+   not copy the `DOMINO_API_KEY` / `DOMINO_USER_API_KEY` the product page and python-domino's
+   example still show.
    https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 3. **Project id and command** per step, plus optional environment id and hardware tier id.
 
@@ -101,8 +102,8 @@ components, pipeline, secret creation and logs on failure: [KUBEFLOW.md](./KUBEF
 - `DominoOperator.command` is a **list**; with `isDirect=True` pass the whole shell command as
   its single element (`command=["python -V"]`).
 - `tier` on `DominoOperator` is validated against hardware tier **names** visible to the project.
-- Constructing `Domino(...)` calls the deployment's `/version` endpoint, so a worker with no
-  network path to Domino fails at client creation, not at Job start.
+- `Domino(...)` calls `/version` on construction, so a worker with no network path to Domino
+  fails at client creation, not at Job start.
 - Default `max_poll_time` is 6000 s (100 min); longer Jobs need a larger value or the task fails
   while the Job keeps running.
 - python-domino reads `DOMINO_API_HOST` and `DOMINO_TOKEN_FILE` from the environment; the

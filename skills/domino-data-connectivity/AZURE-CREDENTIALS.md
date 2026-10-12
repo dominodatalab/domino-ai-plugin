@@ -35,7 +35,8 @@ Two properties of the `domino_aad` package shape everything below (read from the
 
 Prefer the documented alternatives when they fit: an Azure Blob, ADLS or Databricks **Data
 Source** (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors)
-keeps a key or service principal in Domino's secret store and needs no Keycloak work.
+keeps the key or service principal with the Data Source, managed by Domino, and needs no
+Keycloak work.
 
 ## How it works
 

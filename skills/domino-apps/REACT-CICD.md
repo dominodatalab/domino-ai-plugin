@@ -50,7 +50,7 @@ node server.js          # or: npx serve -s dist -l 8888 --no-clipboard
 | Variable | `ENVIRONMENT_ID` | Compute Environment ID |
 | Variable | `HARDWARE_TIER_ID` | Hardware Tier ID, for example `small-k8s` |
 
-Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate.
+Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate. The runner is outside Domino and cannot read Domino Project or user environment variables, so the GitHub secret is its own copy of a token created in Domino (**Account Settings > Personal Access Token**, or a service account token).
 
 ## Workflow
 

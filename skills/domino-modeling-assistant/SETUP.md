@@ -23,7 +23,7 @@ This guide covers setup for the Domino modeling assistant. When the plugin is in
 1. Log into Domino.
 2. Go to **Account** > **Account settings** > **Personal Access Token**.
 3. Click **Generate new Token**, give it a name and an expiration, and click **Create token**.
-4. Copy the token now; it is shown only once. Store it in a password manager.
+4. Copy the token now; it is shown only once. On a laptop it goes only where the next section puts it (`DOMINO_TOKEN` or the env file): that is the laptop's own copy, since Domino user and Project environment variables are not readable outside Domino. Inside a Workspace no token is needed.
 
 Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication (6.3: replace `cloud` with `6.3`). A Personal Access Token carries your identity and expires; rotate it before it does. For unattended automation use a Domino service account token instead. Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated and the server does not accept them: if `DOMINO_API_KEY` is set without `DOMINO_TOKEN`, every API tool fails with a message telling you to set `DOMINO_TOKEN`.
 
