@@ -1196,7 +1196,7 @@ def test_upload_returns_the_commit_that_contains_it(server, laptop, http, run, c
     _add_upload(http, "train.py", visible_at=None)
     result = run(server.upload_file_to_domino_project(OWNER, PROJECT, "train.py", "v2\n"))
     assert result["success"] and result["commitId"] == C2 and clock.sleeps == [2.0]
-    entry = server._file_version_cache[(OWNER, PROJECT, "train.py")]
+    entry = server._recent_write_log[(OWNER, PROJECT, "train.py")]
     assert entry["visible"] and entry["commit_id"] == C2
 
 
@@ -1231,7 +1231,7 @@ def test_upload_tolerates_listing_ahead_of_the_commit_index(server, laptop, http
     posted = run(server.upload_file_to_domino_project(OWNER, PROJECT, "a.py", "x\n"))
     assert posted["success"]
     # the 403-but-listed case keeps polling instead of raising, and resolves once C2 appears
-    server._file_version_cache[(OWNER, PROJECT, "a.py")]["visible"] = False
+    server._recent_write_log[(OWNER, PROJECT, "a.py")]["visible"] = False
     _add_listing(http, ["a.py"])
     _add_commit_sequence(http, [COMMIT, COMMIT, C2])
     _add_content_at(http, C2, "a.py", b"x\n")
@@ -1335,3 +1335,171 @@ def test_run_domino_job_wait_after_upload_pins_then_returns_results(server, lapt
     result = run(server.run_domino_job(OWNER, PROJECT, "python x.py", "t", wait_seconds=60))
     assert posted[0]["commitId"] == C2 and result["commit_id"] == C2
     assert result["status"] == "Succeeded" and result["results"] == "42"
+
+
+# ---------------------------------------------------------------------------------------------
+# Release-review regressions: pinning survives reads; writes are serialized; the wait cap caps
+# ---------------------------------------------------------------------------------------------
+
+def _upload_confirmed(server, http, run, path="train.py", content="print(42)\n"):
+    _add_project_lookup(http)
+    _add_file(http, path, None)
+    _add_upload(http, path)
+    result = run(server.upload_file_to_domino_project(OWNER, PROJECT, path, content))
+    assert result["commitId"] == COMMIT
+    return result
+
+
+def test_download_after_upload_keeps_the_commit_pin(server, laptop, http, run):
+    _upload_confirmed(server, http, run)
+    run(server.download_file_from_domino_project(OWNER, PROJECT, "train.py"))
+    posted = _job_post(http)
+    result = run(server.run_domino_job(OWNER, PROJECT, "python train.py", "t"))
+    assert posted[0]["commitId"] == COMMIT and result["commit_id"] == COMMIT
+
+
+def test_identical_smart_sync_after_upload_keeps_the_commit_pin(server, laptop, http, run):
+    _upload_confirmed(server, http, run)
+    assert run(server.smart_sync_file(OWNER, PROJECT, "train.py", "print(42)\n"))["action"] == "no_change"
+    posted = _job_post(http)
+    result = run(server.run_domino_job(OWNER, PROJECT, "python train.py", "t"))
+    assert posted[0]["commitId"] == COMMIT and result["commit_id"] == COMMIT
+
+
+def test_conflict_baseline_is_separate_from_write_tracking(server, laptop, http, run):
+    """A download sets the conflict baseline to what it saw without forgetting the own write."""
+    _upload_confirmed(server, http, run)
+    _add_file(http, "train.py", b"someone else\n", commit=C2)
+    run(server.download_file_from_domino_project(OWNER, PROJECT, "train.py"))
+    assert server._file_version_cache[(OWNER, PROJECT, "train.py")]["key"] == hashlib.sha1(b"someone else\n").hexdigest()
+    assert [p for p, _ in server._recent_writes(OWNER, PROJECT)] == ["train.py"]
+
+
+def test_a_newer_foreign_version_at_the_latest_commit_is_not_treated_as_lag(server, laptop, http, run):
+    _upload_confirmed(server, http, run)
+    _add_commit_sequence(http, [C3])
+    _add_content_at(http, C3, "train.py", b"someone else\n")   # newer than ours, not the pre-write content
+    posted = _job_post(http)
+    result = run(server.run_domino_job(OWNER, PROJECT, "python train.py", "t"))
+    assert posted[0]["commitId"] == C3 and result["commit_id"] == C3
+
+
+def test_concurrent_creates_of_the_same_path_are_serialized(server, laptop, http, run, monkeypatch):
+    """Two threads reach the remote-state read together; only one PUT may happen without overwrite."""
+    import threading
+    barrier = threading.Barrier(2, timeout=1)
+    uploaded = []
+    state = {"exists": False, "commit_id": COMMIT, "raw": None, "content": None, "key": None, "size": 0}
+
+    def fake_remote_state(user_name, project_name, path, info=None):
+        # Snapshot first, then rendezvous: without serialization both threads snapshot "absent"
+        # and both write; with it the second thread cannot read until the first has written.
+        snapshot = dict(state)
+        if uploaded:
+            data = uploaded[-1]
+            snapshot.update({"exists": True, "raw": data, "content": data.decode(), "key": server._file_key(data), "size": len(data)})
+        try:
+            barrier.wait()
+        except threading.BrokenBarrierError:
+            pass
+        return snapshot
+
+    def fake_upload(user_name, project_name, path, data):
+        uploaded.append(data)
+        return {"success": True, "path": path, "size": len(data), "key": server._file_key(data), "lastModified": 1}
+
+    monkeypatch.setattr(server, "_require_dfs_project", lambda u, p: {"id": PID, "git_based": False})
+    monkeypatch.setattr(server, "_remote_state", fake_remote_state)
+    monkeypatch.setattr(server, "_upload", fake_upload)
+    monkeypatch.setattr(server, "_confirm_upload", lambda *a, **k: {"commitId": COMMIT})
+    results = {}
+
+    def worker(data):
+        try:
+            results[data] = server._upload_file(OWNER, PROJECT, "train.py", data, False)
+        except server.DominoError as e:
+            results[data] = e
+    threads = [threading.Thread(target=worker, args=(d,)) for d in (b"A", b"B")]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join(timeout=10)
+    assert len(uploaded) == 1
+    outcomes = sorted(type(v).__name__ for v in results.values())
+    assert outcomes == ["DominoError", "dict"]
+    err = next(v for v in results.values() if isinstance(v, server.DominoError))
+    assert "already exists" in str(err)
+
+
+def test_run_domino_job_waits_for_an_in_flight_upload_before_choosing_the_commit(server, laptop, http, run, monkeypatch):
+    import threading
+    in_upload = threading.Event()
+    release = threading.Event()
+    _add_project_lookup(http)
+    _add_listing(http, [])
+    _add_file(http, "train.py", None)
+    _add_upload(http, "train.py")
+    real_upload = server._upload
+
+    def slow_upload(user_name, project_name, path, data):
+        in_upload.set()
+        assert release.wait(timeout=10)
+        return real_upload(user_name, project_name, path, data)
+    monkeypatch.setattr(server, "_upload", slow_upload)
+    posted = _job_post(http)
+    order = []
+    t_up = threading.Thread(target=lambda: order.append(("upload", run(server.upload_file_to_domino_project(OWNER, PROJECT, "train.py", "x\n")))))
+    t_up.start()
+    assert in_upload.wait(timeout=10)
+    t_job = threading.Thread(target=lambda: order.append(("job", run(server.run_domino_job(OWNER, PROJECT, "python train.py", "t")))))
+    t_job.start()
+    t_job.join(timeout=0.5)
+    assert t_job.is_alive() and posted == []          # the Job waits for the upload instead of taking the head
+    release.set()
+    t_up.join(timeout=10)
+    t_job.join(timeout=10)
+    assert {name for name, _ in order} == {"upload", "job"}
+    methods = [m for m, _, _ in http.calls]
+    assert methods.index("PUT") < methods.index("POST")          # the upload landed before the Job was submitted
+    job_result = next(r for name, r in order if name == "job")
+    assert posted[0]["commitId"] == COMMIT and job_result["commit_id"] == COMMIT
+
+
+def test_wait_cap_bounds_the_whole_status_call(server, laptop, http, run, clock, monkeypatch):
+    """Two slow status reads of 40 s each must not push a 50 s cap to 80 s."""
+    monkeypatch.setattr(server, "_CLIENT_NAME", "codex")
+    reads = []
+
+    def slow_job(kw):
+        allowed = kw["timeout"][1]
+        reads.append(allowed)
+        took = min(40.0, allowed)
+        clock.now += took
+        if took < 40.0:
+            raise server.requests.exceptions.ReadTimeout("read timed out")
+        return FakeResponse(200, {"job": {"id": "job1", "status": {"executionStatus": "Running", "isCompleted": False}}})
+    http.add("GET", "/api/jobs/beta/jobs/job1", slow_job)
+    t0 = clock.now
+    result = run(server.check_domino_job_run_status("job1", wait_seconds=300))
+    assert clock.now - t0 <= server._WAIT_CAP_CODEX
+    assert result["status"] == "Running" and result["is_completed"] is False
+    assert result["waited_seconds"] <= server._WAIT_CAP_CODEX and "call" in result["message"].lower()
+    assert reads[0] == 50.0 and all(r <= 50.0 for r in reads)
+
+
+def test_run_domino_job_returns_the_job_id_when_little_time_is_left(server, laptop, http, run, clock, monkeypatch):
+    monkeypatch.setattr(server, "_CLIENT_NAME", "codex")
+    _add_project_lookup(http)
+    _add_listing(http, [])
+    _add_upload(http, "a.py", visible_at=None)
+    _add_read_sequence(http, "a.py", [None])            # the upload never becomes visible: 45 s of confirmation
+    run(server.upload_file_to_domino_project(OWNER, PROJECT, "a.py", "x\n"))
+    # make the pending write visible for the job's own wait so that submission happens near the cap
+    _add_read_sequence(http, "a.py", [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, b"x\n"])
+    posted = _job_post(http)
+    _job_status_sequence(http, "j1", ["Queued"])
+    t0 = clock.now
+    result = run(server.run_domino_job(OWNER, PROJECT, "python a.py", "t", wait_seconds=300))
+    assert posted and result["job_id"] == "j1" and result["is_completed"] is not True
+    assert clock.now - t0 <= server._WAIT_CAP_CODEX + 1
+    assert "check_domino_job_run_status" in result["message"] and "results" not in result

@@ -1,5 +1,6 @@
 ---
 type: regex
 target: { source: file, path: flow.py }
-pattern: 'DominoJobConfig|run_domino_job_task'
+flags: m
+pattern: '^(?!\s*#)[^\n]*\b(DominoJobConfig|run_domino_job_task)\('
 ---

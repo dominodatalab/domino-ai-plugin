@@ -104,14 +104,29 @@ GET /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/gitcredentials
 ```
 
 Create returns `{"serviceAccount": {"id", "idpId", "username", "email"}, "metadata": {...}}`.
-Token routes are keyed by **`idpId`**, not `id`; the token value is returned once.
+Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns a
+`ServiceAccountToken` (`name`, `serviceAccountIdpId`, `isValid`, `createdAt`, `expiresAt`,
+`token`) with the token value. Unlike a Personal Access Token, the value is not
+shown only once: in both specs `GET .../tokens/{tokenName}` ("Get the token with the
+provided name") returns the same object, including `token`, as `{"token": {...}, "metadata"}`,
+so an authorized caller can read a value again by name (spec-verified, not live-tested).
+The list route `GET .../tokens` returns `{"tokens": [...], "metadata"}` with the metadata
+fields only, never `token`. Neither spec describes the permission beyond `401`/`403`;
+the docs restrict service-account management to Administrators, so expect `403` for
+anyone else. Tokens inherit the service account's roles at creation and expire after
+four months by default (docs). Store the value in your secret manager rather than
+re-reading it, and invalidate or delete a token that leaked.
 
 ```python
 sa = requests.post(f"{base_url}/api/serviceAccounts/v1/serviceAccounts", headers=headers,
                    json={"username": "github-actions", "email": "mlops@example.com"}).json()["serviceAccount"]
 token = requests.post(f"{base_url}/api/serviceAccounts/v1/serviceAccounts/{sa['idpId']}/tokens",
                       headers=headers, json={"name": "ci-token"}).json()
-secret = token["token"]   # store in your CI secret manager; it is not retrievable again
+secret = token["token"]   # store in your CI secret manager
+
+# Later, an administrator can read it again by name:
+secret = requests.get(f"{base_url}/api/serviceAccounts/v1/serviceAccounts/{sa['idpId']}/tokens/ci-token",
+                      headers=headers).json()["token"]["token"]
 ```
 
 ## Hardware tiers

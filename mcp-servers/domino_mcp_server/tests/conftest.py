@@ -40,6 +40,7 @@ def import_server():
     module = importlib.import_module("domino_mcp_server")
     module._project_cache.clear()
     module._file_version_cache.clear()
+    module._recent_write_log.clear()
     return module
 
 

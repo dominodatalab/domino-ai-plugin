@@ -13,18 +13,21 @@ import os
 import requests
 from domino import Domino
 
-project = f"{os.environ['DOMINO_PROJECT_OWNER']}/{os.environ['DOMINO_PROJECT_NAME']}"
-
-if os.environ.get("DOMINO_API_PROXY"):
-    # Inside a Domino execution with the API proxy: the client picks DOMINO_API_HOST and
-    # DOMINO_API_PROXY up from the environment.
-    domino = Domino(project)
-elif os.environ.get("DOMINO_RUN_ID"):
-    # Inside a run without the proxy: pass the short-lived token explicitly. Without it the
-    # client falls back to DOMINO_TOKEN_FILE and then the deprecated DOMINO_USER_API_KEY.
-    domino = Domino(project, auth_token=requests.get("http://localhost:8899/access-token").text.strip())
+if os.environ.get("DOMINO_RUN_ID"):
+    # Inside a Domino execution: the project comes from the variables Domino injects.
+    project = f"{os.environ['DOMINO_PROJECT_OWNER']}/{os.environ['DOMINO_PROJECT_NAME']}"
+    if os.environ.get("DOMINO_API_PROXY"):
+        # With the API proxy the client picks DOMINO_API_HOST and DOMINO_API_PROXY up from
+        # the environment.
+        domino = Domino(project)
+    else:
+        # Without the proxy pass the short-lived token explicitly; otherwise the client
+        # falls back to DOMINO_TOKEN_FILE and then the deprecated DOMINO_USER_API_KEY.
+        domino = Domino(project, auth_token=requests.get("http://localhost:8899/access-token").text.strip())
 else:
-    # Outside Domino: deployment URL plus a PAT or service account token
+    # Outside Domino: name the project yourself (DOMINO_PROJECT_OWNER and
+    # DOMINO_PROJECT_NAME are not set here) and pass the deployment URL plus a PAT or
+    # service account token.
     domino = Domino("owner/project-name", host=os.environ["DOMINO_API_HOST"],
                     auth_token=os.environ["DOMINO_API_TOKEN"])
 ```
@@ -100,7 +103,7 @@ There is no `datasets_snapshot` or `datasets_tag` method. Snapshot and tag route
 |--------|-------|
 | `environments_list()`, `get_environment(environment_id)`, `get_default_environment()` | `get_environment` calls the Public API `GET /api/environments/v1/environments/{id}`. |
 | `create_environment(name, visibility, dockerfile_instructions="", environment_variables=None, base_image="", post_run_script="", post_setup_script="", pre_run_script="", pre_setup_script="", skip_cache=False, summary="", supported_clusters=None, tags=None, use_vpn=False, workspace_tools=None, add_base_dependencies=True, description="", is_restricted=False, organization_owner_id=None)` | Public API `POST /api/environments/beta/environments` (current on 6.3; deprecated on Cloud in favour of v2, which the SDK does not wrap). |
-| `create_environment_revision(environment_id, dockerfile_instructions="", ...)` | Same optional build fields as above; same beta route caveat. |
+| `create_environment_revision(environment_id, dockerfile_instructions="", ...)` | Same optional build fields as above; same beta route caveat. The body is a complete definition: an omitted `base_image` is filled from the **deployment default environment** (`get_default_environment()["latestRevisionDetails"]["dockerImage"]`), not from this environment, and omitted lists and scripts are sent empty. See [Environments](#environments) below. |
 | `restrict_environment_revision(environment_id, revision_id)`, `archive_environment(environment_id)` | |
 | `hardware_tiers_list()`, `get_hardware_tier_id_from_name(hardware_tier_name)` | Tiers usable by the client's project. |
 
@@ -197,15 +200,65 @@ for ds in domino.datasets_list(domino.project_id):
 
 ### Environments
 
+`create_environment_revision` posts a **complete** revision definition, not a delta. In
+2.2.0 whatever you omit is filled by the SDK, not copied from the environment you name:
+`base_image` defaults to the deployment's default environment image
+(`get_default_environment()["latestRevisionDetails"]["dockerImage"]`), the four scripts
+to empty strings, and `workspace_tools`, `supported_clusters` and `environment_variables`
+to `[]`. Called with only an id and a Dockerfile line it therefore creates a revision on
+a different base image with no workspace tools. Read the current definition and pass it
+back with your change:
+
 ```python
-for env in domino.environments_list():
+for env in domino.environments_list():                  # legacy GET /v1/environments: id, name, visibility
     print(env)
-env = domino.get_environment("<environment-id>")
+
+env_id = "<environment-id>"
+env = domino.get_environment(env_id)["environment"]     # Public GET: tools, but no image or Dockerfile
+rev_id = env["selectedRevision"]["id"]
+
+# Base image and build configuration are only on the Domino Internal API
+# GET /v4/environments/environmentRevision/{revisionId} (may change between Domino
+# versions). A revision built from another environment has no dockerImage of its own;
+# its base image is under "base".
+details = requests.get(f"{base_url}/v4/environments/environmentRevision/{rev_id}", headers=headers).json()
+current = details["environmentRevision"]
+image = current.get("dockerImage") or details["base"]["dockerImage"]
+build = current.get("buildConfiguration") or {}        # dockerfileInstructions, preSetupScript, postSetupScript, preRunScript, postRunScript
+
+def as_workspace_tool(tool):                            # the Public GET returns "start"; the POST body wants "startScripts"
+    out = {"name": tool["name"], "title": tool["title"],
+           "startScripts": tool.get("startScripts") or tool.get("start") or []}
+    for key in ("iconUrl", "proxyConfig", "supportedFileExtensions"):
+        if tool.get(key) is not None:
+            out[key] = tool[key]
+    return out
+
 rev = domino.create_environment_revision(
-    "<environment-id>",
-    dockerfile_instructions="USER root\nRUN pip install --no-cache-dir pandas==2.2.2\nUSER ubuntu",
+    env_id,
+    base_image=image,
+    dockerfile_instructions=(build.get("dockerfileInstructions") or "")
+        + "\nUSER root\nRUN pip install --no-cache-dir pandas==2.2.2\nUSER ubuntu",
+    pre_setup_script=build.get("preSetupScript") or "",
+    post_setup_script=build.get("postSetupScript") or "",
+    pre_run_script=build.get("preRunScript") or "",
+    post_run_script=build.get("postRunScript") or "",
+    workspace_tools=[as_workspace_tool(t) for t in env["selectedRevision"]["availableTools"]],
+    supported_clusters=env["supportedClusters"],
+    summary="add pandas 2.2.2",
 )
 ```
+
+`base_url` and `headers` come from the shared setup block in
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication). The route takes an image
+URI, so the new revision is pinned to that URI even when the environment was built "from
+another environment" in the UI. The field names above were read on an internal Domino
+test cluster (6.4.0): the Public `GET` returned `availableTools[].start` where the spec
+says `startScripts`, and `environmentRevision.dockerImage` was present on a Domino
+Standard Environment revision and absent (with `base.dockerImage` set) on revisions built
+from another environment. The `workspace_tools` round trip follows the spec and was not
+live-tested; try it on a scratch environment first. If you would rather start clean, pass
+`base_image` and `workspace_tools` explicitly and accept that nothing else carries over.
 
 ### Publish a Model API
 

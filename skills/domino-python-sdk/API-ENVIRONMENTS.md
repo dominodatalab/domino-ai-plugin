@@ -137,8 +137,15 @@ PATCH /api/environments/beta/environments/{environmentId}/revisions/{revisionId}
 
 **`image` is required on both revision routes**: without it the server returns
 `400 image is required` (verified live on both routes), even though the schema marks it
-optional. Pass the base image URI the environment already uses. The create responses
-are `{"environmentRevision": {"id", "number", "availableTools"}, "metadata"}`; live, the v2
+optional. Pass the base image URI the environment already uses. The body is a complete
+definition, not a delta: no field inherits from the previous revision, so send the full
+`dockerfileInstructions`, the scripts and `workspaceTools` you want to keep (copy
+`selectedRevision.availableTools` from the environment `GET`, renaming `start` to
+`startScripts`; an environment created without `workspaceTools` reported
+`availableTools: []` live). The Public API does not return the base image or the
+Dockerfile; [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments) shows how to read them
+through the Domino Internal API. The create responses are
+`{"environmentRevision": {"id", "number", "availableTools"}, "metadata"}`; live, the v2
 response carried `architectures` and neither carried `status`, so poll the environment
 (below) for the build state. `isRestricted` is required on `PATCH`.
 
@@ -224,7 +231,11 @@ redirections.
 `create_environment(name, visibility, ...)`, `create_environment_revision(environment_id, ...)`,
 `restrict_environment_revision(environment_id, revision_id)`, `archive_environment(environment_id)`.
 `create_environment` and `create_environment_revision` call the beta routes above (current on
-6.3, deprecated on Cloud, where they still work but cannot set `architectures`).
+6.3, deprecated on Cloud, where they still work but cannot set `architectures`). In
+2.2.0 `create_environment_revision` fills an omitted `base_image` from the deployment's
+default environment, not from the environment you name, and sends omitted lists and
+scripts empty; pass the current definition back explicitly
+([SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments)).
 Signatures: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments-and-hardware-tiers). There is
 no `environment_get` method.
 
