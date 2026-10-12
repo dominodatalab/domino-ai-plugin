@@ -60,7 +60,10 @@ status with `waited_seconds` and, if not complete, a `message` saying to call ag
 completes, adds `results` (the last 100 lines or 8,000 characters of stdout, `results_truncated`
 when cut) and the MLflow link if the output printed one.
 
-One call waits at most 600 s. Claude Code allows hours per MCP call (`MCP_TOOL_TIMEOUT`, default
+Every tool call runs under a time budget, 600 s or 50 s under Codex: HTTP timeouts shrink to
+what is left of it, no request starts once it is spent, a status read is never started after the
+deadline, and once a Job has been submitted the call returns its id with a "call again" message
+rather than fail. Claude Code allows hours per MCP call (`MCP_TOOL_TIMEOUT`, default
 about 28 hours; a call past two minutes moves to a background task) and aborts a stdio call only
 after 30 minutes without a response. Codex ends a tool call after 60 s by default
 (`tool_timeout_sec`), so when the connected client calls itself `codex` the server caps one wait
@@ -97,7 +100,10 @@ remote file at the latest commit before every upload:
 | differs, key differs from baseline | yes | **conflict**: remote content, baseline content and both keys returned, nothing uploaded |
 
 Only `force_overwrite=True` replaces a conflicting file; the response then carries
-`previous_remote_key`. `upload_file_to_domino_project` and `sync_local_file_to_domino` refuse an
+`previous_remote_key`. Within one server process, read-check-write-confirm on a path is
+serialized (tool calls run in worker threads), and a Job's commit selection waits for in-flight
+uploads to the project; two clients of the same project, or two Workspaces, are not serialized,
+because Domino has no conditional write. `upload_file_to_domino_project` and `sync_local_file_to_domino` refuse an
 existing, different file unless `overwrite=True`. The baseline lives in the server process: a
 new session starts without one, which is the safe direction (a conflict, never an overwrite).
 

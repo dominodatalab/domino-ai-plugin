@@ -59,10 +59,12 @@ spark = (SparkSession.builder.appName("etl")
          .config("spark.sql.shuffle.partitions", "400")
          .config("spark.executor.memoryOverhead", "1g")
          .getOrCreate())
-spark.sparkContext.getConf().getAll()     # see what Domino set
+conf = spark.sparkContext.getConf()
+print(sorted(k for k, _ in conf.getAll()))                      # keys only: see what Domino set
+print(conf.get("spark.executor.instances"), conf.get("spark.executor.cores"), conf.get("spark.executor.memory"))
 ```
 
-Never override `spark.master` or `spark.driver.host`. Executor cores and memory follow the worker hardware tier; pick a larger tier rather than overriding them unless you understand the worker overhead.
+Never print `conf.getAll()` values, `spark.hadoop.*` settings or `os.environ` wholesale: storage credentials such as `spark.hadoop.fs.s3a.secret.key`, `fs.s3a.session.token` and propagated cloud credentials live there and would land in the Job logs and the transcript. Read the specific non-secret keys you need, as above. Never override `spark.master` or `spark.driver.host`. Executor cores and memory follow the worker hardware tier; pick a larger tier rather than overriding them unless you understand the worker overhead.
 
 ## Ray
 

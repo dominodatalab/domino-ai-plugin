@@ -17,13 +17,13 @@ model id and a built model version id exist (list them with
 `GET /api/modelServing/v1/modelApis?projectId=...` and `.../{modelApiId}/versions`, Public API).
 
 ```bash
-curl -sS -X POST "$BASE/v4/models/$MODEL_ID/$MODEL_VERSION_ID/exportImageForNvidia" -H "$AUTH" -H "Content-Type: application/json" -d '{
-  "containerRepository": "<org>/<team>/<container-repo>",
-  "tag": "1.4.0",
-  "helmRepository": "<org>/<team>/<helm-repo>",
-  "helmVersion": "1.4.0",
-  "ngcApiKey": "'"$NGC_API_KEY"'"
-}'
+# JSON-encode the body from the environment and send it on stdin: never splice $NGC_API_KEY into a quoted string
+python3 -c 'import json, os, sys
+json.dump({"containerRepository": "<org>/<team>/<container-repo>", "tag": "1.4.0",
+           "helmRepository": "<org>/<team>/<helm-repo>", "helmVersion": "1.4.0",
+           "ngcApiKey": os.environ["NGC_API_KEY"]}, sys.stdout)' \
+| curl -sS -X POST "$BASE/v4/models/$MODEL_ID/$MODEL_VERSION_ID/exportImageForNvidia" \
+    -H "$AUTH" -H "Content-Type: application/json" --data-binary @-
 # -> export id; poll GET $BASE/v4/models/<export-id>/getExportImageStatus
 ```
 

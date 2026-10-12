@@ -68,16 +68,23 @@ capitalises them, python-domino's example tests lowercase `complete` and `failed
 
 ### 3. Export to your registry
 
+Encode the body with a JSON encoder that reads the credentials from the environment, and send
+it on stdin. Splicing `$REGISTRY_PASSWORD` into a JSON string literal breaks the payload on a
+`"` and silently alters it on a `\`; the encoder also keeps the secrets out of `ps` output and
+shell traces.
+
 ```bash
-curl -sS -X POST "$BASE/v4/models/$MODEL_ID/$MODEL_VERSION_ID/exportImageToRegistry" -H "$AUTH" -H "Content-Type: application/json" -d '{
-  "registryUrl": "quay.io",
-  "repository": "acme/credit-risk",
-  "tag": "1.4.0",
-  "username": "'"$REGISTRY_USER"'",
-  "password": "'"$REGISTRY_PASSWORD"'"
-}'
+python3 -c 'import json, os, sys
+json.dump({"registryUrl": "quay.io", "repository": "acme/credit-risk", "tag": "1.4.0",
+           "username": os.environ["REGISTRY_USER"], "password": os.environ["REGISTRY_PASSWORD"]}, sys.stdout)' \
+| curl -sS -X POST "$BASE/v4/models/$MODEL_ID/$MODEL_VERSION_ID/exportImageToRegistry" \
+    -H "$AUTH" -H "Content-Type: application/json" --data-binary @-
 # -> {"modelId", "modelVersionId", "exportId", "status"}
 ```
+
+With `jq` instead of Python: `jq -n '{registryUrl: "quay.io", repository: "acme/credit-risk", tag: "1.4.0", username: env.REGISTRY_USER, password: env.REGISTRY_PASSWORD}'`
+piped into the same `curl ... --data-binary @-` (`env.NAME` reads the variable without putting
+it on the command line, unlike `--arg`).
 
 `registryUrl` and `repository` are required; `tag`, `username`, `password` are optional on the
 cluster reference but a private registry needs the credentials. Derive the tag from the model
@@ -113,6 +120,8 @@ AUTH="Authorization: Bearer $DOMINO_TOKEN"
 # field <key>: print one key from a JSON object (or from the first element if the server wraps it in an array)
 field() { python3 -c 'import json,sys; d=json.load(sys.stdin); d=d[0] if isinstance(d,list) else d; print(d[sys.argv[1]])' "$1"; }
 lower() { tr "[:upper:]" "[:lower:]"; }
+# export_body: the exportImageToRegistry payload, JSON-encoded from the environment so the credentials are never spliced into a string or echoed
+export_body() { python3 -c 'import json, os, sys; json.dump({"registryUrl": "quay.io", "repository": "acme/credit-risk", "tag": os.environ["TAG"], "username": os.environ["REGISTRY_USER"], "password": os.environ["REGISTRY_PASSWORD"]}, sys.stdout)'; }
 
 build=$(curl -sSf -X POST "$BASE/v4/models/buildModelImage" -H "$AUTH" -H "Content-Type: application/json" \
   -d "{\"projectId\":\"$PROJECT_ID\",\"modelName\":\"credit-risk\",\"inferenceFunctionFile\":\"model.py\",\"inferenceFunctionToCall\":\"predict\",\"environmentId\":\"$ENVIRONMENT_ID\",\"logHttpRequestResponse\":false}")
@@ -122,8 +131,8 @@ until status=$(curl -sSf "$BASE/v4/models/$model_id/$version_id/getBuildStatus" 
       [ "$status" = complete ] || [ "$status" = failed ]; do sleep 20; done
 [ "$status" = complete ] || { curl -sS "$BASE/v4/models/$model_id/$version_id/getBuildLogs" -H "$AUTH"; exit 1; }
 
-export_id=$(curl -sSf -X POST "$BASE/v4/models/$model_id/$version_id/exportImageToRegistry" -H "$AUTH" -H "Content-Type: application/json" \
-  -d "{\"registryUrl\":\"quay.io\",\"repository\":\"acme/credit-risk\",\"tag\":\"$TAG\",\"username\":\"$REGISTRY_USER\",\"password\":\"$REGISTRY_PASSWORD\"}" | field exportId)
+export_id=$(export_body | curl -sSf -X POST "$BASE/v4/models/$model_id/$version_id/exportImageToRegistry" \
+  -H "$AUTH" -H "Content-Type: application/json" --data-binary @- | field exportId)
 
 until status=$(curl -sSf "$BASE/v4/models/$export_id/getExportImageStatus" -H "$AUTH" | field status | lower); \
       [ "$status" = complete ] || [ "$status" = failed ]; do sleep 20; done

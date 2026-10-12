@@ -30,4 +30,4 @@ DOMINO_IS_GIT_BASED selects the column; DOMINO_WORKING_DIR, DOMINO_ARTIFACTS_DIR
 ## Environment variables
 
 - DOMINO_PROJECT_ID, DOMINO_PROJECT_OWNER, DOMINO_PROJECT_NAME: the current Project.
-- User and Project variables (credentials, config) are also set: run env before asking for a secret.
+- User and Project variables (credentials, config) are also set. Check by name only, e.g. env | cut -d= -f1 | grep -i NAME or [ -n "$NAME" ] && echo set; never print values or dump env.
