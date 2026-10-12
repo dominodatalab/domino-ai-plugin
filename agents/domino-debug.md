@@ -36,7 +36,7 @@ other hosts open `skills/<skill-name>/SKILL.md` in the plugin directory.
 | Environment build failed; a package is missing at runtime; wrong base image | `domino-environments` | the troubleshooting section of `SKILL.md` |
 | Model endpoint fails to build, returns errors, or is slow; 401 when calling it | `domino-model-endpoints` (deployment, monitoring) and `domino-model-serving` (REST lifecycle, invocation auth) | `SKILL.md`. Synchronous endpoints take HTTP Basic with the token as username and password; asynchronous ones take `Authorization: Bearer` |
 | Workspace won't start; files or packages gone after a restart | `domino-workspaces` | the troubleshooting section of `SKILL.md` |
-| Cannot reach S3, Azure, or an external data volume | `domino-data-connectivity` | `SKILL.md` |
+| Cannot reach a Data Source, S3, Azure, or an external data volume | `domino-data-sdk` (Data Sources), `domino-data-connectivity` | `SKILL.md` |
 | Dataset or NetApp volume path missing or read-only | `domino-datasets`, `netapp-volumes` | `MOUNT-PATHS.md`, `TROUBLESHOOTING.md` |
 | 401, 403 or 404 from a Domino API call; wrong host; pagination | `domino-api-intro` | `ERRORS.md`, `HOSTS.md` |
 | Spark, Ray or Dask cluster won't attach | `domino-distributed-computing` | `SKILL.md` |

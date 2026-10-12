@@ -6,7 +6,8 @@
 # its parameters in the Domino UI. Without agent_config_path the SDK reads the path in
 # DOMINO_AGENT_CONFIG_PATH, defaulting to ./agent_config.yaml.
 #
-# Replace the model names with the ones the agent actually calls.
+# Replace the model names with the ones the agent actually calls (gateway aliases when the
+# agent calls LLM Gateway 2.0, the served model name for a Domino-hosted endpoint).
 
 models:
   # Model the agent calls

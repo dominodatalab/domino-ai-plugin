@@ -23,4 +23,4 @@ POST /findings {
 
 - Waiver is modeled as a finding with `dueDate` for expiry, not a separate API or `expiresAt` field.
 - Create requires approver, assignee, bundleId, name, policyVersionId, severity.
-- Expiring waivers need a re-review trigger (monitor or scheduled).
+- Expiring waivers need a re-review trigger: a Domino scheduled Job ([domino-jobs](../domino-jobs/SKILL.md)) that reads `GET /bundles/{bundle_id}/findings` and flags waivers past `dueDate`, not an external cron.

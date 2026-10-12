@@ -58,6 +58,7 @@ Decision rules: prefer a Data Source whenever the store has a connector (shareab
 no credentials in code). Use an EDV when code needs POSIX file semantics on a shared filesystem.
 Use credential propagation when access must be attributable to the user in the cloud provider's
 own audit log. Use Mountpoint only for S3 and only for read-heavy, large-file workloads.
+Data the project produces belongs in a Domino Dataset (domino-datasets), not a new bucket.
 
 ## Quick start
 

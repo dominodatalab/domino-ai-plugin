@@ -1,6 +1,6 @@
 ---
 name: domino-setup
-description: Sets up Domino Data Lab projects and configuration - new Git-based or DFS Projects, Compute Environments, MLflow experiment tracking, GenAI tracing for LLM and agent applications, data access (Datasets, NetApp volumes, S3, Azure), Workspaces and model monitoring. Use PROACTIVELY when starting a new project, configuring experiment tracking, setting up GenAI tracing, or initializing project structure.
+description: Sets up Domino Data Lab projects and configuration - new Git-based or DFS Projects, Compute Environments, MLflow experiment tracking, GenAI tracing for LLM and agent applications, data access (Data Sources, Datasets, NetApp volumes, external volumes, S3, Azure), LLM access, Workspaces and model monitoring. Use PROACTIVELY when starting a new project, configuring experiment tracking, setting up GenAI tracing, or initializing project structure.
 tools:
   - Read
   - Edit
@@ -37,7 +37,8 @@ Domino and which project this is, and `search_domino` (`domino_docs`) searches t
 | Create or customize a Compute Environment | `domino-environments` | Start from a Domino Standard Environment; add Dockerfile instructions |
 | Set up MLflow experiment tracking | `domino-experiment-setup` (generates the helper), then `domino-experiment-tracking` (auto-logging, comparing runs, model registry) | Experiment names must be unique across all projects in a Domino deployment, so prefix them |
 | Set up GenAI tracing for an LLM or agent application | `domino-trace-setup` (adds the tracing helper, evaluators and config), then `domino-genai-tracing` (`@add_tracing`, `DominoRun`, evaluators) | The SDK is the `dominodatalab` package with the `data` and `agents` extras, pinned as the skill says; there is no package called `domino-genai-sdk` |
-| Data access: Datasets, NetApp volumes, S3, Azure, external volumes | `domino-datasets`, `netapp-volumes`, `domino-data-connectivity` | Mount paths and credential propagation |
+| Data access: Data Sources, Datasets, NetApp volumes, external volumes, S3, Azure | `domino-data-sdk` (Data Sources), `domino-datasets`, `netapp-volumes`, `domino-data-connectivity` | A Data Source first for any external store with a connector; a Dataset for data the Project owns; direct cloud credentials only when neither fits |
+| Call an LLM from a Project, App or agent | `domino-llm-gateway` where deployed, else `domino-llm-access` | A Domino-hosted endpoint or the gateway before a personal provider key |
 | Launch or configure a Workspace (IDE, hardware tier, persistence) | `domino-workspaces` | |
 | Monitor a deployed model (drift, quality, alerts) | `domino-model-monitoring` | |
 | Automate any of this over the Domino API or SDK | `domino-api-intro`, then `domino-python-sdk` | Authentication, hosts, pagination, errors |

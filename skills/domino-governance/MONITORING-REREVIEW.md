@@ -27,4 +27,4 @@ GET /bundles/{bundle_id}/findings
 
 - Reopening a bundle does not detach old evidence.
 - Policy may have been version-bumped; recompute against the version in effect at the new submission, not the original.
-- Monitor finding source is a separate service.
+- Drift and quality signals come from Domino Model Monitoring ([domino-model-monitoring](../domino-model-monitoring/SKILL.md)), a separate service from governance: read the alert there, then open the finding here.

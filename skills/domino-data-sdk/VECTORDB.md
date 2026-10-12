@@ -82,7 +82,7 @@ index.delete(delete_all=True, namespace="test")
 
 ```python
 def embed(text: str) -> list[float]:
-    ...   # your embedding model; call hosted LLMs through AI Gateway (domino-llm-access skill)
+    ...   # your embedding model; call it through LLM Gateway 2.0 where deployed (domino-llm-gateway) or a Domino-hosted endpoint (domino-llm-access)
 
 def retrieve(question: str, top_k: int = 5) -> list[str]:
     hits = index.query(vector=embed(question), top_k=top_k, include_metadata=True)

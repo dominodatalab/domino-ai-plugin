@@ -1,5 +1,9 @@
 # Kubeflow Pipelines and Domino Jobs
 
+Use this when an existing Kubeflow Pipelines deployment owns the pipeline. Otherwise orchestrate
+inside Domino: [domino-flows](../domino-flows/SKILL.md) for multi-step pipelines, a scheduled Job
+([domino-jobs](../domino-jobs/SKILL.md)) for one recurring script.
+
 Sources: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Kubeflow tab),
 KFP v2 component documentation on kubeflow.org, the `kfp-kubernetes` README. Domino ships no
 Kubeflow-specific package; the integration is "install a client in the component and call the

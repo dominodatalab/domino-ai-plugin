@@ -34,3 +34,4 @@ POST /findings {
 - Bulk list must paginate (offset/limit); do not assume a single page.
 - Recertify against current policy version, not the version at original approval.
 - Exceptions use a finding with `dueDate`, not `expiresAt`.
+- Run the periodic sweep as a Domino scheduled Job ([domino-jobs](../domino-jobs/SKILL.md)), not an external cron.

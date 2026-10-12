@@ -82,7 +82,7 @@ You're enforcing constraints, not writing a fixed file. View the current `packag
 Run `node -v`. The current `npm create vite@latest` scaffold (create-vite 9) writes Vite 8, TypeScript 6, `oxlint` and `@types/node` 24. Vite 8 declares `engines.node` as `^20.19.0 || >=22.12.0`; on an older Node `npm install` succeeds but `npm run build` fails with a rolldown native-binding error. Domino Compute Environments do not guarantee a Node that new (Domino's own React example installs Node 22 with nvm first), so check before installing.
 
 - **If Node satisfies `^20.19.0 || >=22.12.0`:** the scaffold's defaults are fine. Skip to "Leave alone" below.
-- **Otherwise, prefer a newer Node:** `nvm install 22` in the workspace, or add Node 22+ to the Compute Environment, and keep the scaffold as is.
+- **Otherwise, prefer a newer Node:** add Node 22+ to the Compute Environment (it persists for every Workspace, Job and App), or `nvm install 22` in the workspace for this session only, and keep the scaffold as is.
 - **If Node cannot change,** pin a Vite 5 toolchain before installing:
   - `vite` — `^5.4.0`
   - `@vitejs/plugin-react` — `^4.3.4`

@@ -1,6 +1,6 @@
 # @add_tracing Decorator Guide
 
-`domino.agents.tracing.add_tracing` is the core mechanism for capturing traces in Domino GenAI applications. Signature in `dominodatalab` 2.2.0:
+`domino.agents.tracing.add_tracing` is the core mechanism for capturing traces in Domino GenAI applications. The examples build a plain `OpenAI()` client; where LLM Gateway 2.0 is deployed, build it against the gateway instead ([TRACING-SETUP.md](./TRACING-SETUP.md#model-access)); the tracing is identical. Signature in `dominodatalab` 2.2.0:
 
 ```python
 add_tracing(

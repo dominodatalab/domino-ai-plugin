@@ -154,7 +154,7 @@ Re-run from the UI (**Flows** > flow > version > run > **Re-run**): new name, ca
 Every launch serializes the flow structure, each task's job config (commit, environment revision, tier, snapshots) and the inputs; identical definitions reuse the version. For deterministic reruns:
 
 1. Replace `use_latest=True` with a complete config: `CommitId`, `MainRepoGitRef` pinned to a commit (Git-based projects), `EnvironmentId`, `EnvironmentRevisionSpec`, `HardwareTierId`, `VolumeSizeGiB`, `DatasetSnapshots`, `NetAppVolumeSnapshots` and `ExternalVolumeMountIds` (empty lists where unused); the constructor raises if any is missing. Example 3 in [EXAMPLES.md](./EXAMPLES.md) shows the full set.
-2. Snapshot external data in a first task that copies it to an output.
+2. Read external data from a pinned Dataset or NetApp Volume snapshot (`DatasetSnapshots`, `NetAppVolumeSnapshots`); for anything else (a Data Source table, a bucket), snapshot it in a first task that copies it to an output.
 3. Write results only as outputs, never to a shared mutable location.
 
 ## Caching, subflows, approvals

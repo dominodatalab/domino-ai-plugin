@@ -5,7 +5,7 @@ Two complete, self-contained examples:
 1. **[Deployed agent](#deployed-agent-example)**: a FastAPI tool-use agent deployed as a Domino App; traces appear on the agent's Performance tab.
 2. **[Batch evaluation](#batch-evaluation-example)**: a pipeline of four agents evaluated under `DominoAgentContext`; traces appear in Experiment Manager.
 
-Both use the OpenAI SDK with `OPENAI_API_KEY` stored as a Domino environment variable (see the `domino-llm-access` skill for provider setup or a Domino-hosted endpoint).
+Both use the OpenAI SDK with `OPENAI_API_KEY` stored as a Domino environment variable. Where LLM Gateway 2.0 is deployed, build the client against it instead (`domino-llm-gateway`), or against a Domino-hosted endpoint (`domino-llm-access`); the tracing code does not change.
 
 ---
 

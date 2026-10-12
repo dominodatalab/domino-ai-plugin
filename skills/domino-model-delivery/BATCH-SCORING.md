@@ -148,7 +148,8 @@ GET  /api/modelApis/async/v1/{asyncModelId}/{asyncPredictionId}   -> {"status": 
 ```
 
 Request and response payloads are capped at 10 KB, so pass data by reference (a path or table
-name) and write predictions to your own store; Domino keeps a picked-up request alive for 30
+name) and read and write it through a Data Source with the domino-data SDK (an endpoint needs a
+service-account token, see `domino-data-sdk`) rather than raw cloud credentials; Domino keeps a picked-up request alive for 30
 minutes. Python client with retries and polling:
 https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/async-example-client
 Deploying the endpoint: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).

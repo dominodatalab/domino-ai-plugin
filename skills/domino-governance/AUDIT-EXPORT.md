@@ -26,3 +26,4 @@ GET /bundles/{bundle_id}/report
 - Attachments may be large; stream, do not load into memory.
 - Policy versions in effect = policy version at each approval event timestamp, not latest.
 - Export is read-only; never mutate.
+- Keep the zip in Domino (a Dataset, or the results of the Job that built it) unless the auditor names another destination.

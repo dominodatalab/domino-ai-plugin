@@ -59,7 +59,7 @@ def run_domino_job(run_command: str) -> str:
     return job["commitDetails"]["outputCommitId"]
 
 with DAG("domino_pipeline", start_date=datetime(2026, 1, 1), schedule="@daily", catchup=False):
-    run_domino_job("python train.py 20")
+    run_domino_job("python prepare.py") >> run_domino_job("python train.py 20")
 ```
 
 The output commit id becomes the task's XCom value; a downstream task reads result files from
@@ -89,8 +89,8 @@ Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md)
 
 ## Kubeflow in one screen
 
-No Domino-specific KFP component exists; the product page says to install a client on the
-cluster and call the API. The same `requests` function as the Airflow task above, wrapped in
+No Domino-specific KFP component exists: install a client and call the API. The same
+`requests` function as the Airflow task above, wrapped in
 `@dsl.component(base_image="python:3.11", packages_to_install=["requests"])`, with the token
 mounted from a Kubernetes Secret by `kfp.kubernetes.use_secret_as_env(task, secret_name=...,
 secret_key_to_env={"token": "DOMINO_TOKEN"})` (`pip install kfp[kubernetes]`). The component

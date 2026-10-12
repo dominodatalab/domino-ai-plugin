@@ -69,7 +69,7 @@ Admins can also query the audit trail in MongoDB (**Admin** > **Advanced** > **M
 Cloud has removed the gateway and 6.3 ships it disabled, so treat any gateway code as a migration candidate (steps from the LLM Gateway 2.0 docs page):
 
 1. **Find the code.** Search the Project for `mlflow.deployments.get_deploy_client(...)` and for `predict()`, `get_endpoint()` or `list_endpoints()` against a Domino AI Gateway target, and for any `/api/aigateway/` URL. All of it fails on Cloud and on a 6.3 deployment where the gateway is disabled.
-2. **Pick the replacement.** LLM Gateway 2.0 if the team needs centralized tracking, budgets or guardrails; otherwise a provider SDK (SKILL.md Option A) or a Domino-hosted endpoint (Option B).
+2. **Pick the replacement.** LLM Gateway 2.0 where an administrator has deployed it (centralized keys, tracking, budgets and guardrails, as the legacy gateway gave); otherwise a Domino-hosted endpoint (SKILL.md Option B) or a provider SDK (Option A).
 3. **Move the credentials.** Provider keys the gateway held centrally are no longer reachable through it. Store them as Project environment variables (user environment variables for a personal key; or as inputs to the LLM Gateway 2.0 configuration) and read them by name with `os.environ`.
 4. **Update the calls and rerun** the affected Jobs, Apps and agents end to end.
 

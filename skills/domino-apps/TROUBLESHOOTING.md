@@ -76,7 +76,7 @@ Vite exposes only variables prefixed `VITE_`, and only those present at **build*
 - `npm ci` with a committed `package-lock.json`, not `npm install`.
 - Add `serve` (or `express`) to `package.json` so `npx` fetches nothing at start.
 - Put Python packages in the Compute Environment, not in `app.sh`.
-- `npm ci` itself needs egress to the npm registry (or a private mirror configured in `.npmrc`). On an air-gapped site, or if the build is the bottleneck, build in CI, commit `dist/` on a deploy branch, point the App's version at that branch, and reduce `app.sh` to the serve step.
+- `npm ci` itself needs egress to the npm registry (or a private mirror configured in `.npmrc`). If the build is the bottleneck, build once in a Domino Workspace or Job (on an air-gapped site, wherever npm is reachable, such as your CI), commit `dist/` on a deploy branch, point the App's version at that branch, and reduce `app.sh` to the serve step.
 
 ## 9. Streamlit websocket or "connection error"
 
@@ -107,7 +107,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 `APP_ID` comes from `GET /api/apps/v1/apps?projectId=$DOMINO_PROJECT_ID&name=<app name>` (`items[].id`) and `VERSION_ID` from that record's `currentVersion.id`. The App details page offers the same logs and a support bundle (`execution.log`, `executor.log`, Kubernetes events, nginx logs).
 
-Local reproduction of the container:
+Reproduce first with App Preview in a Workspace: it runs behind the real proxy with the identity headers. A local Docker build only checks the build and start command:
 
 ```dockerfile
 FROM node:24
@@ -121,8 +121,6 @@ CMD ["node", "server.js"]
 ```bash
 docker build -t test-app . && docker run -p 8888:8888 -e MODEL_API_URL=... -e MODEL_API_TOKEN=... test-app
 ```
-
-Local Docker cannot reproduce the proxy prefix or identity headers; use App Preview in a workspace for that.
 
 ## Quick reference
 

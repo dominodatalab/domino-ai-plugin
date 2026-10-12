@@ -2,13 +2,13 @@
 
 Worked code for Spark, Ray and Dask on Domino on-demand clusters. Connecting to each cluster, environments and cluster settings: [SKILL.md](./SKILL.md). Every example assumes the connection snippet from SKILL.md has run.
 
-Dataset paths: `/mnt/data/<dataset>` in a Git-based Project, `/domino/datasets/local/<dataset>` in a DFS Project; both are mounted on the cluster nodes at the same path. Project files (`/mnt`, `/mnt/code`, `/mnt/artifacts`) exist only on the execution container, never on cluster nodes, so distributed reads and writes must use a Dataset or object storage. Object storage (`s3a://`, `s3://`) needs the connector libraries in both environments and credentials (AWS credential propagation, when enabled, puts a profile on every node).
+Dataset paths: `/mnt/data/<dataset>` in a Git-based Project, `/domino/datasets/local/<dataset>` in a DFS Project; both are mounted on the cluster nodes at the same path. Project files (`/mnt`, `/mnt/code`, `/mnt/artifacts`) exist only on the execution container, never on cluster nodes, so distributed reads and writes use a Dataset. Read object storage (`s3a://`, `s3://`) only for data that already lives there: it needs the connector libraries in both environments and credentials (AWS credential propagation, when enabled, puts a profile on every node; never paste keys into code).
 
 ## Apache Spark
 
 ### Read, transform, write
 
-Spark tasks run on the executors, so read and write only Dataset paths (with the `file:///` prefix the docs use) or object storage. Anything that must become a Job result is collected to the driver first.
+Spark tasks run on the executors, so read and write Dataset paths (with the `file:///` prefix the docs use), or object storage that already holds the data. Anything that must become a Job result is collected to the driver first.
 
 ```python
 import os
@@ -18,7 +18,7 @@ from pyspark.sql import functions as F
 ds = "file:///mnt/data/my-dataset"           # DFS Project: file:///domino/datasets/local/my-dataset
 df = spark.read.csv(f"{ds}/data.csv", header=True, inferSchema=True)
 df = spark.read.parquet(f"{ds}/parquet/")
-df = spark.read.json("s3a://bucket/prefix/people.json")          # needs hadoop-aws in the cluster environment
+df = spark.read.json("s3a://bucket/prefix/people.json")          # data already in S3: hadoop-aws in the cluster environment, propagated credentials
 
 result = (df.filter(F.col("value") > 100)
             .groupBy("category")
@@ -121,7 +121,7 @@ result = trainer.fit()
 print(result.metrics)
 ```
 
-`num_workers` must not exceed the cluster's worker count (or max workers with autoscaling). Checkpoints and outputs go to a Dataset or object storage, not the worker's `/tmp`.
+`num_workers` must not exceed the cluster's worker count (or max workers with autoscaling). Checkpoints and outputs go to a Dataset, not the worker's `/tmp`; log the final model to the experiment ([domino-experiment-tracking](../domino-experiment-tracking/SKILL.md)).
 
 ### Hyperparameter tuning with Ray Tune
 
@@ -152,7 +152,7 @@ import dask.dataframe as dd
 import dask.array as da
 
 df = dd.read_csv("/mnt/data/my-dataset/*.csv")
-df = dd.read_parquet("s3://bucket/path/data-*.parquet", storage_options={"profile": "my-role"})   # needs s3fs on all nodes
+df = dd.read_parquet("s3://bucket/path/data-*.parquet", storage_options={"profile": "my-role"})   # data already in S3: s3fs on all nodes, profile from AWS credential propagation
 means = df.groupby("category")["value"].mean().compute()
 
 x = da.random.random((100_000, 10_000), chunks=(1_000, 1_000))

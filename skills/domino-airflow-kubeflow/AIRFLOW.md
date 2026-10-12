@@ -1,5 +1,9 @@
 # Apache Airflow and Domino Jobs
 
+Use this when an existing Airflow deployment owns the schedule. Otherwise orchestrate inside
+Domino: [domino-flows](../domino-flows/SKILL.md) for multi-step pipelines, a scheduled Job
+([domino-jobs](../domino-jobs/SKILL.md)) for one recurring script.
+
 Sources: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Airflow tab),
 python-domino `domino/airflow/_operator.py`, `domino/authentication.py`, `domino/routes.py`,
 `setup.py`, `README.md` and `examples/example_airflow_dag.py` at `Release-2.2.0` / `master`
@@ -218,6 +222,11 @@ two Jobs through the Domino project (results committed by the first Job are the 
 the second) or through a Dataset.
 
 ## Result delivery
+
+Domino delivers results itself, so start there: a scheduled Job's **Notify emails** send the
+last lines of output and up to ten result files (`.dominoresults` and `email.html` shape them),
+and the scoring Job can write straight to the warehouse or bucket through a Data Source
+(`domino-data-sdk`). Add an Airflow delivery task only when Airflow already owns the downstream load.
 
 Airflow can also run **after** a Domino scheduled Job finished elsewhere: a sensor-style task
 lists Jobs (`GET /api/jobs/beta/jobs?projectId=...&statusFilter=completed`), downloads the newest

@@ -6,7 +6,7 @@ compatibility: Domino 6.3 and Domino Cloud, only where an administrator has depl
 
 # Domino LLM Gateway 2.0
 
-Applies to Domino 6.3 and Domino Cloud, where an administrator has deployed LLM Gateway 2.0. It is in early access and not part of every deployment: Domino distributes it as a Domino App through the Domino field representative. If nobody has deployed it, say so and use the `domino-llm-access` skill (provider SDK or a Domino-hosted endpoint); do not try to install it.
+Applies to Domino 6.3 and Domino Cloud, where an administrator has deployed LLM Gateway 2.0. It is in early access and not part of every deployment: Domino distributes it as a Domino App through the Domino field representative. If nobody has deployed it, say so and use the `domino-llm-access` skill (a Domino-hosted endpoint or a provider SDK); do not try to install it.
 
 ## What the gateway is
 

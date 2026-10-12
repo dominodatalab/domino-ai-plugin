@@ -5,6 +5,10 @@ documented product feature to the Professional Services blueprints. All three ar
 (Domino 6.3) procedures that need AWS and cluster administration; on Domino Cloud, ask Domino
 Support for the equivalent.
 
+First check whether a Data Source fits: an S3, Redshift, MySQL or PostgreSQL Data Source
+(`domino-data-sdk`) needs none of this and is the default. Use an option below when access must be
+attributable to the user in CloudTrail, or the code needs an AWS service no connector covers.
+
 | Option | Identity | Workload types | Where documented |
 |---|---|---|---|
 | AWS credential propagation (SAML) | The user's own IAM roles, chosen by the identity provider | Workspaces and Jobs started by the user | https://docs.domino.ai/6.3/admin/identity-and-access/authentication/sso/aws-credential-propagation |
@@ -100,8 +104,8 @@ Domino manages pod identity.
    }
    ```
 
-   Attach a least-privilege permissions policy to the role (named buckets and prefixes, named
-   SageMaker endpoints; no `*` resources). Hardening beyond the blueprint, per AWS's IRSA
+   Attach a least-privilege permissions policy to the role (named buckets and prefixes; no
+   `*` resources). Hardening beyond the blueprint, per AWS's IRSA
    guidance: use `StringEquals` on `sub` and add
    `"oidc.eks.<REGION>.amazonaws.com/id/<OIDC_ID>:aud": "sts.amazonaws.com"` so only tokens
    minted for STS can assume the role.

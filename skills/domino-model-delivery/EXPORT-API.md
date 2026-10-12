@@ -6,6 +6,11 @@ container image a Domino endpoint runs (environment, project files, Flask or Plu
 auth and load-balancing layer) and pushes it to a registry you own. The other targets (NVIDIA
 Fleet Command, Snowflake, SageMaker) and the Exports page: [EXPORT-TARGETS.md](./EXPORT-TARGETS.md).
 
+Export only when the model must run outside Domino (your own Kubernetes, an air-gapped or
+customer runtime). To serve it, publish a Domino endpoint instead
+([domino-model-endpoints](../domino-model-endpoints/SKILL.md)): Domino then builds, hosts, scales
+and monitors it.
+
 **Every `/v4/...` route in this file is Domino Internal API, may change between Domino versions.**
 They are not in the Public API spec; each cluster documents them under
 `https://<domino-domain>/docs` (`openapi-internal.json`). The routes come from the product page

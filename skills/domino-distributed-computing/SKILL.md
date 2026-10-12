@@ -16,8 +16,8 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-cluste
 
 | Framework | Use for | Not for |
 |---|---|---|
-| Spark | SQL/ETL over large data, MLlib, PySpark | streaming, HDFS-style storage, strict-SLA pipelines |
-| Ray | Ray Train, Ray Tune, RLlib, parallel Python | serving (clusters are ephemeral) |
+| Spark | SQL/ETL over large data, MLlib, PySpark | streaming, HDFS-style storage, strict-SLA pipelines (use domino-flows) |
+| Ray | Ray Train, Ray Tune, RLlib, parallel Python | serving (clusters are ephemeral; use a Domino endpoint) |
 | Dask | pandas/NumPy/scikit-learn at scale, custom task graphs | |
 | Open MPI | multi-node, multi-GPU `mpirun` training (Horovod, PyTorch, TF) | Apps, Launchers, endpoints (not supported) |
 
@@ -85,7 +85,7 @@ client.wait_for_workers(2)      # optional; client.close() when done, never clie
 
 **MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code to the workers; Datasets are already mounted there), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`). Write outputs to a Dataset, not the Project files.
 
-Datasets mounted on the execution are mounted on all cluster nodes at the same path; S3 and other stores need the client libraries in both environments.
+Datasets mounted on the execution are mounted on all cluster nodes at the same path, so a Dataset is the default for distributed reads and writes. Read S3 or another store only where the data already lives: client libraries in both environments, propagated credentials (domino-data-connectivity).
 
 ## Web UI, autoscaling, lifecycle
 

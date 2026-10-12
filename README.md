@@ -417,13 +417,13 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-model-delivery` | Batch scoring Jobs, the Model Export API for CI/CD, NVIDIA Fleet Command and Snowflake exports |
 | `domino-governance` | Policies, bundles, and evidence for model risk governance |
 | `domino-flows` | Flyte-based workflow orchestration |
-| `domino-airflow-kubeflow` | Trigger and wait for Domino Jobs from Apache Airflow or Kubeflow Pipelines |
+| `domino-airflow-kubeflow` | Trigger and wait for Domino Jobs from an existing Apache Airflow or Kubeflow Pipelines deployment (inside Domino, use `domino-flows`) |
 | `domino-distributed-computing` | Spark, Ray, Dask cluster management |
-| `domino-llm-access` | Which LLM path to use: provider SDKs, Domino-hosted vLLM endpoints, legacy AI Gateway (6.3) |
+| `domino-llm-access` | Which LLM path to use: LLM Gateway 2.0 where deployed (`domino-llm-gateway`), else Domino-hosted vLLM endpoints or provider SDKs; legacy AI Gateway (6.3) |
 | `domino-llm-gateway` | Call models through LLM Gateway 2.0: aliases, in-run token, OpenAI and Anthropic SDKs, coding assistants, admin overview |
 | `domino-launchers` | Parameterized web forms for self-service |
 | `domino-modeling-assistant` | MCP server for AI-assisted model development |
-| `domino-data-connectivity` | S3 Mountpoint, AWS IRSA, Azure credentials |
+| `domino-data-connectivity` | Choosing a mechanism (Data Source first), External Data Volumes, S3 Mountpoint, AWS IRSA, Azure credentials |
 | `domino-api-intro` | Start here for Domino APIs: auth, hosts, pagination, errors |
 | `domino-python-sdk` | Python SDK (python-domino) and REST API |
 | `domino-cli` | Domino CLI and the R package: sync project files, run Jobs, upload to Datasets from a laptop |
@@ -445,7 +445,7 @@ without skill preload; Codex and Gemini CLI don't use them.
 | --- | --- |
 | `domino-deploy` | `domino-apps`, `domino-app-init`, `domino-debug-proxy`, `domino-ui-bootstrap`, `domino-ui-design`, `domino-model-endpoints`, `domino-model-serving`, `domino-environments` for deploying apps and model endpoints |
 | `domino-debug` | `domino-apps`, `domino-jobs`, `domino-environments`, `domino-api-intro` and the skill for the failing workload, with the log locations and Public API routes for fetching evidence |
-| `domino-setup` | `domino-projects`, `domino-environments`, `domino-experiment-setup`, `domino-trace-setup`, `domino-datasets`, `domino-data-connectivity`, `domino-model-monitoring` for new projects and configuration |
+| `domino-setup` | `domino-projects`, `domino-environments`, `domino-experiment-setup`, `domino-trace-setup`, `domino-datasets`, `domino-data-sdk`, `domino-data-connectivity`, `domino-llm-gateway`, `domino-llm-access`, `domino-model-monitoring` for new projects and configuration |
 
 ### Output Styles (Claude Code only)
 

@@ -118,9 +118,13 @@ In a Workspace the trace lands in the active MLflow experiment; open **Experimen
 
 ## Environment variables
 
-### Provider keys
+### Model access
 
-Store API keys as Domino environment variables (**Project > Settings > Environment variables** for a key the Project shares, **Account > Account Settings > User environment variables** for a personal one), never in code, and read them by name:
+Where an administrator has deployed LLM Gateway 2.0, point the client at it instead of a provider:
+`OpenAI(base_url=<gateway URL>/v1, api_key=<in-run access token>)` with a gateway alias as `model`
+(`domino-llm-gateway`); a Domino-hosted endpoint is the same with its **Calling** tab URL and
+served model name (`domino-llm-access`). Neither needs a provider key in the Project, and
+autologging traces both unchanged. Only for direct provider calls store API keys as Domino environment variables (**Project > Settings > Environment variables** for a key the Project shares, **Account > Account Settings > User environment variables** for a personal one), never in code, and read them by name:
 
 ```python
 import os
@@ -220,7 +224,7 @@ The SDK checked `GET $DOMINO_API_HOST/version` and found a platform older than 6
 
 ### `openai.AuthenticationError`
 
-Set the provider key as a Domino environment variable, not in code; see the `domino-llm-access` skill.
+Set the provider key as a Domino environment variable, not in code; see the `domino-llm-access` skill. Through the gateway or a Domino-hosted endpoint, a 401 means a missing or expired access token: re-read it before each call.
 
 ## Next steps
 

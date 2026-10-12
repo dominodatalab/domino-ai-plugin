@@ -91,7 +91,7 @@ async def chat(body: dict):
 
 ## Viewing traces
 
-- Evaluation: **Experiments** > the experiment > the run > **Traces** tab (span tree, inputs, outputs, scores). Select two to four runs and **Compare** for aggregated metrics side by side. Only Job-originated runs offer **Deploy Agent**.
+- Evaluation: **Experiments** > the experiment > the run > **Traces** tab (span tree, inputs, outputs, scores). **Compare** two to four runs' aggregated metrics. Only Job-originated runs offer **Deploy Agent**.
 - Deployed agent: the agent's details page > **Performance**, **Usage**, **Monitoring**.
 
 ## Reference files
@@ -102,7 +102,7 @@ async def chat(body: dict):
 - [EVALUATORS.md](./EVALUATORS.md): span, trace, LLM-as-judge, post-hoc and production evaluators
 - [MULTI-AGENT-EXAMPLE.md](./MULTI-AGENT-EXAMPLE.md): a deployed tool-use agent and a batch-evaluated multi-agent pipeline
 
-To scaffold tracing into an existing project, use the `domino-trace-setup` skill. To call the models themselves, use the `domino-llm-access` skill.
+To scaffold tracing into an existing project, use the `domino-trace-setup` skill. For the model client, use LLM Gateway 2.0 where deployed (`domino-llm-gateway`), else `domino-llm-access`; tracing works the same.
 
 ## Documentation
 

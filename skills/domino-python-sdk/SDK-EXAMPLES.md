@@ -298,7 +298,9 @@ if status != "Succeeded":                       # "Stopped" and "Error" do not r
 print("Training succeeded")
 ```
 
-The same start-and-wait step as an Airflow task or a Kubeflow component, with the python-domino
+Chaining several such steps is a Domino Flow ([domino-flows](../domino-flows/SKILL.md)); running one on a timer
+is a scheduled Job. Where an existing Airflow or Kubeflow deployment owns the schedule, the same
+start-and-wait step as an Airflow task or a Kubeflow component, with the python-domino
 operators and their Airflow 3 and constraint caveats: [domino-airflow-kubeflow](../domino-airflow-kubeflow/SKILL.md).
 
 ## Error handling
