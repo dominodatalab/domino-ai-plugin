@@ -17,6 +17,7 @@ import hashlib
 import os
 import re
 import sys
+import threading
 import time
 import urllib.parse
 import webbrowser
@@ -272,6 +273,34 @@ def _env_flag(name: str) -> bool | None:
 
 _TIMEOUT = (10, 60)  # connect, read (seconds)
 
+# Every tool call runs under a time budget (set by _threaded): the host's per-call limit, see
+# _wait_cap. HTTP timeouts shrink to the remaining budget and no request starts once it is spent,
+# so a slow deployment cannot push a call past the host's timeout.
+_budget = threading.local()
+_MIN_REQUEST_SECONDS = 2.0
+
+
+class BudgetExhausted(DominoError):
+    """The tool call's time budget is spent; nothing more is started."""
+
+
+def _set_budget(seconds: float | None) -> None:
+    _budget.deadline = None if seconds is None else time.monotonic() + seconds
+
+
+def _remaining() -> float | None:
+    deadline = getattr(_budget, "deadline", None)
+    return None if deadline is None else max(0.0, deadline - time.monotonic())
+
+
+def _request_timeout() -> tuple:
+    remaining = _remaining()
+    if remaining is None:
+        return _TIMEOUT
+    if remaining < _MIN_REQUEST_SECONDS:
+        raise BudgetExhausted("the call's time budget is spent; call the tool again to continue")
+    return (min(_TIMEOUT[0], remaining), min(_TIMEOUT[1], remaining))
+
 
 def _describe_http_error(method: str, path: str, resp: requests.Response) -> str:
     detail = ""
@@ -299,8 +328,12 @@ def _api(method: str, path: str, *, params: Dict[str, Any] | None = None,
     url = f"{_get_domino_host()}{path}"
     hdrs = {**_get_auth_headers(), **(headers or {})}
     try:
+        timeout = _request_timeout()
+    except BudgetExhausted as e:
+        raise BudgetExhausted(f"{method} {path} not started: {e}") from None
+    try:
         resp = requests.request(method, url, params=params, json=json, data=data, headers=hdrs,
-                                timeout=_TIMEOUT)
+                                timeout=timeout)
     except Exception as e:  # requests exceptions can embed header values; never let them through raw
         raise DominoError(_redact(f"{method} {path} failed: {e}")) from None
     if resp.status_code in allow:
@@ -335,12 +368,21 @@ def _capture_client_name() -> None:
         _CLIENT_NAME = ""
 
 
+def _run_with_budget(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    _set_budget(_wait_cap())
+    try:
+        return fn(*args, **kwargs)
+    finally:
+        _set_budget(None)
+
+
 def _threaded(fn: Callable[..., Any]) -> Callable[..., Any]:
-    """Run a blocking tool implementation in a worker thread so the stdio event loop stays free."""
+    """Run a blocking tool implementation in a worker thread, under the per-call time budget,
+    so the stdio event loop stays free and no call outlives the host's tool timeout."""
     @functools.wraps(fn)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         _capture_client_name()
-        return await anyio.to_thread.run_sync(functools.partial(fn, *args, **kwargs))
+        return await anyio.to_thread.run_sync(functools.partial(_run_with_budget, fn, *args, **kwargs))
     return wrapper
 
 
@@ -577,7 +619,7 @@ def _remote_state(user_name: str, project_name: str, path: str, info: Dict[str, 
     returned as is and the caller reports the lag).
     """
     project_id = (info or _project_info(user_name, project_name))["id"]
-    entry = _file_version_cache.get((user_name, project_name, path))
+    entry = _recent_write_log.get((user_name, project_name, path))
     if not _recent_own_write(entry):
         return _read_state(user_name, project_name, path, project_id)
 
@@ -619,23 +661,25 @@ _PIN_WINDOW = 15 * 60
 def _recent_writes(user_name: str, project_name: str) -> List[tuple]:
     """[(path, entry)] for files this process wrote to the project within _PIN_WINDOW."""
     now = time.monotonic()
-    return [(path, entry) for (owner, project, path), entry in list(_file_version_cache.items())
-            if (owner, project) == (user_name, project_name) and "written_at" in entry
-            and now - entry["written_at"] < _PIN_WINDOW]
+    return [(path, entry) for (owner, project, path), entry in list(_recent_write_log.items())
+            if (owner, project) == (user_name, project_name) and now - entry["written_at"] < _PIN_WINDOW]
 
 
 def _confirm_upload(user_name: str, project_name: str, path: str, info: Dict[str, Any]) -> Dict[str, Any]:
     """After a write: the commit that contains it ("commitId"), waiting for the files API to show it."""
+    why = ""
     try:
-        state = _remote_state(user_name, project_name, path, info)
+        _remote_state(user_name, project_name, path, info)
     except FileAheadOfCommitError:
-        state = {"commit_id": None}
-    entry = _file_version_cache.get((user_name, project_name, path)) or {}
+        pass
+    except DominoError as e:   # for example the call's time budget: the upload itself succeeded
+        why = f" ({e})"
+    entry = _recent_write_log.get((user_name, project_name, path)) or {}
     commit = entry.get("commit_id") if entry.get("visible") else None
     result: Dict[str, Any] = {"commitId": commit}
     if not commit:
-        result["note"] = (f"The upload succeeded but after {int(_WRITE_VISIBILITY_TIMEOUT)} s the latest "
-                          f"commit does not show it yet; run_domino_job will wait for it before starting.")
+        result["note"] = (f"The upload succeeded but the latest commit does not show it yet{why}; "
+                          f"run_domino_job will wait for it before starting.")
     return result
 
 
@@ -674,10 +718,14 @@ def _pin_commit_for_recent_writes(user_name: str, project_name: str, info: Dict[
         if entry.get("commit_id") == latest:
             continue
         resp = _read_remote_file(project_id, latest, path)
-        if resp.status_code != 200 or _file_key(resp.content) != entry["key"]:
-            # The latest commit does not (yet) contain this write: fall back to the newest commit
-            # that was confirmed to; later writes' commits contain the earlier ones.
-            return confirmed[-1][1] if confirmed else None
+        key_at_latest = _file_key(resp.content) if resp.status_code == 200 else None
+        if key_at_latest == entry["key"]:
+            continue
+        if key_at_latest is not None and key_at_latest != entry.get("previous_key"):
+            continue   # someone wrote a newer version after ours: the latest commit is ahead, not behind
+        # The latest commit does not (yet) contain this write: fall back to the newest commit
+        # that was confirmed to; later writes' commits contain the earlier ones.
+        return confirmed[-1][1] if confirmed else None
     return latest
 
 
@@ -807,17 +855,41 @@ def _get_job(job_id: str) -> Dict[str, Any]:
     return _summarize_job(body.get("job") or {})
 
 
+def _time_left() -> bool:
+    remaining = _remaining()
+    return remaining is None or remaining >= _MIN_REQUEST_SECONDS
+
+
 def _poll_job(job_id: str, wait_seconds: int) -> Dict[str, Any]:
-    """The job summary, after waiting up to wait_seconds (capped per host) for it to complete."""
-    budget = max(0, min(int(wait_seconds or 0), _wait_cap()))
+    """The job summary, after waiting up to wait_seconds for it to complete.
+
+    The wait is capped per host (_wait_cap) and by what is left of the call's time budget; a
+    status read is never started once the budget is spent, and a read cut off by it keeps the
+    last known state. When no read fits, only the id comes back with a "call again" message.
+    """
+    budget = max(0.0, float(min(int(wait_seconds or 0), _wait_cap())))
+    remaining = _remaining()
+    if remaining is not None:
+        budget = min(budget, remaining)
     start = time.monotonic()
     deadline = start + budget
     interval = _POLL_FIRST
-    result = _get_job(job_id)
-    while not result.get("is_completed") and time.monotonic() < deadline:
-        time.sleep(min(interval, max(0.0, deadline - time.monotonic())))
-        interval = min(_POLL_MAX, interval + _POLL_STEP)
-        result = _get_job(job_id)
+    result: Dict[str, Any] | None = None
+    try:
+        if _time_left():
+            result = _get_job(job_id)
+        while result is not None and not result.get("is_completed") and time.monotonic() < deadline:
+            time.sleep(min(interval, max(0.0, deadline - time.monotonic())))
+            interval = min(_POLL_MAX, interval + _POLL_STEP)
+            if not _time_left():
+                break
+            result = _get_job(job_id)
+    except DominoError as e:
+        if result is None or _time_left():
+            raise
+        result["note"] = f"The last status read did not finish within the call's time budget ({e})."
+    if result is None:
+        result = {"job_id": job_id, "run_id": job_id, "status": None, "is_completed": None}
     result["waited_seconds"] = int(round(time.monotonic() - start))
     if not result.get("is_completed"):
         result["message"] = (f"Job is still {result.get('status') or 'in progress'} after "
@@ -1061,7 +1133,12 @@ def run_domino_job(user_name: str, project_name: str, run_command: str, title: s
             payload["commitId"] = commit_id
         pinned = commit_id
     elif not info.get("git_based"):
-        pinned = _pin_commit_for_recent_writes(user_name, project_name, info)
+        gate = _project_gate(user_name, project_name)
+        gate.begin_select()   # no upload to this project is in flight while the commit is chosen
+        try:
+            pinned = _pin_commit_for_recent_writes(user_name, project_name, info)
+        finally:
+            gate.end_select()
         if pinned:
             payload["commitId"] = pinned
     body = _api_json("POST", "/api/jobs/v1/jobs", json=payload) or {}   # Public API (NewJobV1)
@@ -1073,9 +1150,13 @@ def run_domino_job(user_name: str, project_name: str, run_command: str, title: s
         result["environment_id"] = payload["environmentId"]
     job_id = result.get("job_id")
     if wait_seconds and job_id:
+        # From here on the Job exists: whatever the time budget allows is reported, never an error.
         result.update(_poll_job(job_id, wait_seconds))
         if result.get("is_completed"):
-            result.update(_stdout_tail(job_id, user_name, project_name))
+            try:
+                result.update(_stdout_tail(job_id, user_name, project_name))
+            except DominoError as e:
+                result["results_note"] = f"Output not read within the call's time budget ({e}); call check_domino_job_run_results."
             result["message"] = (f"Job {result.get('number')} ({job_id}) finished with status "
                                  f"{result.get('status')} after {result.get('waited_seconds')} s.")
         return result
@@ -1182,8 +1263,62 @@ def _probe_git(working_dir: str) -> bool | None:
 # ---------------------------------------------------------------------------------------------
 
 # Versions this process has seen, for conflict detection in smart_sync_file.
-# Key: (user_name, project_name, file_path) -> {"key": sha1, "content": str}
+# Key: (user_name, project_name, file_path) -> {"key": sha1, "raw": bytes}
 _file_version_cache: Dict[tuple, Dict[str, Any]] = {}
+# Files this process wrote, for read-after-write handling and commit pinning. Kept apart from the
+# conflict baseline above, which a download or an identical sync may replace at any time.
+# Key: (user_name, project_name, file_path) ->
+#   {"key", "previous_key", "written_at", "visible", "commit_id"}
+_recent_write_log: Dict[tuple, Dict[str, Any]] = {}
+
+# Tools run in worker threads. Read-check-write-confirm on one path is serialized with a lock per
+# path, and a Job's commit selection waits for in-flight uploads to the project (and holds new
+# ones back) with a gate per project. This coordinates this process's own threads only; two
+# clients of the same project are not serialized (Domino has no conditional write).
+_locks_guard = threading.Lock()
+_path_locks: Dict[tuple, threading.Lock] = {}
+_project_gates: Dict[tuple, "_ProjectGate"] = {}
+
+
+def _path_lock(cache_key: tuple) -> threading.Lock:
+    with _locks_guard:
+        return _path_locks.setdefault(cache_key, threading.Lock())
+
+
+class _ProjectGate:
+    """Uploads (writers) and Job commit selection (selector) exclude each other per project."""
+
+    def __init__(self) -> None:
+        self._cv = threading.Condition()
+        self._writes = 0
+        self._selecting = False
+
+    def begin_write(self) -> None:
+        with self._cv:
+            while self._selecting:
+                self._cv.wait()
+            self._writes += 1
+
+    def end_write(self) -> None:
+        with self._cv:
+            self._writes -= 1
+            self._cv.notify_all()
+
+    def begin_select(self) -> None:
+        with self._cv:
+            while self._selecting or self._writes:
+                self._cv.wait()
+            self._selecting = True
+
+    def end_select(self) -> None:
+        with self._cv:
+            self._selecting = False
+            self._cv.notify_all()
+
+
+def _project_gate(user_name: str, project_name: str) -> _ProjectGate:
+    with _locks_guard:
+        return _project_gates.setdefault((user_name, project_name), _ProjectGate())
 
 
 @mcp.tool()
@@ -1194,7 +1329,7 @@ def list_domino_project_files(user_name: str, project_name: str, path: str = "/"
     Works with DFS (non-git) projects. Use it to see what exists before uploading or downloading.
 
     Args:
-        user_name (str): The username of the project owner (e.g., 'etan_lightstone')
+        user_name (str): The username of the project owner (e.g., 'alice')
         project_name (str): The name of the Domino project (e.g., 'diabetes_dfs_proj')
         path (str): The directory to list (default: "/" for the project root). Files in
             subdirectories are not included; list each subdirectory separately.
@@ -1225,14 +1360,16 @@ def list_domino_project_files(user_name: str, project_name: str, path: str = "/"
     }
 
 
-def _written(key: str, data: bytes, previous_key: str | None) -> Dict[str, Any]:
-    """A cache entry for a file this process just wrote (see _WRITE_VISIBILITY_TIMEOUT).
+def _record_write(cache_key: tuple, key: str, data: bytes, previous_key: str | None) -> None:
+    """Record a file this process just wrote: conflict baseline plus the write log entry
+    (see _WRITE_VISIBILITY_TIMEOUT and _PIN_WINDOW).
 
     previous_key is the remote key read just before the write (None for a new file): a later
     read that still shows it is stale, not a conflict.
     """
-    return {"key": key, "raw": data, "written_at": time.monotonic(), "visible": False,
-            "previous_key": previous_key}
+    _file_version_cache[cache_key] = {"key": key, "raw": data}
+    _recent_write_log[cache_key] = {"key": key, "previous_key": previous_key,
+                                    "written_at": time.monotonic(), "visible": False, "commit_id": None}
 
 
 def _upload(user_name: str, project_name: str, path: str, data: bytes) -> Dict[str, Any]:
@@ -1260,20 +1397,28 @@ def _upload_file(user_name: str, project_name: str, file_path: str, data: bytes,
                  overwrite: bool) -> Dict[str, Any]:
     path = _normalize_project_path(file_path)
     info = _require_dfs_project(user_name, project_name)
-    remote = _remote_state(user_name, project_name, path, info)   # also records the pre-write key
-    if remote["exists"]:
-        if remote["key"] == _file_key(data):
-            return {"success": True, "action": "no_change", "path": path, "key": remote["key"],
-                    "commitId": remote["commit_id"],
-                    "message": "File content identical to remote, no upload needed"}
-        if not overwrite:
-            raise DominoError(f"{path} already exists in {user_name}/{project_name} with different "
-                              f"content (key {remote['key']}). Use smart_sync_file to compare and "
-                              f"merge, or pass overwrite=True to replace it.")
-    result = _upload(user_name, project_name, path, data)
-    _file_version_cache[(user_name, project_name, path)] = _written(result["key"], data, remote["key"])
-    result.update(_confirm_upload(user_name, project_name, path, info))
-    return result
+    cache_key = (user_name, project_name, path)
+    gate = _project_gate(user_name, project_name)
+    with _path_lock(cache_key):
+        gate.begin_write()
+        try:
+            remote = _remote_state(user_name, project_name, path, info)   # also records the pre-write key
+            if remote["exists"]:
+                if remote["key"] == _file_key(data):
+                    _file_version_cache[cache_key] = {"key": remote["key"], "raw": remote["raw"]}
+                    return {"success": True, "action": "no_change", "path": path, "key": remote["key"],
+                            "commitId": remote["commit_id"],
+                            "message": "File content identical to remote, no upload needed"}
+                if not overwrite:
+                    raise DominoError(f"{path} already exists in {user_name}/{project_name} with different "
+                                      f"content (key {remote['key']}). Use smart_sync_file to compare and "
+                                      f"merge, or pass overwrite=True to replace it.")
+            result = _upload(user_name, project_name, path, data)
+            _record_write(cache_key, result["key"], data, remote["key"])
+            result.update(_confirm_upload(user_name, project_name, path, info))
+            return result
+        finally:
+            gate.end_write()
 
 
 @mcp.tool()
@@ -1293,7 +1438,7 @@ def upload_file_to_domino_project(
     there). For a file on disk (a model artifact, an image) use sync_local_file_to_domino.
 
     Args:
-        user_name (str): The username of the project owner (e.g., 'etan_lightstone')
+        user_name (str): The username of the project owner (e.g., 'alice')
         project_name (str): The name of the Domino project (e.g., 'diabetes_dfs_proj')
         file_path (str): The path where the file should be saved in the project (e.g., 'scripts/train.py')
         file_content (str, optional): The content of a text file
@@ -1328,7 +1473,7 @@ def download_file_from_domino_project(
     moments ago is waited for, but another client's very recent write may not be visible yet.
 
     Args:
-        user_name (str): The username of the project owner (e.g., 'etan_lightstone')
+        user_name (str): The username of the project owner (e.g., 'alice')
         project_name (str): The name of the Domino project (e.g., 'diabetes_dfs_proj')
         file_path (str): The path of the file to download (e.g., 'scripts/train.py')
 
@@ -1338,11 +1483,13 @@ def download_file_from_domino_project(
         recorded for conflict detection but their content is not returned.
     """
     path = _normalize_project_path(file_path)
-    remote = _remote_state(user_name, project_name, path)   # Public API
-    if not remote["exists"]:
-        raise DominoError(f"{path} does not exist in {user_name}/{project_name} at commit "
-                          f"{remote['commit_id']}. Use list_domino_project_files to see what exists.")
-    _file_version_cache[(user_name, project_name, path)] = {"key": remote["key"], "raw": remote["raw"]}
+    with _path_lock((user_name, project_name, path)):
+        remote = _remote_state(user_name, project_name, path)   # Public API
+        if not remote["exists"]:
+            raise DominoError(f"{path} does not exist in {user_name}/{project_name} at commit "
+                              f"{remote['commit_id']}. Use list_domino_project_files to see what exists.")
+        # The conflict baseline only; a recent own write stays recorded for commit pinning.
+        _file_version_cache[(user_name, project_name, path)] = {"key": remote["key"], "raw": remote["raw"]}
     return {
         "success": True,
         "path": path,
@@ -1369,7 +1516,7 @@ def sync_local_file_to_domino(
     projects (commit and push there).
 
     Args:
-        user_name (str): The username of the project owner (e.g., 'etan_lightstone')
+        user_name (str): The username of the project owner (e.g., 'alice')
         project_name (str): The name of the Domino project (e.g., 'diabetes_dfs_proj')
         local_file_path (str): The absolute path to the local file to upload
         domino_file_path (str, optional): The path in Domino where the file should be saved.
@@ -1443,13 +1590,25 @@ def smart_sync_file(
     data = _bytes_from_args(content, content_base64, "content")
     path = _normalize_project_path(file_path)
     cache_key = (user_name, project_name, path)
-    cached = _file_version_cache.get(cache_key)
     info = _require_dfs_project(user_name, project_name)
+    gate = _project_gate(user_name, project_name)
+    with _path_lock(cache_key):
+        gate.begin_write()
+        try:
+            return _smart_sync_locked(user_name, project_name, path, data, force_overwrite, info)
+        finally:
+            gate.end_write()
+
+
+def _smart_sync_locked(user_name: str, project_name: str, path: str, data: bytes,
+                       force_overwrite: bool, info: Dict[str, Any]) -> Dict[str, Any]:
+    cache_key = (user_name, project_name, path)
+    cached = _file_version_cache.get(cache_key)
     remote = _remote_state(user_name, project_name, path, info)   # Public API, latest commit
 
     def _do_upload(action: str, **extra: Any) -> Dict[str, Any]:
         result = _upload(user_name, project_name, path, data)
-        _file_version_cache[cache_key] = _written(result["key"], data, remote["key"])
+        _record_write(cache_key, result["key"], data, remote["key"])
         confirmed = _confirm_upload(user_name, project_name, path, info)
         return {"success": True, "action": action, "path": path, "key": result["key"],
                 "size": result["size"], "message": f"{action}: {path}", **confirmed, **extra}
@@ -1458,7 +1617,8 @@ def smart_sync_file(
     if not remote["exists"]:
         return _do_upload("created")
 
-    # Identical content needs no upload, whatever the history.
+    # Identical content needs no upload, whatever the history. Only the conflict baseline moves; a
+    # recent own write stays recorded for commit pinning.
     if remote["key"] == _file_key(data):
         _file_version_cache[cache_key] = {"key": remote["key"], "raw": remote["raw"]}
         return {"success": True, "action": "no_change", "path": path, "key": remote["key"],
