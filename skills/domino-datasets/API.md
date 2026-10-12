@@ -4,8 +4,9 @@ All routes below exist in both published Public API specs
 (https://docs.domino.ai/api-specs/6.3/public-api.json and
 https://docs.domino.ai/api-specs/cloud/public-api.json, tag `Datasets`). Every write (create,
 snapshot, tag, grant, shared-dataset link, delete) was exercised on a live Domino 6.4.0
-deployment on 2026-10-12; "verified" below means observed there. The only `/v4` routes are the
-snapshot file-listing ones, labelled internal.
+deployment on 2026-10-12; "verified" below means observed there. Every `/v4` route named below
+(the snapshot file routes and the delete-cancellation route) is labelled Internal API, may
+change between Domino versions, at its point of use.
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/create-and-manage-datasets
 (REST tab) and the API reference under https://docs.domino.ai/cloud/reference/api.
 
@@ -50,7 +51,7 @@ on 6.4.0 a 400 or 404 arrives as `{"requestId": ..., "errors": ["..."]}`, so rea
 | `POST /api/datasetrw/v1/datasets` | Create | `{"name": "...", "description": "...", "projectId": "...", "grants": [...]}`; or `snapshotId` instead of `projectId` to copy a snapshot into a new Dataset; `name` required |
 | `GET /api/datasetrw/v1/datasets/{datasetId}` | Details | returns `id`, `name`, `description`, `projectId`, `createdAt`, `snapshotIds`, `tags` (tag name to snapshot ID) |
 | `PATCH /api/datasetrw/v1/datasets/{datasetId}` | Rename or re-describe | `{"name": "...", "description": "..."}` (either) |
-| `DELETE /api/datasetrw/v1/datasets/{datasetId}` | Soft delete (verified by a non-admin Owner): returns the Dataset, which vanishes from the v2 list at once while `GET` by ID still works; internally it is `DeletionInProgress` and cancellable (internal API `DELETE /v4/datasetrw/dataset/{id}/cancel-request-to-delete`, not exercised), and it stayed in that state after 10 minutes. The spec names the PermanentDelete permission. Whether an admin must finish the deletion was not determined. Never call it without explicit user confirmation | none |
+| `DELETE /api/datasetrw/v1/datasets/{datasetId}` | Soft delete (verified by a non-admin Owner): returns the Dataset, which vanishes from the v2 list at once while `GET` by ID still works; internally it is `DeletionInProgress` and cancellable through `DELETE /v4/datasetrw/dataset/{id}/cancel-request-to-delete` (**Internal API, may change between Domino versions**; not exercised), and it stayed in that state after 10 minutes. The spec names the PermanentDelete permission. Whether an admin must finish the deletion was not determined. Never call it without explicit user confirmation | none |
 | `GET /api/datasetrw/v1/datasets/{datasetId}/snapshots` | List snapshots | `offset`, `limit` (default 10); each has `id`, `datasetId`, `creatorId`, `createdAt`, `status` |
 | `POST /api/datasetrw/v1/datasets/{datasetId}/snapshots` | Create snapshot | `{"relativeFilePaths": ["*"]}` for all files (verified: active in about 20 s with nested files; `["/*"]` is accepted but the snapshot ends `failed`), or paths such as `["a.txt", "sub/b.txt"]`; returns `status: pending`. One copy at a time: a second `POST` while one is pending returns 400 `a snapshot copy is already in progress` |
 | `GET /api/datasetrw/v1/snapshots/{snapshotId}` | Snapshot details | `status` is one of `pending`, `active`, `failed`, `copying`, `markForDeletion`, `deletionInProgress`, `deleted` |

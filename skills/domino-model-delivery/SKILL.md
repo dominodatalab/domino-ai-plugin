@@ -90,11 +90,11 @@ Kubernetes manifests, the test call, `.modelignore` and the python-domino method
 
 ## Pitfalls
 
-- Build first, export second: an export needs a `modelVersionId` whose build reached `Complete`.
+- Build first, export second: an export needs a model version whose build reached `Complete`.
 - The NVIDIA export fails when the image tag or Helm chart version already exists in NGC; derive
   tags from the version for every target so re-runs never collide.
-- Export bodies carry registry, NGC or Snowflake credentials in plain JSON; read them from a secret
-  store at run time and never commit them.
+- Export bodies carry registry, NGC or Snowflake credentials in plain JSON; JSON-encode them from
+  the environment, never splice or commit them.
 - The build body requires `logHttpRequestResponse`; send `false` unless payload logging is wanted.
 - Every project file goes into the image unless listed in `.modelignore`; exported images and
   UDFs cannot reach Domino-only assets (Datasets, Data Sources, the API proxy) at inference time.
