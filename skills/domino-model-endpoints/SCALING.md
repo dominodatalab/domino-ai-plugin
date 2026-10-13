@@ -2,7 +2,7 @@
 
 Applies to Domino 6.3 and Domino Cloud. Sources: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/scale and https://docs.domino.ai/cloud/admin/platform-configuration/manage-model-deployments.
 
-Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings.
+Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings (from the UI: there is no public restart route, and the internal stop and start routes do not restart a version; see [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment)).
 
 ## Horizontal: number of instances
 
@@ -15,7 +15,7 @@ Via the API, `PUT /api/modelServing/v1/modelApis/{modelApiId}` takes `name`, `de
 
 ## Vertical: endpoint hardware tiers
 
-- Endpoints use a separate class of hardware tier. A tier is usable by endpoints only when an admin marked it **Is Domino endpoint Tier** (Admin > **Advanced** > **Hardware Tiers**); Workspace and Job tiers do not appear in the endpoint form.
+- Endpoints use a separate class of hardware tier. A tier is usable by endpoints only when an admin marked it **Is Domino endpoint Tier** (Admin > **Advanced** > **Hardware Tiers**), or set the same flag with the public `PUT /api/hardwaretiers/v1/hardwaretiers`: the body is the full `HardwareTierV1` record (read it with the `GET` below) with `flags.isModelApiTier: true` and, for the default endpoint tier, `flags.isDefaultForModelApi: true`. That route needs `ManageHardwareTiers`, changes the platform for every project, and is spec-verified (both specs) but was not run here. Workspace and Job tiers do not appear in the endpoint form.
 - List what exists: `GET $DOMINO_API_HOST/api/hardwaretiers/v1/hardwaretiers?limit=100` (needs `ViewHardwareTiers`). Endpoint tiers have `flags.isModelApiTier: true`; `flags.isDefaultForModelApi` marks the default. Names and IDs are deployment-specific; never copy a tier name from another deployment.
 - When creating by API, pass `hardwareTierId` explicitly: on Domino Cloud 6.4 a create without it came back with `hardwareTierId: "small-k8s"`, not the tier flagged `isDefaultForModelApi`.
 - GPU tiers exist only if the administrator configured GPUs in the node pool. Check in code (`torch.cuda.is_available()`) rather than assuming.
@@ -23,7 +23,7 @@ Via the API, `PUT /api/modelServing/v1/modelApis/{modelApiId}` takes `name`, `de
 
 ## Python worker parallelism
 
-Each Python endpoint instance runs uWSGI with one worker by default. An administrator raises `com.cerebro.domino.modelmanager.uWsgi.workerCount` under **Admin** > **Platform settings** > **Configuration records** and restarts services. The setting is deployment-wide and applies to synchronous endpoints only. More workers means more concurrent requests per instance and proportionally more memory, since each worker loads the model.
+Each Python endpoint instance runs uWSGI with one worker by default. An administrator raises `com.cerebro.domino.modelmanager.uWsgi.workerCount` under **Admin** > **Platform settings** > **Configuration records** and restarts services. The setting is deployment-wide and applies to synchronous endpoints only. The same records are reachable through the internal `/v4/admin/centralConfigSettings` routes ([API-ADMIN.md](../domino-python-sdk/API-ADMIN.md); internal API, may change between Domino versions, requires `EditCentralConfig`, not exercised here); on Domino Cloud only Domino holds that permission, so for Cloud the UI instruction is the path, and self-managed admins can use either. More workers means more concurrent requests per instance and proportionally more memory, since each worker loads the model.
 
 ## Routing modes
 
