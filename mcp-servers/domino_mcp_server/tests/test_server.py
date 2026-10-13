@@ -775,7 +775,11 @@ def test_tool_names_schemas_and_instructions(server, run):
     instructions = server._plugin_instructions()
     rules = (Path(server.__file__).resolve().parents[2] / "rules" / "domino.md").read_text(encoding="utf-8")
     lead = rules.split("\n---\n", 2)[-1].split("\n## ", 1)[0].strip()
-    assert instructions == lead and instructions.startswith("Domino Data Lab.")
+    assert instructions == lead
+    # The lead's wording is the rules file's business; the server only needs it to identify
+    # Domino and carry the in-run auth rule it is the single source for.
+    first_line = instructions.splitlines()[0]
+    assert "Domino" in first_line and "DOMINO_API_PROXY" in instructions
     assert len(lead.encode()) <= 900, "rules/domino.md lead section would be truncated"
 
 

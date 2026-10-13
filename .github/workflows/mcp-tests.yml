@@ -1,12 +1,13 @@
 name: MCP server tests
 
 # Unit tests of the bundled MCP server (mocked HTTP, fake clock; no Domino needed). Runs on pull
-# requests that touch mcp-servers/. The test command is the one documented in
+# requests that touch mcp-servers/ or rules/domino.md, whose lead section the server sends as its
+# MCP instructions at runtime. The test command is the one documented in
 # mcp-servers/domino_mcp_server/README.md; pytest is deliberately not a project dependency.
 
 on:
   pull_request:
-    paths: ["mcp-servers/**"]
+    paths: ["mcp-servers/**", "rules/domino.md"]
 
 permissions:
   contents: read
