@@ -46,7 +46,7 @@ body = {
     "endpointName": "openai-chat",
     "endpointType": "llm/v1/chat",          # the MLflow Deployments Server endpoint type
     "modelProvider": "openai",              # an MLflow Deployments Server provider name
-    "modelName": "gpt-4o",
+    "modelName": "gpt-6.1-sol",             # example provider model name
     "modelConfig": {"openai_api_key": os.environ["OPENAI_API_KEY"]},   # provider key read from a Project or user environment variable; the gateway keeps it afterwards
     "endpointPermissions": {"isEveryoneAllowed": False, "userIds": ["<user id>"]},
 }

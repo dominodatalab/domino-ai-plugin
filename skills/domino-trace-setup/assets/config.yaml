@@ -11,11 +11,11 @@
 
 models:
   # Model the agent calls
-  primary: gpt-4o-mini
+  primary: gpt-6.1-sol        # example model name; use one your provider serves
 
   # Model used by the LLM-as-judge evaluator; must match the judge_model passed to
   # create_llm_judge_evaluator() (or the JUDGE_MODEL environment variable)
-  judge: gpt-4o-mini
+  judge: gpt-6.1-sol          # example; keep equal to the judge model the evaluator uses
 
 agents:
   # Default settings for all agents

@@ -56,7 +56,7 @@ from contextlib import contextmanager
 import mlflow
 
 FRAMEWORKS = ("openai", "anthropic", "langchain")
-DEFAULT_JUDGE_MODEL = "gpt-4o-mini"   # keep in sync with models.judge in config.yaml
+DEFAULT_JUDGE_MODEL = "gpt-6.1-sol"   # example model name; keep in sync with models.judge in config.yaml
 _openai_autolog_enabled = False       # set by setup_tracing("openai"); read by the judge helper
 
 
@@ -206,7 +206,7 @@ if __name__ == "__main__":
 
     setup_tracing("openai")
     client = OpenAI()
-    model = "gpt-4o-mini"
+    model = "gpt-6.1-sol"          # example model name; use one your provider serves
 
     @add_tracing(name="example_agent", span_type="AGENT", evaluator=create_evaluator())
     def example_agent(query: str) -> dict:

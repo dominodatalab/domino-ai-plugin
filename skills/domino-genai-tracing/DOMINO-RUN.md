@@ -93,8 +93,8 @@ def evaluation_run(**kwargs):
 
 ```yaml
 models:
-  primary: gpt-4o-mini
-  judge: gpt-4o-mini
+  primary: gpt-6.1-sol        # example model name; use one your provider serves
+  judge: gpt-6.1-sol          # example; keep equal to the judge model the evaluator uses
 
 agents:
   classifier:
@@ -144,6 +144,8 @@ Run metrics: `mean_classification_confidence`, `min_classification_confidence`, 
 
 ## Complete example
 
+Model names are examples (`gpt-6.1-sol`); use one your provider serves.
+
 ```python
 import mlflow
 from domino.agents.tracing import add_tracing
@@ -162,7 +164,7 @@ def quality_evaluator(span):
 @add_tracing(name="qa_agent", span_type="AGENT", autolog_frameworks=["openai"], evaluator=quality_evaluator)
 def qa_agent(question: str) -> dict:
     response = client.chat.completions.create(
-        model="gpt-4o-mini", messages=[{"role": "user", "content": question}])
+        model="gpt-6.1-sol", messages=[{"role": "user", "content": question}])
     return {"response": response.choices[0].message.content, "confidence": 0.9}
 
 aggregated = [("response_length", "mean"), ("response_length", "max"),

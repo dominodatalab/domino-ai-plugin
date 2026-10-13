@@ -34,6 +34,8 @@ Supported function kinds in `dominodatalab` 2.2.0: plain functions, `async def` 
 
 ## Basic usage
 
+Model names in the examples (`gpt-6.1-sol`) are examples; use a model your provider serves, or an alias from the `domino-llm-gateway` skill where that extension is installed.
+
 ```python
 from domino.agents.tracing import add_tracing
 from openai import OpenAI
@@ -45,7 +47,7 @@ def chat_agent(user_message: str) -> str:
     """Captured: the arguments (span.inputs), the return value (span.outputs),
     timing, every OpenAI call as a child span, and any exception."""
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-6.1-sol",
         messages=[{"role": "user", "content": user_message}],
     )
     return response.choices[0].message.content
@@ -60,7 +62,7 @@ aclient = AsyncOpenAI()
 
 @add_tracing(name="agent_turn", span_type="AGENT", autolog_frameworks=["openai"])
 async def run_agent_turn(messages: list[dict]) -> dict:
-    response = await aclient.chat.completions.create(model="gpt-4o-mini", messages=messages)
+    response = await aclient.chat.completions.create(model="gpt-6.1-sol", messages=messages)
     return {"content": response.choices[0].message.content}
 ```
 
@@ -110,7 +112,7 @@ from domino.agents.tracing import add_tracing
 from openai import AsyncOpenAI
 
 client = AsyncOpenAI()      # OPENAI_API_KEY from a Domino environment variable
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-6.1-sol"          # example model name; use one your provider serves
 
 def get_data(table: str) -> str:
     return json.dumps({"table": table, "rows": 42})
@@ -218,7 +220,7 @@ mlflow.update_current_trace(tags={"session_id": "abc123", "actor": "agent"})
 # Attributes on the current span
 span = mlflow.get_current_active_span()
 if span is not None:
-    span.set_attributes({"tool_calls": 5, "model": "gpt-4o-mini"})
+    span.set_attributes({"tool_calls": 5, "model": "gpt-6.1-sol"})
 ```
 
 ## What gets captured

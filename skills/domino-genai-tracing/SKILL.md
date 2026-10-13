@@ -26,7 +26,7 @@ Do not call `mlflow.set_experiment()` or wrap requests in `DominoAgentContext` /
 - Errors: an exception inside the function ends the span with the error and propagates.
 - Evaluator results, stored as trace tags: numeric values as metrics, strings as labels.
 
-The SDK does not compute cost; derive it from the token counts on the LLM spans if needed.
+The SDK does not compute cost; derive it from the LLM-span token counts.
 
 ## Core components
 
@@ -53,7 +53,7 @@ def judge(span):
 @add_tracing(name="single_question_agent", span_type="AGENT", autolog_frameworks=["openai"], evaluator=judge)
 def process_single_question(data_point: dict) -> dict:
     response = client.chat.completions.create(
-        model="gpt-4o-mini", messages=[{"role": "user", "content": data_point["question"]}])
+        model="gpt-6.1-sol", messages=[{"role": "user", "content": data_point["question"]}])  # example model
     return {"answer": response.choices[0].message.content}
 
 if __name__ == "__main__":
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         print(run.info.run_id)
 ```
 
-Run it as a Domino Job to create a deployable agent version (the Job ties the run to the code commit and config); run from the Workspace only to gut-check.
+Run it as a Domino Job to create a deployable agent version (the Job ties the run to the commit and config); from a Workspace only to gut-check.
 
 ## Quick start: deployed agent
 

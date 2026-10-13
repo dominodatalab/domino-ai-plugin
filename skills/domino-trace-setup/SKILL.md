@@ -75,10 +75,10 @@ def quality_evaluator(span):
 @add_tracing(name="my_agent", span_type="AGENT", evaluator=quality_evaluator)
 def my_agent(query: str) -> dict:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-6.1-sol",          # example model name; use one your provider serves
         messages=[{"role": "user", "content": query}],
     )
-    return {"response": response.choices[0].message.content, "confidence": 0.9, "model": "gpt-4o-mini"}
+    return {"response": response.choices[0].message.content, "confidence": 0.9, "model": "gpt-6.1-sol"}
 
 if __name__ == "__main__":
     aggregated_metrics = [("response_length", "mean"), ("confidence", "mean"), ("confidence", "min")]
@@ -109,7 +109,7 @@ Facts the example depends on (dominodatalab 2.2.0, `domino/agents`):
 |---|---|
 | OpenAI | `mlflow.openai.autolog()` then `OpenAI()` |
 | Anthropic | `mlflow.anthropic.autolog()` then `Anthropic()` (may need manual spans for some calls) |
-| LangChain | `mlflow.langchain.autolog()` then e.g. `ChatOpenAI(model="gpt-4o-mini")` |
+| LangChain | `mlflow.langchain.autolog()` then e.g. `ChatOpenAI(model="gpt-6.1-sol")` |
 
 `@add_tracing(autolog_frameworks=["openai"])` does the same lazily on the first traced call.
 

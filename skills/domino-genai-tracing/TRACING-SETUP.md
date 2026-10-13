@@ -97,7 +97,7 @@ from domino.agents.logging import DominoAgentContext, DominoRun, log_evaluation
 print("mlflow", mlflow.__version__)      # 3.2.x
 ```
 
-Then trace one call. `@add_tracing` creates the trace on its own; no context manager is needed to see it:
+Then trace one call. `@add_tracing` creates the trace on its own; no context manager is needed to see it (`gpt-6.1-sol` is an example model name; use one your provider serves):
 
 ```python
 from domino.agents.tracing import add_tracing
@@ -108,7 +108,7 @@ client = OpenAI()
 @add_tracing(name="test_agent", span_type="AGENT", autolog_frameworks=["openai"])
 def test_agent(query: str) -> str:
     response = client.chat.completions.create(
-        model="gpt-4o-mini", messages=[{"role": "user", "content": query}])
+        model="gpt-6.1-sol", messages=[{"role": "user", "content": query}])
     return response.choices[0].message.content
 
 print(test_agent("Say hello"))

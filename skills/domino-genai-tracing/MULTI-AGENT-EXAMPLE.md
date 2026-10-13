@@ -77,7 +77,7 @@ TOOLS = [
 import os
 from openai import AsyncOpenAI
 
-MODEL = os.environ.get("AGENT_MODEL", "gpt-4o-mini")
+MODEL = os.environ.get("AGENT_MODEL", "gpt-6.1-sol")   # example default; use one your provider serves
 SYSTEM_PROMPT = "You are a data assistant. Use the tools to answer questions about tables."
 
 client = AsyncOpenAI()      # OPENAI_API_KEY from a Domino environment variable
@@ -231,7 +231,7 @@ incident-triage/
 
 ```yaml
 models:
-  primary: gpt-4o-mini
+  primary: gpt-6.1-sol        # example model name; use one your provider serves
 
 agents:
   classifier:
