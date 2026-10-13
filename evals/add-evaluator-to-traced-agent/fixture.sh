@@ -16,6 +16,6 @@ def answer(question: str) -> dict:
 EOF
 cat > requirements.txt <<'EOF'
 openai
-mlflow==3.2.0
-dominodatalab[data,agents]==2.2.0
+dominodatalab[data]==2.2.0
+mlflow==3.3.2
 EOF

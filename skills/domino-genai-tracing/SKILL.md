@@ -1,14 +1,14 @@
 ---
 name: domino-genai-tracing
 description: Trace and evaluate GenAI applications (LLM calls, agents, RAG pipelines, multi-step AI systems) in Domino with the Domino agents SDK, using the @add_tracing decorator, span and trace evaluators, DominoAgentContext / DominoRun evaluation runs with aggregated metrics, manual MLflow spans, and post-hoc or production scoring with search_traces, search_agent_traces and log_evaluation. Captures inputs, outputs, token usage, latency, tool calls and errors per span. Use when building or debugging agents and LLM apps on Domino, adding evaluators or LLM-as-judge scoring, comparing agent versions in Experiment Manager, or scoring the production traces of a deployed agent.
-compatibility: Domino 6.3 and Domino Cloud (the agents SDK requires Domino 6.2 or later and mlflow 3.2.x; pin dominodatalab[data,agents]==2.2.0 with mlflow==3.2.0). Runs inside Domino executions, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set by Domino.
+compatibility: Domino 6.3 and Domino Cloud (agents SDK needs Domino 6.2+ and MLflow 3.2+; verified on the DSE as shipped with MLflow 3.3.2). Runs inside Domino executions, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set.
 ---
 
 # Domino GenAI Tracing
 
 Applies to Domino 6.3 and Domino Cloud.
 
-Tracing records every call an agentic system makes (LLM calls, tool invocations, retrieval, nested agents) as a trace of spans with evaluator scores attached, so agent versions can be compared in Experiment Manager and production agents monitored. Verified against `dominodatalab` 2.2.0 and mlflow 3.2.0.
+Tracing records every call an agentic system makes (LLM calls, tool invocations, retrieval, nested agents) as a trace of spans with evaluator scores attached, so agent versions can be compared in Experiment Manager and production agents monitored. Works on the DSE as shipped; install nothing there.
 
 ## Two modes
 
@@ -17,7 +17,7 @@ Tracing records every call an agentic system makes (LLM calls, tool invocations,
 | **Development / evaluation**: a script run in a Workspace or, for a deployable agent version, as a Domino Job | **Experiments** > experiment > run (agent version) > **Traces** tab | Wrap the evaluation loop in `DominoAgentContext` (or `DominoRun`); evaluators passed to `@add_tracing` run after every call and the run logs aggregated metrics at exit |
 | **Deployed agent**: a Domino App whose request handler is decorated | The agent's details page: **Performance**, **Usage**, **Monitoring** tabs | `@add_tracing` alone. When Domino sets `DOMINO_AGENT_IS_PROD=true` and `DOMINO_APP_ID`, the SDK routes traces to the experiment `agent_experiment_<app id>` and **skips inline evaluators**; score production traces out of band ([EVALUATORS.md](./EVALUATORS.md)) |
 
-Do not call `mlflow.set_experiment()` or wrap requests in `DominoAgentContext` / `DominoRun` inside a deployed agent; the SDK manages the experiment there.
+Do not call `mlflow.set_experiment()` or wrap requests in `DominoAgentContext` / `DominoRun` inside a deployed agent; the SDK manages that experiment.
 
 ## What gets captured
 
@@ -96,7 +96,7 @@ async def chat(body: dict):
 
 ## Reference files
 
-- [TRACING-SETUP.md](./TRACING-SETUP.md): environment, pins, environment variables, troubleshooting
+- [TRACING-SETUP.md](./TRACING-SETUP.md): environment (DSE needs nothing; pins for other images), variables, troubleshooting
 - [ADD-TRACING-DECORATOR.md](./ADD-TRACING-DECORATOR.md): decorator parameters, manual spans, tool-use agent pattern
 - [DOMINO-RUN.md](./DOMINO-RUN.md): `DominoAgentContext` / `DominoRun`, config file, aggregated metrics
 - [EVALUATORS.md](./EVALUATORS.md): span, trace, LLM-as-judge, post-hoc and production evaluators

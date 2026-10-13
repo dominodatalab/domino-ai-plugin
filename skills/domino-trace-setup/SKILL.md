@@ -1,7 +1,7 @@
 ---
 name: domino-trace-setup
-description: Set up GenAI tracing for an LLM or agent application in Domino by checking the mlflow 3.2.0 and Domino SDK (dominodatalab[agents] 2.2.0) requirements, then adding a tracing_setup.py helper, span evaluators, a config.yaml, and @add_tracing / DominoAgentContext wiring. Use when the user asks to add tracing, observability, or evaluation to an agent or LLM app running on Domino.
-compatibility: Domino 6.3 and Domino Cloud (the agents SDK requires Domino 6.2 or later and mlflow 3.2.x). Runs inside a Domino Workspace or Job, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set by Domino.
+description: Set up GenAI tracing for an LLM or agent application in Domino by checking the Domino SDK and MLflow requirements (the DSE needs nothing installed), then adding a tracing_setup.py helper, span evaluators, a config.yaml, and @add_tracing / DominoAgentContext wiring. Use when the user asks to add tracing, observability, or evaluation to an agent or LLM app running on Domino.
+compatibility: Domino 6.3 and Domino Cloud (agents SDK needs Domino 6.2+ and MLflow 3.2+; verified on the DSE as shipped with MLflow 3.3.2). Runs inside a Domino Workspace or Job, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set.
 ---
 
 # Set Up Domino GenAI Tracing
@@ -27,19 +27,21 @@ so the judge shares it; through the gateway, model names are aliases.
 
 ## Steps
 
-1. **Check requirements.** The Domino Standard Environment on 6.3 and Cloud ships the agents SDK,
-   but the examples need `dominodatalab` 2.1.0 or later (`span_type` on `@add_tracing`), mlflow
-   3.2.x, and `opentelemetry-sdk` below 1.36 (mlflow 3.2.0 cannot end spans with a newer one):
+1. **Check requirements.** In the Domino Standard Environment install nothing: it ships the
+   agents code (`dominodatalab` 2.2.0) and MLflow 3.3.2, verified as shipped; one harmless
+   `Failed to end span ... '_metrics'` warning per trace is expected. Do not add the `agents`
+   extra there (it downgrades MLflow sub-packages to 3.2.0). Needs `dominodatalab` 2.1.0+ and
+   MLflow 3.2+:
 
    ```bash
    python -c "import importlib.metadata as m; print({p: m.version(p) for p in ('dominodatalab', 'mlflow', 'opentelemetry-sdk')})"
    ```
 
-   If anything is missing or outside those ranges, add the pinned set to the environment's
-   Dockerfile instructions (or `requirements.txt`); the four pins belong together:
+   Outside the DSE, add to the Dockerfile instructions (or `requirements.txt`), at or below the
+   DSE versions:
 
    ```dockerfile
-   RUN pip install mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0" "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
+   RUN pip install "dominodatalab[data]==2.2.0" mlflow==3.3.2 "opentelemetry-sdk<=1.44.0" "opentelemetry-api<=1.44.0"
    ```
 
 2. **Copy helpers** from this skill's `assets/` folder next to the agent's entry point:

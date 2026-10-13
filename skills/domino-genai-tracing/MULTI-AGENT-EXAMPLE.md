@@ -528,11 +528,15 @@ Change `config.yaml` (model, temperatures), run the Job again, then select both 
 
 ### requirements.txt
 
+In the Domino Standard Environment only `openai` is missing; the tracing stack ships there (install nothing else, and not the `agents` extra, which would downgrade MLflow's sub-packages). For an environment not based on the DSE:
+
 ```text
-mlflow==3.2.0
-dominodatalab[data,agents]==2.2.0
-opentelemetry-sdk<1.36
-opentelemetry-api<1.36
+dominodatalab[data]==2.2.0
+mlflow==3.3.2
+opentelemetry-sdk<=1.44.0
+opentelemetry-api<=1.44.0
+pandas<=2.3.2
+numpy<=2.5.2
 openai==3.29.0
 pyyaml==6.0.3
 ```

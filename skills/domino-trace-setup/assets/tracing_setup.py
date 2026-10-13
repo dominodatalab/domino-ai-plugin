@@ -5,12 +5,15 @@ Copy this file next to the agent's entry point. It wraps the Domino agents SDK s
 agent can be traced with @add_tracing, scored by evaluators, and grouped into an
 evaluation run with DominoAgentContext (or DominoRun).
 
-Requirements (pin all four together; the `agents` extra of dominodatalab 2.2.0 requires
-mlflow 3.2.x, and mlflow 3.2.0 cannot end spans with opentelemetry-sdk 1.36 or later):
-    mlflow==3.2.0
-    dominodatalab[data,agents]==2.2.0
-    opentelemetry-sdk<1.36
-    opentelemetry-api<1.36
+Requirements: in the Domino Standard Environment, nothing (dominodatalab 2.2.0 ships the agents
+code; verified there with MLflow 3.3.2; do not install the `agents` extra, it downgrades MLflow's
+sub-packages to 3.2.0). In an environment not based on the DSE, at or below the DSE's versions:
+    dominodatalab[data]==2.2.0
+    mlflow==3.3.2
+    opentelemetry-sdk<=1.44.0
+    opentelemetry-api<=1.44.0
+(MLflow 3.2.0 only: also opentelemetry-sdk<1.36, or spans never end.) One harmless
+"Failed to end span ... '_metrics'" warning per trace on MLflow 3.3.2 is expected.
 
 Usage:
     from tracing_setup import (setup_tracing, create_evaluator,

@@ -21,7 +21,7 @@ add_tracing(
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `name` | Yes | Span (and, for a top-level call, trace) name shown in the UI. Letters, digits, `_` and `-` only. |
-| `span_type` | No | Span classification passed to `mlflow.start_span`. Values in mlflow 3.2.0: `AGENT`, `CHAIN`, `CHAT_MODEL`, `EMBEDDING`, `LLM`, `PARSER`, `RERANKER`, `RETRIEVER`, `TOOL`, `UNKNOWN` (default). Use `AGENT` for the top-level agent function. |
+| `span_type` | No | Span classification passed to `mlflow.start_span`. Values in MLflow 3.2 and 3.3: `AGENT`, `CHAIN`, `CHAT_MODEL`, `EMBEDDING`, `LLM`, `PARSER`, `RERANKER`, `RETRIEVER`, `TOOL`, `UNKNOWN` (default). Use `AGENT` for the top-level agent function. |
 | `autolog_frameworks` | No | MLflow integrations to autolog on the first call, for example `["openai"]`, `["openai", "anthropic"]`, `["pydantic_ai"]`. |
 | `evaluator` | No | `evaluator(span) -> dict`; runs after every call with the finished span. See [EVALUATORS.md](./EVALUATORS.md). |
 | `trace_evaluator` | No | `trace_evaluator(trace) -> dict`; runs only when this call started and finished the trace, with the complete trace (all child spans). |
