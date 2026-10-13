@@ -1,6 +1,6 @@
 # Complete Modeling Assistant Setup Guide
 
-This guide covers setup for the Domino modeling assistant. When the plugin is installed from the source repository (for example Claude Code, or Codex from a local marketplace), the Domino MCP server is **bundled with the plugin** and starts automatically: no manual cloning, installation, or MCP configuration is required. Skills-only distributions (such as the ChatGPT plugin directory) don't include the server; see [Register the server manually](#register-the-server-manually).
+When the plugin is installed from the source repository (for example Claude Code, or Codex from a local marketplace), the Domino MCP server is **bundled with the plugin** and starts automatically: no manual cloning, installation, or MCP configuration is required. Skills-only distributions (such as the ChatGPT plugin directory) don't include the server; see [Register the server manually](#register-the-server-manually).
 
 **Inside a Domino Workspace:** everything is auto-detected (project, authentication, DFS/Git mode). Skip straight to [Step 3: Test the integration](#step-3-test-the-integration).
 
@@ -25,7 +25,7 @@ This guide covers setup for the Domino modeling assistant. When the plugin is in
 3. Click **Generate new Token**, give it a name and an expiration, and click **Create token**.
 4. Copy the token now; it is shown only once. On a laptop it goes only where the next section puts it (`DOMINO_TOKEN` or the env file): that is the laptop's own copy, since Domino user and Project environment variables are not readable outside Domino. Inside a Workspace no token is needed.
 
-Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication (6.3: replace `cloud` with `6.3`). A Personal Access Token carries your identity and expires; rotate it before it does. For unattended automation use a Domino service account token instead. Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated and the server does not accept them: if `DOMINO_API_KEY` is set without `DOMINO_TOKEN`, every API tool fails with a message telling you to set `DOMINO_TOKEN`.
+Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication (6.3: replace `cloud` with `6.3`). A Personal Access Token carries your identity and expires; rotate it before it does. For unattended automation use a Domino service account token instead. The server does not accept legacy API keys: if `DOMINO_API_KEY` is set without `DOMINO_TOKEN`, every API tool fails with a message telling you to set `DOMINO_TOKEN`.
 
 ### Set environment variables
 
@@ -113,23 +113,11 @@ Prompt:
 Run test_domino.py as a Domino job
 ```
 
-The assistant should call `run_domino_job(..., wait_seconds=300)`, which waits on the server and returns the final status with the end of the output; if the Job outlives one call (at most 600 s, or 50 s under Codex), the assistant calls `check_domino_job_run_status(run_id, wait_seconds=300)` again rather than sleeping or polling, then reads the full output with `check_domino_job_run_results`.
+The assistant calls `run_domino_job(..., wait_seconds=300)` and, if the Job outlives one call, `check_domino_job_run_status(run_id, wait_seconds=300)` again instead of sleeping or polling, then reads the full output with `check_domino_job_run_results`; waiting rules and caps: [TOOLS.md](./TOOLS.md#waiting-for-a-job).
 
 ## Step 4: Choose a compute environment
 
 Use the **Domino Standard Environment** for the project (**Settings** > **Compute Environment**). On Domino 6.3 and Cloud it ships with the coding assistants, the Domino skills, MLflow, and the common ML libraries. If your organization needs a different assistant, pinned versions, or extra tools, build a custom environment as described at https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/custom-environments (6.3: replace `cloud` with `6.3`).
-
-## Workflow example
-
-1. **Start in your AI assistant** with your project open.
-2. **Analyze data** (prompt): `Load the sales data from /mnt/data/sales.csv and show me a summary of the key metrics`.
-3. **The assistant creates a script**, commits (or syncs) it, and runs it as a Domino Job.
-4. **Review results** returned through MCP.
-5. **Iterate** (prompt): `Now create a visualization of sales by region and save it to /mnt/artifacts/sales_by_region.png`.
-6. **Train a model** (prompt): `Train a random forest model to predict sales using the processed data. Log the results to MLflow.`
-7. **All work is tracked** in Experiment Manager; register the best run from the **Experiments** view.
-
-The documented end-to-end walkthrough: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/modeling-assistant.
 
 ## Troubleshooting
 
@@ -166,7 +154,7 @@ Codex strips the shell environment from MCP servers, so on a laptop use the env 
 
 ### File conflicts on DFS projects
 
-`smart_sync_file` reports a conflict, with the remote content, when the remote file changed since this session last saw it (or was never seen). Review and merge, then sync again; pass `force_overwrite=True` only when the remote version should be discarded. `upload_file_to_domino_project` and `sync_local_file_to_domino` need `overwrite=True` to replace an existing, different file. Binary files (model artifacts, images) are uploaded as `content_base64` or through `sync_local_file_to_domino`, which reads the local file as bytes; the file tools refuse Git-based projects, where you commit and push instead.
+`smart_sync_file` reports a conflict, with the remote content, when the remote file changed since this session last saw it (or was never seen). Review and merge, then sync again; pass `force_overwrite=True` only when the remote version should be discarded. Overwrite rules for the other upload tools, binary content and the Git-based exclusion: [TOOLS.md](./TOOLS.md#files-text-and-binary-dfs-only).
 
 ### Jobs fail immediately
 
@@ -176,10 +164,11 @@ Codex strips the shell environment from MCP servers, so on a laptop use the env 
 
 ### The assistant polls or gives up while a Job runs
 
-Hosts block shell `sleep`, so a status call without `wait_seconds` returns at once. The assistant should pass `wait_seconds=300` to `run_domino_job` or `check_domino_job_run_status` and call again when the response says so; see [SKILL.md](./SKILL.md#important-considerations).
+Hosts block shell `sleep`, so a status call without `wait_seconds` returns at once. Pass `wait_seconds=300` to `run_domino_job` or `check_domino_job_run_status` and call again when the response says so ([TOOLS.md](./TOOLS.md#waiting-for-a-job), [SKILL.md](./SKILL.md#important-considerations)).
 
 ## Next steps
 
 - [SKILL.md](./SKILL.md): overview of modeling assistant capabilities and the MCP server tool reference
 - `mcp-servers/domino_mcp_server/README.md` in the plugin repository: full tool, route and environment-variable reference
+- https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/modeling-assistant: the end-to-end walkthrough
 - https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/domino-skills: the other Domino skills the assistant can use

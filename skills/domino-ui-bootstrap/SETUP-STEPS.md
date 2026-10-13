@@ -134,7 +134,7 @@ The Storybook MCP is what lets future assistant sessions look up real component 
 - URL: `https://main--60c0de3f60dd96003bdcb1a1.chromatic.com/mcp`
 - Transport: HTTP (streamable HTTP)
 
-That URL is the library's published Storybook build at the time this skill was written and can move. Before registering it, check it answers (an HTTP POST with a JSON-RPC `initialize` body returns 200). If it does not, ask the user for the current Storybook MCP URL from the Domino design-system team; do not guess another URL and do not skip the registration silently.
+That URL can move. Before registering it, check it answers (an HTTP POST with a JSON-RPC `initialize` body returns 200). If it does not, ask the user for the current Storybook MCP URL from the Domino design-system team; do not guess another URL and do not skip the registration silently.
 
 These rules apply on every host:
 

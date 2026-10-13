@@ -1,6 +1,6 @@
 # Governance API reference
 
-Endpoint table, bundle field semantics, base-URL discovery shell setup with takeaways, and the compute-policy polling loop for the Domino Governance API (`/api/governance/v1`).
+Endpoint table, bundle field semantics, base-URL discovery shell setup, and the compute-policy polling loop for the Domino Governance API (`/api/governance/v1`).
 
 Auth, base table and rules: [SKILL.md Configuration](./SKILL.md#configuration).
 
@@ -25,14 +25,6 @@ BASE="<the deployment's HTTPS URL>$GOV"
 TOKEN="$PAT_OR_SA_TOKEN"   # Personal Access Token or service account token; never a legacy API key
 curl -s "$BASE$PREFIX" -H "Authorization: Bearer $TOKEN"
 ```
-
-**Takeaways for agents**
-
-1. **Proxy + no header is correct only when routing works.** `DOMINO_API_PROXY` injects JWT ([product auth doc](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)); it does not add `/api/governance/v1` if guardrails is not reachable on that path.
-2. **Try steps 1 → 2 → 3** until `GET $BASE/policy-overviews` returns HTTP 200. Do not assume step 1 works on every deployment.
-3. **In-run without proxy is not “use public URL.”** Use `DOMINO_USER_HOST` (or `DOMINO_API_HOST`) plus Bearer from `http://localhost:8899/access-token` when governance is on the platform API gateway.
-4. **Public deployment URL + PAT/SA** when you are outside a run, or when step 1 or 2 returns **404** (common when the API gateway is off or governance is not registered on port 8763).
-5. **Suffix is always** `/api/governance/v1` on whichever host/base you chose ([Governance API](https://docs.domino.ai/cloud/reference/api/governance-api)).
 
 ## Endpoints
 

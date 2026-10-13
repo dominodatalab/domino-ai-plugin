@@ -1,6 +1,6 @@
 # Host an LLM: UI walkthrough
 
-Applies to Domino 6.3 and Domino Cloud. Register a model, deploy it with vLLM on a GPU hardware tier, call its OpenAI-compatible endpoint, and monitor it. Source: https://docs.domino.ai/cloud/platform-capabilities/features/llms/host-an-llm (6.3: replace `cloud` with `6.3`). For the REST routes see [HOST-AN-LLM-API.md](./HOST-AN-LLM-API.md).
+Register a model, deploy it with vLLM on a GPU hardware tier, call its OpenAI-compatible endpoint, and monitor it. Source: https://docs.domino.ai/cloud/platform-capabilities/features/llms/host-an-llm (6.3: replace `cloud` with `6.3`). For the REST routes see [HOST-AN-LLM-API.md](./HOST-AN-LLM-API.md).
 
 ## Before you start
 
@@ -55,7 +55,7 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-With Pydantic AI, as in Domino's documentation:
+With Pydantic AI:
 
 ```python
 import os

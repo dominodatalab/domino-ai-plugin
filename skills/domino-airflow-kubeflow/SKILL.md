@@ -25,7 +25,7 @@ lives in the Domino project. Domino keeps reproducibility, the orchestrator keep
 
 1. **Network path** from its workers to the Domino deployment URL (the one users open in a
    browser), exported as `DOMINO_API_HOST` on the worker. Nothing from inside a run
-   (`DOMINO_API_PROXY`, `localhost:8899`, `127.0.0.1:8763`) exists on an Airflow worker or a KFP pod.
+   (`DOMINO_API_PROXY`, `localhost:8899`) exists on an Airflow worker or a KFP pod.
 2. **A token**: a Personal Access Token for a pipeline that acts as you, or a service-account
    token for unattended automation, created in Domino and held in the orchestrator's own secret
    mechanism (Domino variables are not readable there). Legacy user API keys are deprecated; do
@@ -65,25 +65,22 @@ with DAG("domino_pipeline", start_date=datetime(2026, 1, 1), schedule="@daily", 
 The output commit id becomes the task's XCom value; a downstream task reads result files from
 it. Request fields, logs, result hand-off and failure handling: [JOBS-API-PATTERN.md](./JOBS-API-PATTERN.md).
 
-## Airflow: python-domino operators (what the product page documents)
+## Airflow: python-domino operators
 
 `pip install dominodatalab` ships `domino.airflow.DominoOperator` and `DominoSparkOperator`.
 Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md):
 
 - `DominoOperator` starts Jobs with python-domino's `runs_start_blocking` on the **legacy v1
-  Runs API** (`/v1/projects/{owner}/{project}/runs`; not in the Public API, may change between
-  Domino versions). python-domino's README: use `job_start` for all new development.
-- `DominoSparkOperator` uses `job_start_blocking` on the v4 Jobs API (**internal API, may change
-  between Domino versions**) and takes `environment_id`, `hardware_tier_name` and a Spark, Ray,
+  Runs API** (`/v1/projects/{owner}/{project}/runs`; not in the Public API, may change in a future Domino version). python-domino's README: use `job_start` for all new development.
+- `DominoSparkOperator` uses `job_start_blocking` on the v4 Jobs API (**non-public route; may change in a future Domino version**) and takes `environment_id`, `hardware_tier_name` and a Spark, Ray,
   Dask or MPI `compute_cluster_properties`. It raises only when the Job ends `Failed`; a Job that
   ends `Error` or `Stopped` returns normally and the task goes green. AIRFLOW.md has a subclass
   that checks `executionStatus == "Succeeded"`. `DominoOperator` fails on any non-success.
-- `dominodatalab` 2.2.0 pins `packaging==23.2` and `python-dateutil~=2.8.2`; Airflow's
-  constraint files pin `packaging==26.3` (3.3.2; `26.0` in 2.11.2) and
-  `python-dateutil==2.9.0.post0`, so a constraints-based install fails to resolve and a plain
-  install downgrades Airflow's dependencies. Give the worker a
-  dedicated virtual environment where those pins are acceptable, or use the pattern above.
-  The `[airflow]` extra pins `apache-airflow==2.2.4`; do not use it on an existing Airflow.
+- `dominodatalab` 2.2.0 pins `packaging` and `python-dateutil` below Airflow's constraints, so
+  a constraints-based install fails to resolve and a plain install downgrades Airflow's
+  dependencies; give the worker a dedicated virtual environment or use the pattern above
+  ([AIRFLOW.md](./AIRFLOW.md#install)). The `[airflow]` extra pins `apache-airflow==2.2.4`; do
+  not use it on an existing Airflow.
 - Both operators import `airflow.utils.decorators.apply_defaults`, removed in Airflow 3.0.
 - Neither accepts `auth_token`: pass a token file as `domino_token_file` or set `DOMINO_TOKEN_FILE`.
 

@@ -15,17 +15,10 @@ The Tags API (`/api/taxonomy/v1`) manages two metadata systems:
 - **Properties**: typed metadata fields (`text`, `number`, `date`, `select`, ...), each
   holding one value per entity.
 
-Every route below is in both published Public API specs; bodies and parameters were
-verified against them (October 2026). Docs:
+Docs:
 https://docs.domino.ai/cloud/reference/api/tags-api,
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/knowledge-management/tags,
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/knowledge-management/properties.
-
-## Activation
-
-Use when the user wants to tag an entity, find entities by tag, build or migrate a
-taxonomy, merge or deprecate tags, define typed properties, or set property values
-(including per-version values on models and apps).
 
 ## Configuration
 
@@ -93,9 +86,9 @@ More workflows (hierarchy, discovery, autocomplete, properties): [WORKFLOWS.md](
   new assignments without touching existing ones.
 - `DELETE /tags/{id}` and `POST /tags/bulk-delete` remove the tags **and their
   assignments** without confirmation. `DELETE /namespaces/{id}` removes the namespace and
-  its tags but, per the spec, **fails if any tag still has entity assignments**: untag
-  first or deprecate the namespace instead. Confirm destructive calls with the user. Pin
-  tag ids, not labels, in automation.
+  its tags but fails while any tag is still assigned: untag first or deprecate the
+  namespace instead. Confirm destructive calls with the user. Pin tag ids, not labels, in
+  automation.
 - `POST /rpc/copy-entity-tags` and `/rpc/copy-property-values` are marked "Internal,
   service-account only" in the spec and **replace** the target's tags or values; they are
   not user workflows.

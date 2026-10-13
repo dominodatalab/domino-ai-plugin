@@ -2,7 +2,7 @@
 
 Auditor exports one bundle: full attachment list and content, all evidence submissions and results history, all findings and comments and resolutions, all approval events, policy versions in effect at each approval, bundle report PDF, zipped.
 
-HTTP: Governance calls use [SKILL.md Configuration](./SKILL.md#configuration).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## Core calls
 
@@ -13,6 +13,7 @@ GET /bundles/{bundle_id}
 GET /bundles/{bundle_id}/findings
 
 GET /results?bundleID={bundle_id}
+# optional policyID, artifactID
 
 GET /bundles/{bundle_id}/approvals
 
@@ -22,7 +23,6 @@ GET /bundles/{bundle_id}/report
 
 ## Gotchas
 
-- Result rows for a bundle: `GET /results?bundleID=...` (optional `policyID`, `artifactID`).
 - Attachments may be large; stream, do not load into memory.
 - Policy versions in effect = policy version at each approval event timestamp, not latest.
 - Export is read-only; never mutate.

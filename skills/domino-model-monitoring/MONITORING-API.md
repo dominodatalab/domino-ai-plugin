@@ -1,13 +1,13 @@
 # Model Monitoring API
 
-Applies to Domino 6.3 and Domino Cloud. Every route below is in both public API specs (`https://docs.domino.ai/api-specs/6.3/public-api.json`, `https://docs.domino.ai/api-specs/cloud/public-api.json`): the Model Monitor service under `/model-monitor/...` and custom metrics under `/api/metricValues/v1` and `/api/metricAlerts/v1`. Response shapes are in the spec; your cluster's reference at `https://<domino-domain>/docs` has the Model Monitor document.
+Routes: the Model Monitor service under `/model-monitor/...` and custom metrics under `/api/metricValues/v1` and `/api/metricAlerts/v1`. Response shapes are in the public API spec ([API-SPECS.md](../domino-api-intro/API-SPECS.md)); your deployment's `/docs` has the Model Monitor document.
 
 ## Authentication
 
-Use the same bearer authentication as the rest of the Domino API: in a run `$DOMINO_API_PROXY` with no header, or `$DOMINO_API_HOST` with `Authorization: Bearer $(curl -s http://localhost:8899/access-token)`; outside Domino the deployment URL with a Personal Access Token or service-account token. Verified with a bearer token on Domino Cloud 6.4 (`GET /model-monitor/v2/api/models` returned 200). The docs' "API token" page still describes the `X-Domino-Api-Key` header and old DMM keys; both are deprecated and not recommended.
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication). The examples use `$TOKEN`:
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: PAT or service-account token
+TOKEN=$(curl -s http://localhost:8899/access-token)   # in a run; outside Domino a PAT or service-account token
 ```
 
 ## Routes
@@ -114,11 +114,8 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
 import os
 import requests
 
-if os.environ.get("DOMINO_API_PROXY"):
-    base, headers = os.environ["DOMINO_API_PROXY"], {}
-else:
-    base = os.environ["DOMINO_API_HOST"]
-    headers = {"Authorization": "Bearer " + requests.get("http://localhost:8899/access-token").text.strip()}
+# base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
+base, headers = os.environ["DOMINO_API_PROXY"], {}        # in a run with the proxy
 
 dmm_model_id = os.environ["DMM_MODEL_ID"]       # the Model Monitor model id (set it as a project or job variable)
 
@@ -136,4 +133,4 @@ if latest and latest["columnsDrifted"] > 0:
     print("retraining job", job.json()["job"]["id"], "started; drifted columns:", latest["columnsDrifted"])
 ```
 
-`POST /api/jobs/v1/jobs` requires only `projectId` and `runCommand` (spec, and verified live on Domino Cloud 6.4 on 2026-10-12: a job started with just those two fields and succeeded); optional `hardwareTier`, `environmentId`, `title` and others are documented in `domino-jobs`. Run this script as a scheduled Job after the daily check. Where the Model Monitor and the retraining project differ, give the service account access to both.
+`POST /api/jobs/v1/jobs` requires only `projectId` and `runCommand`; optional `hardwareTier`, `environmentId`, `title` and others are documented in `domino-jobs`. Run this script as a scheduled Job after the daily check. Where the Model Monitor and the retraining project differ, give the service account access to both.

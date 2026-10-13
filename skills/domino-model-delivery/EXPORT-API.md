@@ -11,24 +11,20 @@ customer runtime). To serve it, publish a Domino endpoint instead
 ([domino-model-endpoints](../domino-model-endpoints/SKILL.md)): Domino then builds, hosts, scales
 and monitors it.
 
-**Every `/v4/...` route in this file is Domino Internal API, may change between Domino versions.**
-They are not in the Public API spec; each cluster documents them under
-`https://<domino-domain>/docs` (`openapi-internal.json`). The routes come from the product page
-(Cloud and 6.3 are identical); the field lists and required flags below come from one Domino
-Cloud cluster's reference (reporting version 6.4.0). Before relying on them on Domino 6.3, read
-that deployment's own `/docs/openapi/openapi-internal.json`.
+**Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
+Each deployment documents them under `https://<domino-domain>/docs`
+(`openapi-internal.json`); on Domino 6.3 confirm the field lists and required flags there before
+relying on them.
 
-## Authentication for a pipeline
+## Setup for a pipeline
 
-A CI/CD runner is outside Domino, so use the deployment URL and a Bearer token:
+A CI/CD runner is outside Domino, so use the deployment URL and a Bearer token; other contexts:
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ```bash
 BASE="$DOMINO_API_HOST"                      # outside Domino: export DOMINO_API_HOST=<deployment URL users open in a browser>
 AUTH="Authorization: Bearer $DOMINO_TOKEN"   # PAT or service-account token created in Domino; the CI system's own secret holds the runner's copy (Domino variables are not readable there)
 ```
-
-Inside a Domino run use `$DOMINO_API_PROXY` with no header instead. Do not use
-`X-Domino-Api-Key` even though the product page still shows it.
 
 ## Sequence
 
@@ -51,14 +47,13 @@ curl -sS -X POST "$BASE/v4/models/buildModelImage" -H "$AUTH" -H "Content-Type: 
 | `projectId` | yes | project whose files and environment are packaged |
 | `modelName` | yes | name of the model in Domino |
 | `inferenceFunctionFile`, `inferenceFunctionToCall` | yes | file and function Domino calls per request |
-| `logHttpRequestResponse` | yes (cluster reference) | log request and response payloads for the model |
+| `logHttpRequestResponse` | yes | log request and response payloads for the model |
 | `environmentId` | no | defaults to the project default environment |
 | `modelId` | no | build a new version of this existing model instead of creating a model |
 | `description` | no | free text |
 
 Response: `202 Accepted` with `modelId` and `modelVersionId` (the build continues in the
-background). On the cluster reference the response schema is declared as an array wrapping that
-object; python-domino's examples read it as an object. Handle both.
+background). The response may be the object or a one-element array wrapping it; handle both.
 
 ### 2. Poll the build
 
@@ -91,10 +86,10 @@ With `jq` instead of Python: `jq -n '{registryUrl: "quay.io", repository: "acme/
 piped into the same `curl ... --data-binary @-` (`env.NAME` reads the variable without putting
 it on the command line, unlike `--arg`).
 
-`registryUrl` and `repository` are required; `tag`, `username`, `password` are optional on the
-cluster reference but a private registry needs the credentials. Derive the tag from the model
-version or the pipeline run so re-runs never collide (the product page documents a collision
-failure for the NVIDIA export; do not count on other registries overwriting silently either).
+`registryUrl` and `repository` are required; `tag`, `username`, `password` are optional, but a
+private registry needs the credentials. Derive the tag from the model
+version or the pipeline run so re-runs never collide (the NVIDIA export fails on a tag
+collision; do not count on other registries overwriting silently either).
 
 ### 4. Poll the export, then read its logs
 
@@ -105,8 +100,7 @@ curl -sS "$BASE/v4/models/$EXPORT_ID/getExportLogs" -H "$AUTH"
 # {"modelId", "modelVersionId", "exportId", "status", "logs"}
 ```
 
-Public API alternative for the logs, present in both published specs and keyed by the Model API
-ids you can list with `GET /api/modelServing/v1/modelApis?projectId=...` and
+Public API alternative for the logs, keyed by the Model API ids you can list with `GET /api/modelServing/v1/modelApis?projectId=...` and
 `GET /api/modelServing/v1/modelApis/{modelApiId}/versions`:
 
 ```text
@@ -180,16 +174,16 @@ Jenkins: the same script with `withCredentials` binding `DOMINO_TOKEN`, `REGISTR
 
 python-domino wraps the export calls but not the build call. Use the REST calls above in
 examples; the mapping is here so you can read existing code. Usage of the client itself:
-[domino-python-sdk](../domino-python-sdk/SKILL.md). Routes from `domino/routes.py`:
+[domino-python-sdk](../domino-python-sdk/SKILL.md).
 
 | Method | Calls | API |
 |---|---|---|
-| `models_list()` | `GET /v1/projects/{owner}/{project}/models` | legacy v1, not in the Public API, may change between Domino versions |
+| `models_list()` | `GET /v1/projects/{owner}/{project}/models` | legacy v1, not in the Public API; non-public route; may change in a future Domino version |
 | `model_versions_get(model_id)` | `GET /v1/models/{modelId}/versions` (versions carry `_id`, `metadata.number`) | legacy v1, as above |
-| `model_version_export(model_id, model_version_id, registry_host, registry_username, registry_password, repository_name, image_tag)` | `POST /v4/models/{modelId}/{modelVersionId}/exportImageToRegistry` | internal API |
-| `model_version_sagemaker_export(...)` (same arguments) | `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker` | internal API; see [EXPORT-TARGETS.md](./EXPORT-TARGETS.md#amazon-sagemaker) |
-| `model_version_export_status(model_export_id)` | `GET /v4/models/{exportId}/getExportImageStatus` | internal API |
-| `model_version_export_logs(model_export_id)` | `GET /v4/models/{exportId}/getExportLogs` | internal API |
+| `model_version_export(model_id, model_version_id, registry_host, registry_username, registry_password, repository_name, image_tag)` | `POST /v4/models/{modelId}/{modelVersionId}/exportImageToRegistry` | non-public route; may change in a future Domino version |
+| `model_version_sagemaker_export(...)` (same arguments) | `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker` | non-public route; may change in a future Domino version; see [EXPORT-TARGETS.md](./EXPORT-TARGETS.md#amazon-sagemaker) |
+| `model_version_export_status(model_export_id)` | `GET /v4/models/{exportId}/getExportImageStatus` | non-public route; may change in a future Domino version |
+| `model_version_export_logs(model_export_id)` | `GET /v4/models/{exportId}/getExportLogs` | non-public route; may change in a future Domino version |
 
 Public API replacements for the two listing calls: `GET /api/modelServing/v1/modelApis?projectId=...`
 and `GET /api/modelServing/v1/modelApis/{modelApiId}/versions`.

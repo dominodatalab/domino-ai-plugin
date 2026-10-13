@@ -1,0 +1,5 @@
+# Names of skills that no longer exist. scripts/lint-skills.py (rule L16) fails on any of them
+# written as `name` or name/ under skills/, agents/ or README.md, because a reference to a
+# removed skill sends the model looking for text that is not there. Point at the skill that
+# replaced it instead. One name per line; a trailing comment says what replaced it.
+domino-ui-design        # folded into domino-ui-bootstrap and domino-apps

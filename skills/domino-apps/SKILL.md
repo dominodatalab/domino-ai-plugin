@@ -14,7 +14,7 @@ A Domino App runs project code in a container behind Domino's reverse proxy. The
 
 1. **Serve on `0.0.0.0:8888`.** An App that does not expose a server on that address and port fails to start. Port 8888 is mandatory, not a default.
 2. **The entry point is a launch file** in the project (`app.sh`, or a Python or R script). It is fixed for the life of the App; create a new App to change it.
-3. **Read the URL prefix from `DOMINO_RUN_HOST_PATH`** wherever a framework needs its base path (Dash `requests_pathname_prefix`, Gradio `root_path`). Never assemble it from the project owner, name and run ID; that layout no longer matches.
+3. **Read the URL prefix from `DOMINO_RUN_HOST_PATH`** wherever a framework needs its base path (Dash `requests_pathname_prefix`, Gradio `root_path`). Never assemble it from the project owner, name and run ID; the prefix is not derived from them.
 4. **Use relative URLs** for assets and API calls (Vite `base: './'`, `new URL('api/', document.baseURI)`), never root-absolute `/assets/...` or `fetch('/api/...')`.
 5. **Keep secrets on the server.** Model endpoint tokens live in project or user environment variables and are read by backend code. Anything in a `VITE_`-prefixed variable is compiled into the browser bundle.
 
@@ -44,7 +44,7 @@ Injected at start: `DOMINO_RUN_HOST_PATH` (URL prefix), `DOMINO_PROJECT_ID`, `DO
 
 - **Platform API as the publisher**: `$DOMINO_API_PROXY/api/...` with no `Authorization` header, or a bearer from `http://localhost:8899/access-token` on `$DOMINO_API_HOST`. Fetch the token per request; it is short-lived.
 - **Platform API as the viewer**: with extended identity propagation enabled by a SysAdmin or CloudAdmin and consent granted, forward the viewer's `Authorization` header.
-- **Model endpoints**: read `MODEL_API_URL` and `MODEL_API_TOKEN` from Project environment variables (API: `domino-api-intro`). Both come from the user: the URL is on the endpoint's overview page (`$DOMINO_API_HOST` and `$DOMINO_API_PROXY` do not route `/models/`), and the token is created and shown once under **Settings > Invocation > Add Model Access Token**; no API returns it. Synchronous endpoints take HTTP Basic auth with the token as both username and password (`auth=(token, token)`); asynchronous endpoints take `Authorization: Bearer <token>`. Call them from backend code, never from the browser.
+- **Model endpoints**: read `MODEL_API_URL` and `MODEL_API_TOKEN` from Project environment variables (API: `domino-api-intro`). The URL is on the endpoint's overview page (`$DOMINO_API_HOST` and `$DOMINO_API_PROXY` do not route `/models/`); the token is the user's, or one you create and store (`domino-model-endpoints` DEPLOY-ENDPOINT.md "Access tokens"), never printing it. Synchronous endpoints take HTTP Basic auth with the token as both username and password (`auth=(token, token)`); asynchronous endpoints take `Authorization: Bearer <token>`. Call them from backend code, never from the browser.
 
 Authentication reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . Legacy API keys (`DOMINO_USER_API_KEY`, `X-Domino-Api-Key`) are deprecated; do not use them.
 
@@ -60,4 +60,4 @@ Authentication reference: https://docs.domino.ai/cloud/reference/api/domino-api-
 - [API-APPS.md](./API-APPS.md): v1 vs beta routes, publish chain, logs
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): symptoms, causes and fixes
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps (same under `/6.3/`). Specs: https://docs.domino.ai/api-specs/cloud/public-api.json and https://docs.domino.ai/api-specs/6.3/public-api.json . Related skills: `domino-app-init` (scaffold), `domino-debug-proxy` (diagnose), `domino-api-intro` (auth, hosts), `domino-ui-bootstrap` (design system SPA), `domino-ui-design` (FastAPI + Ant Design), `domino-extensions` (mount an App in the Domino UI).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps (same under `/6.3/`). Specs: https://docs.domino.ai/api-specs/cloud/public-api.json and https://docs.domino.ai/api-specs/6.3/public-api.json . Related skills: `domino-app-init` (scaffold), `domino-debug-proxy` (diagnose), `domino-api-intro` (auth, hosts), `domino-ui-bootstrap` (design system SPA), `domino-extensions` (mount an App in the Domino UI).

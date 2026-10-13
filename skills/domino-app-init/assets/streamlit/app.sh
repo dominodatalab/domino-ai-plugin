@@ -1,7 +1,7 @@
 #!/bin/bash
 # Domino App entry point for a Streamlit application.
 # Domino runs this file when the App starts; Streamlit must listen on 0.0.0.0:8888
-# (its default is 8501). Mirrors Domino's published Streamlit example.
+# (its default is 8501).
 
 set -e
 
@@ -20,9 +20,9 @@ cd "$(dirname "$0")"
 # line to `exec python -m streamlit run app.py --server.port 8888 --server.address 0.0.0.0`.
 # python -m pip install --user -q streamlit
 
-# Domino's published Streamlit example writes this config. enableCORS and
-# enableXsrfProtection are set to false there; keep them unless your deployment is known to
-# work with the defaults (XSRF protection off weakens file-upload protection).
+# enableCORS and enableXsrfProtection are off (Domino's Streamlit example sets the same);
+# keep them unless your deployment is known to work with the defaults (XSRF protection off
+# weakens file-upload protection).
 mkdir -p ~/.streamlit
 cat > ~/.streamlit/config.toml << 'EOF'
 [server]

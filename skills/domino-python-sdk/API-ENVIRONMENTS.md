@@ -1,7 +1,7 @@
 # Domino Environments API
 
-Create, revise and inspect Compute Environments. Routes and fields are from both
-published specs unless marked **Cloud**. Product docs:
+Create, revise and inspect Compute Environments. Routes marked **Cloud** exist only on
+Domino Cloud. Product docs:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments.
 
 ## Authentication
@@ -15,7 +15,7 @@ Read `GET $DOMINO_API_HOST/version`.
 
 | Target | Create environments and revisions with |
 |--------|----------------------------------------|
-| Domino Cloud (`6.4.0` and later) | `POST /api/environments/v2/environments` and `POST /api/environments/v2/environments/{environmentId}/revisions`. The Cloud spec marks the beta create routes **deprecated**: "Use POST /api/environments/v2/environments instead. This endpoint does not support specifying a CPU architecture and will not gain new capabilities." |
+| Domino Cloud (`6.4.0` and later) | `POST /api/environments/v2/environments` and `POST /api/environments/v2/environments/{environmentId}/revisions`. On Cloud the beta create routes are **deprecated**: they cannot set a CPU architecture and gain no new capabilities. |
 | Domino 6.3 | `POST /api/environments/beta/environments` and `.../beta/environments/{environmentId}/revisions` (v2 does not exist on 6.3) |
 
 List (`GET /api/environments/beta/environments`), get and archive
@@ -43,10 +43,9 @@ for env in envs:
 
 ## Create an environment
 
-The spec marks no field required, but the field descriptions say `name`, `visibility`
-(`global` or `private`), `image` and `addBaseDependencies` are "required for creating a new
-environment". `duplicateFromEnvironmentId` is an alternative: "when specifying this property,
-no other properties in the payload must be set." There is no `baseEnvironmentId`.
+Required: `name`, `visibility` (`global` or `private`), `image` and `addBaseDependencies`.
+`duplicateFromEnvironmentId` is the alternative, sent with no other field in the body.
+There is no `baseEnvironmentId`.
 
 Build fields (shared by create and revision bodies): `image` (base image URI),
 `dockerfileInstructions`, `preSetupScript`, `postSetupScript`, `preRunScript`,
@@ -78,9 +77,8 @@ env = requests.post(f"{base_url}/api/environments/v2/environments", headers=head
 }).json()["environment"]
 ```
 
-Verified on an internal Domino test cluster (6.4.0) with this body: 200, the record came
-back with `latestRevision.status: "Queued"` and `selectedRevision: null`, and the build
-reached `Succeeded` in about two minutes. The Public API does not expose a base image
+The response has `latestRevision.status: "Queued"` and `selectedRevision: null`; poll
+[Build status](#build-status) below. The Public API does not expose a base image
 URI; copy one from an existing environment's details page (the DSE image) or your
 registry. `PUT .../description` works, but the description is not returned by the
 Public `GET`.
@@ -99,7 +97,7 @@ env = requests.post(f"{base_url}/api/environments/beta/environments", headers=he
 ```
 
 Duplicate an existing environment instead (either target; nothing else in the body).
-Verified live: the copy is named "Duplicate of <name>" and reuses the source's built
+The copy is named "Duplicate of <name>" and reuses the source's built
 revision, so no new build runs.
 
 ```python
@@ -125,7 +123,7 @@ DELETE /api/environments/v1/environments/{environmentId}
 ```
 
 A soft archive: the response is the environment with `archived: true`, and `GET` still
-returns it (verified live).
+returns it.
 
 ## Revisions
 
@@ -136,18 +134,18 @@ PATCH /api/environments/beta/environments/{environmentId}/revisions/{revisionId}
 ```
 
 **`image` is required on both revision routes**: without it the server returns
-`400 image is required` (verified live on both routes), even though the schema marks it
+`400 image is required` on both routes, even though the schema marks it
 optional. Pass the base image URI the environment already uses. The body is a complete
 definition, not a delta: no field inherits from the previous revision, so send the full
 `dockerfileInstructions`, the scripts and `workspaceTools` you want to keep (copy
 `selectedRevision.availableTools` from the environment `GET`, renaming `start` to
-`startScripts`; an environment created without `workspaceTools` reported
-`availableTools: []` live). The Public API does not return the base image or the
+`startScripts`; an environment created without `workspaceTools` has
+`availableTools: []`). The Public API does not return the base image or the
 Dockerfile; [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments) shows how to read them
-through the Domino Internal API. The create responses are
-`{"environmentRevision": {"id", "number", "availableTools"}, "metadata"}`; live, the v2
-response carried `architectures` and neither carried `status`, so poll the environment
-(below) for the build state. `isRestricted` is required on `PATCH`.
+through the Domino Internal API (non-public routes; may change in a future Domino version). The create responses are
+`{"environmentRevision": {"id", "number", "availableTools"}, "metadata"}` (plus
+`architectures` on v2); neither carries `status`, so poll the environment (below) for the
+build state. `isRestricted` is required on `PATCH`.
 
 ```python
 rev = requests.post(f"{base_url}/api/environments/beta/environments/{env_id}/revisions",
@@ -175,7 +173,7 @@ rev = requests.post(f"{base_url}/api/environments/v2/environments/{env_id}/revis
 
 Poll `GET /api/environments/v1/environments/{environmentId}` and read
 `environment.latestRevision.status`. The spec enum is lowercase (`queued`, `starting`,
-`pulling`, `building`, `pushing`, `succeeded`, `failed`, `killed`) but an internal Domino test cluster (6.4.0)
+`pulling`, `building`, `pushing`, `succeeded`, `failed`, `killed`) but Domino 6.4
 returns capitalized values (`Succeeded`, `Failed`, `Killed`), so compare
 case-insensitively. `latestRevision` is the newest build; `selectedRevision` is the one
 executions use, and the two differ when the newest build failed or was killed.
@@ -224,11 +222,9 @@ USER ubuntu
 
 Quote version specifiers that contain `>` or `<`; unquoted, the shell treats them as
 redirections. For a package the Domino Standard Environment already ships, pin at or below the
-DSE's own version (the current line, `ubuntu24-py3.12-r4.5-domino6.3` on 6.3 and the same
-`Py3.12` line on Cloud, ships Python 3.12, pandas 2.3.2, numpy 2.5.2 and scikit-learn 1.7.2):
-a newer release can break the ranges its MLflow and other preinstalled packages declare (MLflow
-3.3.2 declares `pandas<3` and `scikit-learn<2`). Packages the DSE does not ship, such as torch,
-take their newest release.
+DSE's own version (`pip show <pkg>` in a Workspace on that environment): a newer release can
+break the ranges its MLflow and other preinstalled packages declare (for example `pandas<3`
+and `scikit-learn<2`). Packages the DSE does not ship, such as torch, take their newest release.
 
 ## python-domino
 
@@ -236,11 +232,9 @@ take their newest release.
 `create_environment(name, visibility, ...)`, `create_environment_revision(environment_id, ...)`,
 `restrict_environment_revision(environment_id, revision_id)`, `archive_environment(environment_id)`.
 `create_environment` and `create_environment_revision` call the beta routes above (current on
-6.3, deprecated on Cloud, where they still work but cannot set `architectures`). In
-2.2.0 `create_environment_revision` fills an omitted `base_image` from the deployment's
-default environment, not from the environment you name, and sends omitted lists and
-scripts empty; pass the current definition back explicitly
-([SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments)).
+6.3, deprecated on Cloud, where they still work but cannot set `architectures`).
+`create_environment_revision` posts a complete definition and fills omitted fields with
+defaults, not with the environment's current values: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments).
 Signatures: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments-and-hardware-tiers). There is
 no `environment_get` method.
 

@@ -14,9 +14,9 @@ Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 | Get, update, read versions, model APIs for a version | `/api/registeredmodels/v1/{modelName}/...` | Path key is the **model name**, not an id |
 | Versions (v2 read) | `/api/registeredmodels/v2/{modelName}/versions[/{version}]` | |
 
-Both families are in both specs; use v2 for discovery and writes, v1 for per-model reads.
-`POST /api/registeredmodels/v1/{modelName}/versions` is marked deprecated in both specs
-(since 6.2.1); do not use it for new automation.
+Use v2 for discovery and writes, v1 for per-model reads.
+`POST /api/registeredmodels/v1/{modelName}/versions` is deprecated; do not use it for new
+automation.
 
 ## Model Serving (`/api/modelServing/v1`)
 
@@ -31,8 +31,9 @@ GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/bu
 
 Read `activeVersion.deployment.status` and `activeVersion.deployment.isPending` to know
 when a version is serving; `deployment` is absent from the record until the first build
-finishes. The Model API record does not contain the invocation URL; copy it from the
-Model API's page in Domino. Async batch prediction uses
+finishes. The Model API record does not contain the invocation URL and no route returns
+it: it is the deployment's external URL plus `/models/{modelApiId}/latest/model`, as shown
+on the Model API's page. Async batch prediction uses
 `/api/modelApis/async/v1/{asyncModelId}` ([API-MODELS.md](./API-MODELS.md#invoking-a-model-api)).
 
 ## Model Deployments vs Model APIs
@@ -45,14 +46,13 @@ separate resources with separate lifecycles; do not mix their ids.
 
 ## Lifecycle
 
-- A running Model API cannot be deleted (`500 ... is running`, verified on Domino Cloud
-  6.4.0). Stop it first (`POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment`,
-  internal API, may change between Domino versions, or the UI), then `DELETE`; afterwards
-  `GET` returns 404 and the record is gone from the list.
+- A running Model API cannot be deleted (`500 ... is running`): stop it first, then
+  `DELETE` ([API-MODELS.md](./API-MODELS.md#get-update-delete); worked requests in
+  [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#stop-and-delete)).
 - A Model Deployment has `start` and `stop`; after `stop` or `DELETE`, `GET` the resource
   to confirm the state before issuing the next call.
-- Collaborator and visibility routes under `/api/modelServing/beta` exist only in the
-  Cloud spec.
+- Collaborator and visibility routes under `/api/modelServing/beta` exist only on Domino
+  Cloud.
 
 ## MLflow vs REST
 
@@ -68,7 +68,7 @@ separate resources with separate lifecycles; do not mix their ids.
 `GET/PATCH .../versions/{versionNumber}`, `.../start`, `.../stop`, `.../realTimeLogs`,
 `.../request-metrics`, `.../pod-resource-metrics`, `.../vllm-*-metrics`,
 `GET /api/gen-ai/beta/default-endpoint-environment`,
-`GET /api/gen-ai/beta/vanity-url-availability/{vanityUrl}` are in both specs. Invoke a
+`GET /api/gen-ai/beta/vanity-url-availability/{vanityUrl}`. Invoke a
 GenAI endpoint at the URL the endpoint's page shows, not at a management route. These
 are Domino-hosted LLM endpoints; the routes, bodies and calling pattern are in
 [domino-llm-access/HOST-AN-LLM-API.md](../domino-llm-access/HOST-AN-LLM-API.md).

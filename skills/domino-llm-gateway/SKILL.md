@@ -1,16 +1,16 @@
 ---
 name: domino-llm-gateway
-description: Call Large Language Models through Domino LLM Gateway 2.0, the centrally governed gateway extension an administrator installs in front of external providers and Domino-hosted models. Covers finding and detecting the gateway, authentication with the in-run access token (fresh per call) or a Personal Access Token outside Domino, model aliases and model discovery, the OpenAI-compatible and Anthropic-compatible paths from the OpenAI and Anthropic SDKs, Pydantic AI, LangChain and plain HTTP, streaming, attribution headers, refused calls (login redirect, grants, budgets, guardrails), pointing a coding assistant such as Claude Code at the gateway, and what the administrator configures. Use when a user mentions LLM Gateway, Gateway 2.0, a gateway alias or URL, asks how to call a model through the Domino gateway, how to run a coding assistant through it, why a gateway call was refused, or what the gateway administrator must set up.
-compatibility: Domino 6.3 and Domino Cloud, only where an administrator has installed the LLM Gateway 2.0 extension (early access); availability depends on the installation, not the Domino version. Inside a Domino execution the bearer is the access token from DOMINO_API_PROXY/access-token (localhost:8899), re-read per call; outside Domino a Personal Access Token. Legacy user API keys are not used.
+description: Call Large Language Models through Domino LLM Gateway 2.0, the centrally governed gateway extension an administrator installs in front of external providers and Domino-hosted models. Covers finding and detecting the gateway, authentication with the in-run access token (fresh per call) or a Personal Access Token outside Domino, model aliases and model discovery, the OpenAI-compatible and Anthropic-compatible paths from the OpenAI and Anthropic SDKs, Pydantic AI, LangChain and plain HTTP, streaming, attribution headers, refused calls (login redirect, grants, budgets, guardrails), pointing a coding assistant such as Claude Code or Codex at the gateway, and what the administrator configures. Use when a user mentions LLM Gateway, Gateway 2.0, a gateway alias or URL, asks how to call a model through the Domino gateway, how to run a coding assistant through it, why a gateway call was refused, or what the gateway administrator must set up.
+compatibility: Domino 6.3 and Domino Cloud, only where an administrator has installed the LLM Gateway 2.0 extension; availability depends on the installation, not the Domino version. Inside a Domino execution the bearer is the access token from DOMINO_API_PROXY/access-token (localhost:8899), re-read per call; outside Domino a Personal Access Token. Legacy user API keys are not used.
 ---
 
 # Domino LLM Gateway 2.0
 
-Applies to Domino 6.3 and Domino Cloud where an administrator has installed LLM Gateway 2.0. It is an **extension**: installed separately, updated out of band, in early access, so whether it exists depends on the installation, not on the Domino version. It runs as a Domino App. If nobody has installed it, say so and use the `domino-llm-access` skill (a Domino-hosted endpoint or a provider SDK); do not try to install it.
+Applies to Domino 6.3 and Domino Cloud where an administrator has installed LLM Gateway 2.0. It is an **extension**: installed separately, updated out of band, so whether it exists depends on the installation, not on the Domino version. It runs as a Domino App. If nobody has installed it, say so and use the `domino-llm-access` skill (a Domino-hosted endpoint or a provider SDK); do not try to install it.
 
 ## What the gateway is
 
-One base URL in front of many providers (external LLM vendors and Domino-hosted model endpoints). Provider keys stay in the gateway; callers authenticate with their Domino identity. Every request is tracked (user, Project, model, tokens, latency, estimated cost); administrators grant access per **model alias**, set budgets, and screen prompts and responses with guardrails. It replaces the legacy AI Gateway (removed from Cloud, disabled by default on 6.3).
+One base URL in front of many providers (external LLM vendors and Domino-hosted model endpoints). Provider keys stay in the gateway; callers authenticate with their Domino identity. Every request is tracked (user, Project, model, tokens, latency, estimated cost); administrators grant access per **model alias**, set budgets, and screen prompts and responses with guardrails.
 
 ## Find and detect the gateway
 
@@ -25,8 +25,8 @@ The extension injects **nothing** into a Workspace: no URL, no token, no `ANTHRO
 
 Send `Authorization: Bearer <token>` on every request.
 
-- **Inside a Domino Workspace, Job or App:** read the access token from `$DOMINO_API_PROXY/access-token` (the sidecar at `http://localhost:8899/access-token`). It is short-lived, so re-read it before every request instead of caching it in a long-running process. Verified live.
-- **Outside Domino (laptop, CI):** a Domino bearer such as a Personal Access Token in a variable the user creates, for example `LLM_GATEWAY_TOKEN`. A Domino access token worked from a laptop in testing; a PAT and the gateway's own tokens (prefix `dgw_`, issued by an administrator) are unverified, and a gateway token may not pass the App login redirect at all.
+- **Inside a Domino Workspace, Job or App:** read the access token from `$DOMINO_API_PROXY/access-token` (the sidecar at `http://localhost:8899/access-token`). It is short-lived, so re-read it before every request instead of caching it in a long-running process.
+- **Outside Domino (laptop, CI):** a Domino bearer such as a Personal Access Token in a variable the user creates, for example `LLM_GATEWAY_TOKEN`. A Domino access token works from a laptop; a PAT or one of the gateway's own tokens (prefix `dgw_`, issued by an administrator) may be answered with the App login redirect or 401, in which case use a Domino access token.
 - Legacy user API keys are deprecated and not used. The Anthropic path needs the bearer in `Authorization`; a credential sent only as `x-api-key` is treated as no credential.
 
 ```python
@@ -66,7 +66,7 @@ A **302 to the Domino login page** (HTML) is a missing, malformed or expired bea
 
 ## Coding assistants through the gateway
 
-Where the extension is installed, offer the user the choice of routing the assistant through the gateway (its calls then fall under the gateway's grants, budgets and guardrails) or keeping the vendor sign-in; never route by default. Claude Code through the gateway is verified live: [CODING-ASSISTANTS.md](./CODING-ASSISTANTS.md).
+Offer the user the choice; never route by default. Claude Code and Codex through the gateway, and the rule: [CODING-ASSISTANTS.md](./CODING-ASSISTANTS.md).
 
 ## What the administrator configures
 

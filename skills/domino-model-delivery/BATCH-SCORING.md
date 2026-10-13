@@ -70,7 +70,7 @@ Model Registry notes:
   Domino Standard Environments; do not override the URI. A custom environment needs `mlflow`.
 - `mlflow.pyfunc.load_model` returns a `predict(DataFrame)` wrapper for every MLflow flavor; use
   the flavor loader (`mlflow.sklearn.load_model(...)`) when you need the native object.
-- Aliases are an MLflow registry feature verified on Domino Cloud; on Domino 6.3 pin a version
+- Aliases are an MLflow registry feature available on Domino Cloud; on Domino 6.3 pin a version
   number, or confirm alias support first as described in
   [MODEL-REGISTRY.md](../domino-experiment-tracking/MODEL-REGISTRY.md), which also covers
   registering a model, versions, tags and the Domino registry routes.
@@ -115,9 +115,8 @@ users should pick the input file or date in a web form
 | Notify emails | who gets the completion mail |
 | Update Domino endpoint | republish an endpoint after the Job; for retraining, not scoring |
 
-There is no Public API route for scheduled Jobs (stated on
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job). Create and
-edit schedules in the UI. There is no pause: edit the schedule to a far-future start time.
+Scheduled Jobs have no Public API route; the non-public route with its create, update, pause and
+delete bodies is in [SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md).
 
 If Apache Airflow or Kubeflow Pipelines already owns the nightly schedule, keep it there: a task
 starts this Job over the same `POST /api/jobs/v1/jobs`, waits for it and collects the result file

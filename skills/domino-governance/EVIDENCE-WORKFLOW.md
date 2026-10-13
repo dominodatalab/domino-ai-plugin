@@ -1,49 +1,24 @@
 # Evidence Workflow
 
-This document explains how to attach evidence, answer policy questions, and create findings in governance bundles.
-
-## Setup
-
-Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . In a run use `DOMINO_API_PROXY` or the `localhost:8899` access token; outside a run a Personal Access Token or service account token. Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) are deprecated; never use them.
-
-Use the first base where `GET $BASE/policy-overviews` returns HTTP 200. Try proxy (no header), then in-run gateway + access-token, then public URL + PAT on 404. Details: [SKILL.md Configuration](./SKILL.md#configuration).
-
-```bash
-GOV="/api/governance/v1"
-
-# 1) Proxy in-run — no Authorization; fails with 404 if governance not on this route
-BASE="$DOMINO_API_PROXY$GOV"
-TOKEN=""
-
-# 2) In-run gateway — not the same as public URL
-# HOST="${DOMINO_USER_HOST:-$DOMINO_API_HOST}"
-# TOKEN="$(curl -s http://localhost:8899/access-token)"
-# BASE="$HOST$GOV"
-
-# 3) Public deployment — outside run, or 404 on 1 and 2
-# BASE="<the deployment's HTTPS URL>$GOV"
-# TOKEN="$PAT_OR_SA_TOKEN"
-```
-
-Curl examples use `${TOKEN:+-H "Authorization: Bearer $TOKEN"}`. Leave `TOKEN` empty only on step 1 when it succeeds.
+Base URL, auth and the `TOKEN` conditional in the curl examples: [SKILL.md Configuration](./SKILL.md#configuration).
 
 Attachments may be inline on `POST /bundles` or added via `POST /bundles/{bundleId}/attachments`. Use the attachment endpoint when adding evidence after create.
 
 ## Attachment Types
 
-The attachments API endpoint is `POST /bundles/{bundleId}/attachments` with body `{"type": ..., "identifier": {...}, "source": "MANUAL"}` (`source` optional: `AUTO` or `MANUAL`). Both public specs (6.3.1 and 6.4.0) define **seven** attachment types:
+The attachments API endpoint is `POST /bundles/{bundleId}/attachments` with body `{"type": ..., "identifier": {...}, "source": "MANUAL"}` (`source` optional: `AUTO` or `MANUAL`). There are seven attachment types:
 
 | `type` | What it links | `identifier` object |
 |--------|---------------|---------------------|
-| `ModelVersion` | A registered model version | `{"name": "<registered model name>", "version": <int>}` (verified below) |
-| `Report` | A file in the project repository (git or DFS) | `{"branch", "commit", "source": "git" or "DFS", "filename"}` (verified below) |
-| `DatasetSnapshotFile` | A file in a Domino Dataset snapshot | `{"datasetId", "snapshotId", "filename"}` (seen on a live deployment; the UI also adds `datasetName`, `snapshotVersion`, `snapshotCreationTime`) |
+| `ModelVersion` | A registered model version | `{"name": "<registered model name>", "version": <int>}` (example below) |
+| `Report` | A file in the project repository (git or DFS) | `{"branch", "commit", "source": "git" or "DFS", "filename"}` (example below) |
+| `DatasetSnapshotFile` | A file in a Domino Dataset snapshot | `{"datasetId", "snapshotId", "filename"}` (the UI also adds `datasetName`, `snapshotVersion`, `snapshotCreationTime`) |
 | `Endpoint` | A model endpoint (model API) | Not documented in the spec; see below |
 | `NetAppVolumeSnapshotFile` | A file in a NetApp Volume snapshot | Not documented in the spec; see below |
 | `FlowArtifact` | A Domino Flow artifact | Not documented in the spec; see below |
 | `FlowArtifactFile` | A file inside a Flow artifact | Not documented in the spec; see below |
 
-The spec types `identifier` as an opaque object, so the shapes above come from attachments observed on live deployments. The spec's `GET /attachment-overviews` filter parameters name the identifier keys it knows: `identifier.name`, `identifier.version` (model versions); `identifier.branch`, `identifier.commit`, `identifier.source`, `identifier.filename` (reports); `identifier.datasetId`, `identifier.snapshotId` (dataset snapshot files); `identifier.volumeId` (NetApp Volume snapshot files); `identifier.artifactId`, `identifier.executionName`, `identifier.executionWorkflowName`, `identifier.executionWorkflowVersion` (Flow artifacts). For a type whose full shape is not listed above, attach one example through the Domino UI (bundle > **Attachments**), read it back with `GET /bundles/{bundleId}` (the `attachments[]` array carries `type` and `identifier`), and reuse that shape. Do not guess field names.
+The spec types `identifier` as an opaque object, so the shapes above are the ones Domino itself writes. The spec's `GET /attachment-overviews` filter parameters name the identifier keys it knows: `identifier.name`, `identifier.version` (model versions); `identifier.branch`, `identifier.commit`, `identifier.source`, `identifier.filename` (reports); `identifier.datasetId`, `identifier.snapshotId` (dataset snapshot files); `identifier.volumeId` (NetApp Volume snapshot files); `identifier.artifactId`, `identifier.executionName`, `identifier.executionWorkflowName`, `identifier.executionWorkflowVersion` (Flow artifacts). For a type whose full shape is not listed above, attach one example through the Domino UI (bundle > **Attachments**), read it back with `GET /bundles/{bundleId}` (the `attachments[]` array carries `type` and `identifier`), and reuse that shape. Do not guess field names.
 
 `POST /bundles/{id}/register-endpoint` ("Set monitored model as governed": required `approver`, `assignee`, `artifactID`, `evidenceID`, `endpointVersionID`, `isGoverned`) and `PUT /bundles/{id}/update-endpoint/{endpointID}` ("Update monitored model entry") record a monitored model endpoint as governed evidence under an approval; they are not an alternative way to add an `Endpoint` attachment.
 
@@ -68,8 +43,6 @@ curl -X POST "$BASE/bundles/$BUNDLE_ID/attachments" \
     "description": "Model description and metrics."
   }'
 ```
-
-**When to use**: When the model is registered in Domino's Model Registry. Use the model name and version number (integer).
 
 ### Report
 
@@ -115,7 +88,7 @@ Policies define evidence questions via `evidenceSet` items in the YAML. These ap
 
 ### Discovering EvidenceSet IDs
 
-**IMPORTANT**: The bundle response (`GET /bundles/{bundleId}`) does NOT contain evidenceSet IDs. You must fetch them from the **policy** endpoint:
+The bundle response (`GET /bundles/{bundleId}`) does not contain evidenceSet IDs; fetch them from the policy:
 
 ```bash
 curl -s "$BASE/policies/$POLICY_ID" \
@@ -179,7 +152,7 @@ curl -X POST "$BASE/rpc/submit-result-to-policy" \
 - You can submit one artifact at a time or multiple artifacts for the same evidenceId in one call
 - Each successful submission returns the full bundle JSON
 - If a policy has `classification` rules tied to an artifact, the bundle's `classificationValue` updates automatically
-- The `policyId` field is the policy UUID, NOT the `policyVersionId` — this is a common gotcha
+- The `policyId` field is the policy UUID, NOT the `policyVersionId`
 
 ---
 

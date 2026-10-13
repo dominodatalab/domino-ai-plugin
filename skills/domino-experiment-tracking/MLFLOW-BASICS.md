@@ -1,12 +1,12 @@
 # MLflow Basics for Domino Experiment Tracking
 
-Applies to Domino 6.3 and Domino Cloud. This guide covers the fundamentals of using MLflow for experiment tracking in Domino; `MLFLOW_TRACKING_URI` is preconfigured in Workspaces and Jobs, so no tracking-server setup is needed. Product reference: https://docs.domino.ai/cloud/platform-capabilities/features/development/track-monitor
+`MLFLOW_TRACKING_URI` is preconfigured in Workspaces and Jobs, so MLflow experiment tracking in Domino needs no tracking-server setup. Product reference: https://docs.domino.ai/cloud/platform-capabilities/features/development/track-monitor
 
 ## Setting Up an Experiment
 
 ### Unique Experiment Names
 
-**CRITICAL**: Experiment names must be unique across the entire Domino deployment, not just your project.
+Experiment names are unique across the whole deployment, not per project, so suffix them with project and user.
 
 ```python
 import mlflow

@@ -68,7 +68,7 @@ Never print `conf.getAll()` values, `spark.hadoop.*` settings or `os.environ` wh
 
 ### Project-wide Spark settings
 
-Settings that should apply to every on-demand cluster in a Project live in **Settings > Integrations > Domino managed on-demand cluster**, or in the Project's Spark config over the Internal API (internal API, may change between Domino versions; live-verified on Domino 6.4, confirm on 6.3 in your deployment's `/docs`). `onDemandFreeFormConfig` is the free-form box: one `key value` per line.
+Settings that should apply to every on-demand cluster in a Project live in **Settings > Integrations > Domino managed on-demand cluster**, or in the Project's Spark config over the Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); on 6.3 confirm in your deployment's `/docs`). `onDemandFreeFormConfig` is the free-form box: one `key value` per line.
 
 ```python
 import os, requests
@@ -161,7 +161,7 @@ results = tuner.fit()
 print(results.get_best_result().config)
 ```
 
-`tune.report` is exported by recent Ray releases (Domino's validated 2.55.x has it); on older cluster images such as the Ray 2.36 tags use `from ray import train` and `train.report({...})` instead. Log trials to MLflow with `mlflow.get_tracking_uri()` (preconfigured in Domino) to compare them in Experiments; see https://docs.domino.ai/cloud/platform-capabilities/features/development/ray-tune and [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md).
+`tune.report` is exported by recent Ray releases (Ray 2.55 has it); on older cluster images such as the Ray 2.36 tags use `from ray import train` and `train.report({...})` instead. Log trials to MLflow with `mlflow.get_tracking_uri()` (preconfigured in Domino) to compare them in Experiments; see https://docs.domino.ai/cloud/platform-capabilities/features/development/ray-tune and [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md).
 
 ## Dask
 

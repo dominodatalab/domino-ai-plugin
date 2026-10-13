@@ -1,16 +1,15 @@
 # Export targets: NVIDIA Fleet Command, Snowflake, SageMaker, the Exports page
 
-**Every `/v4/...` route in this file is Domino Internal API, may change between Domino versions.**
-They are documented on the product pages cited below and on each cluster's reference
-(`https://<domino-domain>/docs`, `openapi-internal.json`); they are not in the Public API spec.
-Authentication as in [SKILL.md](./SKILL.md#authentication): Bearer token, never `X-Domino-Api-Key`.
+**Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
+They are documented on the product pages cited below and in each deployment's
+`https://<domino-domain>/docs` (`openapi-internal.json`). Auth: [SKILL.md](./SKILL.md#authentication).
 
 ## NVIDIA Fleet Command (edge)
 
 Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/export-nvidia
 (same on 6.3). Domino pushes the endpoint container image and a Helm chart to private
-repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The cluster
-reference labels the route **BETA**.
+repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The route is
+labelled beta.
 
 Prerequisites: a Domino endpoint deployed from the project and in **Ready to Run** state, so a
 model id and a built model version id exist (list them with
@@ -30,12 +29,12 @@ json.dump({"containerRepository": "<org>/<team>/<container-repo>", "tag": "1.4.0
 | Field | Required | Rule |
 |---|---|---|
 | `containerRepository` | yes | existing private NGC container repository; lowercase alphanumerics, dashes, slashes, no spaces |
-| `tag` | no (cluster reference) | alphanumerics, underscores, periods, dashes |
+| `tag` | no | alphanumerics, underscores, periods, dashes |
 | `helmRepository` | yes | existing private NGC Helm repository, same character rules |
 | `helmVersion` | yes | semver |
 | `ngcApiKey` | yes | NGC API key; generate it in NGC, keep it in a Project or user environment variable and read it by name (`os.environ["NGC_API_KEY"]`); a CI runner outside Domino holds its own copy |
 
-Constraints from the product page:
+Constraints:
 
 - The endpoint port on the edge device is hardcoded to **30008**; a second Domino model on the
   same device fails unless you override the port in `values.yaml` in the Fleet Command UI.
@@ -74,7 +73,7 @@ Publish (UI):
    and environment, then **Authenticate & Export**. The current project HEAD becomes the next
    version and Snowflake overwrites the UDF.
 
-The same operation exists as an internal API call with the fields the dialog asks for:
+The same operation exists as a non-public call (may change in a future Domino version) with the fields the dialog asks for:
 
 ```text
 POST /v4/models/{modelId}/{modelVersionId}/exportImageForSnowflake   (also /v4/modelManager/exportImageForSnowflake/{modelId}/{modelVersionId})
@@ -96,7 +95,7 @@ the next export).
 
 Two mechanisms exist; prefer the first.
 
-**Deployment targets (current, Public API in both specs).** An admin registers an external
+**Deployment targets (Public API, 6.3 and Cloud).** An admin registers an external
 deployment target (`GET/POST /api/admin/v1/deploymentTargets`, types from
 `/api/admin/v1/deploymentTargetTypes`, resource configurations under
 `.../{deploymentTargetId}/resourceConfigurations`). A user then deploys a **registered model**
@@ -107,7 +106,7 @@ and `.../versions`. Only supported when the Domino control plane runs on AWS EKS
 https://docs.domino.ai/cloud/platform-capabilities/features/models/deploy-sagemaker. REST
 details: [domino-python-sdk API-MODELS.md](../domino-python-sdk/API-MODELS.md).
 
-**Legacy image export (internal API).** `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker`
+**Legacy image export (non-public route; may change in a future Domino version).** `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker`
 with the same body as `exportImageToRegistry` (`registryUrl`, `repository`, `tag`, `username`,
 `password`) pushes a SageMaker-compatible image to ECR; python-domino's
 `model_version_sagemaker_export(...)` wraps it and
@@ -118,7 +117,7 @@ credential dance with `boto3`. You then create the SageMaker model and endpoint 
 
 **Exports** in the project navigation lists every exported model with its target, latest
 version and, for Snowflake and other monitored exports, drift and model-quality columns (green
-check healthy, red number of alerts, grey no data). Internal API behind it:
+check healthy, red number of alerts, grey no data). Non-public routes (may change in a future Domino version) behind it:
 
 ```text
 GET /v4/modelManager/getModelExports/{projectId}?startIndex=0&count=50&sort=created&sortDirection=desc
@@ -131,5 +130,4 @@ GET /v4/modelManager/getExportVersionLogs/{exportVersionId}
 DELETE /v4/modelManager/archiveModelExport/{exportId}
 ```
 
-Verified read-only against a Domino Cloud cluster (HTTP 200, empty list on a project with no
-exports).
+On a project with no exports the list route returns HTTP 200 with an empty list.

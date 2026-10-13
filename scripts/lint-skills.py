@@ -37,6 +37,67 @@ CLAUDE = re.compile(r"claude", re.I)
 GIT_SOURCE = re.compile(r"git\+[a-z]+://[^\s\"'#]+", re.I)
 PINNED_SHA = re.compile(r"@[0-9a-f]{40}$")
 
+# Content-noise rules, the mechanical part of CONTRIBUTING standards 12 (facts and instructions,
+# no provenance) and 13 (what belongs in a skill). Checked line by line over every .md under
+# skills/ and agents/ and over rules/domino.md. The error tier fails CI; the warn tier prints
+# ::warning:: for a human to judge. Columns: id, label, pattern, flags, tier, standard, scope
+# ("all", or "skill_md" for SKILL.md only), exempt (True: skip files in claude-mentions.allow,
+# which may name models). Patterns match fixed collocations; a hit that is a false positive is
+# fixed by tightening the pattern here, not by rewording the skill.
+AGENTS = ROOT / "agents"
+RULES_FILE = ROOT / "rules" / "domino.md"
+REMOVED_SKILLS_FILE = ROOT / "scripts" / "removed-skills.txt"
+DENYLIST = [
+    ("L1", "provenance narrative",
+     r"\b(live (test|records|run|call|behaviou?r)|test (cluster|deployment)|internal (Domino )?(test )?cluster|our (test|run|cluster|live)|no other credential existed|the audit (found|showed)|(verified|confirmed|validated|tested|smoke-tested|run|ran) live\b|(verified|confirmed|validated|tested) (on|against) (a |the |this )?(deployment|cluster|instance|DSE|Domino Cloud|Cloud|6\.\d)|from one deployment|one (Domino )?(Cloud )?cluster's reference|from the (Cloud/)?6\.4(\.0)? internal reference)",
+     re.I, "error", 12, "all", False),
+    ("L2", "'live' as an observation marker",
+     r"(?<=; )live\b|\(live:|(?<!\()\blive\)|\blive \(Domino|a record live\b",
+     0, "error", 12, "all", False),
+    ("L3", "past-tense test log with a version",
+     r"\b(returned|answered|appeared|listed|reported|came back|could set|crash-looped|was built|were absent|fired|went)\b[^.\n]{0,80}\b(on (Domino )?(Cloud )?6\.\d|on (a |the )?(6\.\d(\.\d)?|Cloud|DSE|test) deployment|from a DSE Workspace)\b|\bon (Domino )?Cloud 6\.\d[^.\n]{0,40}\b(returned|came back|created|reaches|reached)\b",
+     re.I, "error", 12, "all", False),
+    ("L4", "skill self-history",
+     r"\b(earlier|previous|older|prior) (versions? of )?(this|the) skill\b|\bthis skill (previously|used to|no longer|now)\b|at the time this skill was written",
+     re.I, "error", 13, "all", False),
+    ("L5", "dated snapshot in parentheses",
+     r"(?<!`)\([^()\n`]{0,40}\b(20\d\d-[01]\d-[0-3]\d|(January|February|March|April|May|June|July|August|September|October|November|December) 20\d\d)\b[^()\n]{0,25}\)",
+     0, "error", 12, "all", False),
+    ("L6", "shouting label",
+     r"\*\*(IMPORTANT|CRITICAL|NOTE|WARNING|MUST|NEVER|ALWAYS)\*\*|^\s*#\s*(IMPORTANT|CRITICAL|WARNING)\b",
+     0, "error", 13, "all", False),
+    ("L7", "process jargon",
+     r"\b(this PR|PR #\d+|the audit (found|showed)|coverage audit|workstream|release candidate|weak[- ]model|grader|E2E)\b",
+     0, "error", 13, "all", False),
+    ("L7", "model name (process jargon)",
+     r"\b(Haiku|Sonnet|Opus|Fable|Astra)\b",
+     0, "error", 13, "all", True),
+    ("L8", "first-person provenance",
+     r"\b(we|our team|I) (tested|verified|ran|saw|found|observed|confirmed|checked)\b",
+     re.I, "error", 12, "all", False),
+    ("L9", "when-to-use heading; that guidance belongs in the description",
+     r"^##+ (Activation|When to use( this skill)?)\s*$",
+     0, "error", 13, "skill_md", False),
+    ("L10", "self-describing preamble",
+     r"^(This (skill|guide|document|file) (provides|enables|covers|explains|describes|is for)|Use this skill when)\b",
+     0, "error", 13, "all", False),
+    ("L5b", "'today' qualifier",
+     r"\btoday\)",
+     0, "warn", 13, "all", False),
+    ("L11", "observed timing",
+     r"\b(in|within|after|takes?|took|later|reaches \w+ in) about \d+(\.\d+)? ?(seconds|s|minutes|min)\b|\bevery \d+ seconds or so\b|\bwithin seconds\b|\bseconds? later\b",
+     re.I, "warn", 12, "all", False),
+    ("L12", "stage label",
+     r"\b(early access|coming soon|roadmap|in a future release)\b|\(preview\)",
+     re.I, "warn", 13, "all", False),
+    ("L14", "smoke test",
+     r"\bSmoke[- ]test\b",
+     re.I, "warn", 12, "all", False),
+    ("L15", "spec attestation",
+     r"\b(exists?|is|are|present) (present )?(,? with the same bodies,? )?in both (public |published )?(API )?specs\b|\b(from|taken from) (both|the) published specs?\b|\(6\.3\.1 and 6\.4\.0\)|\bidentical in both public API specs\b|\(cluster reference\)|on the cluster reference\b",
+     re.I, "warn", 12, "all", False),
+]
+
 
 def load_allowlist(path: Path) -> set[str]:
     lines = path.read_text().splitlines() if path.exists() else []
@@ -53,8 +114,46 @@ def gemini_substituted_names() -> set[str]:
     return names
 
 
+def lint_content(errors: list[str], warnings: list[str], claude_allowed: set[str]) -> int:
+    """DENYLIST over skills/, agents/ and rules/domino.md, plus L16 (names of removed skills,
+    backticked or as a path, under skills/, agents/ and README.md). Returns the files checked."""
+    paths = [p for d in (SKILLS, AGENTS) if d.is_dir() for p in sorted(d.rglob("*.md"))]
+    if RULES_FILE.is_file():
+        paths.append(RULES_FILE)
+    compiled = [(rid, label, re.compile(pat, flags), tier, std, scope, exempt)
+                for rid, label, pat, flags, tier, std, scope, exempt in DENYLIST]
+    for path in paths:
+        rel = path.relative_to(ROOT).as_posix()
+        lines = path.read_text(encoding="utf-8").split("\n")
+        for rid, label, rx, tier, std, scope, exempt in compiled:
+            if scope == "skill_md" and path.name != "SKILL.md":
+                continue
+            if exempt and rel in claude_allowed:
+                continue
+            for n, line in enumerate(lines, 1):
+                hit = rx.search(line)
+                if hit:
+                    msg = (f"{rel}:{n}: {rid} {label}: '{hit.group(0).strip()[:70]}' "
+                           f"(CONTRIBUTING standard {std})")
+                    (errors if tier == "error" else warnings).append(msg)
+    removed = load_allowlist(REMOVED_SKILLS_FILE)
+    readme = ROOT / "README.md"
+    targets = [p for p in paths if p != RULES_FILE] + ([readme] if readme.is_file() else [])
+    for name in sorted(removed):
+        rx = re.compile(rf"`{re.escape(name)}`|(?<![A-Za-z0-9_-]){re.escape(name)}/")
+        for path in targets:
+            rel = path.relative_to(ROOT).as_posix()
+            for n, line in enumerate(path.read_text(encoding="utf-8").split("\n"), 1):
+                if rx.search(line):
+                    errors.append(f"{rel}:{n}: L16 removed skill name '{name}' "
+                                  f"({REMOVED_SKILLS_FILE.relative_to(ROOT)}); point at the current "
+                                  f"skill (CONTRIBUTING standard 13)")
+    return len(paths)
+
+
 def main() -> int:
     errors: list[str] = []
+    warnings: list[str] = []
     notes: list[str] = []
     plugin = json.loads((ROOT / "plugin.json").read_text())["name"]
     substituted = gemini_substituted_names()
@@ -162,17 +261,21 @@ def main() -> int:
             notes.append(f"{GEMINI_ALLOW_FILE.relative_to(ROOT)}: '{stale}' no longer contains "
                          f"'${{'; drop the entry")
 
+    content_files = lint_content(errors, warnings, allowed)
     rules_count = lint_rules(errors)
 
     for note in notes:
         print(f"::notice::{note}")
+    for warning in warnings:
+        print(f"::warning::{warning}")
     for err in errors:
         print(f"::error::{err}")
     if errors:
         print(f"{len(errors)} problem(s) in skills/", file=sys.stderr)
         return 1
     print(f"ok: {len(seen)} skills valid ({cross_links} links between skills); "
-          f"{rules_count} always-on rules file(s) valid")
+          f"{rules_count} always-on rules file(s) valid; content rules clean over "
+          f"{content_files} files ({len(warnings)} warning(s))")
     return 0
 
 

@@ -1,41 +1,12 @@
 # python-domino: supported methods and examples
 
-Every method below exists in `domino/domino.py` at release 2.2.0 of
-https://github.com/dominodatalab/python-domino (`dominodatalab` on PyPI). Names, argument
-names and required arguments are taken from the source, not from memory. Methods marked
+python-domino 2.2.0 (`dominodatalab` on PyPI) methods and examples. Methods marked
 **legacy** call the pre-Jobs v1 Runs API and are kept only for existing scripts.
 
-Client setup and authentication: [SKILL.md](./SKILL.md#authentication). Never pass
-`api_key=`.
-
-```python
-import os
-import requests
-from domino import Domino
-
-if os.environ.get("DOMINO_RUN_ID"):
-    # Inside a Domino execution: the project comes from the variables Domino injects.
-    project = f"{os.environ['DOMINO_PROJECT_OWNER']}/{os.environ['DOMINO_PROJECT_NAME']}"
-    if os.environ.get("DOMINO_API_PROXY"):
-        # With the API proxy the client picks DOMINO_API_HOST and DOMINO_API_PROXY up from
-        # the environment.
-        domino = Domino(project)
-    else:
-        # Without the proxy pass the short-lived token explicitly; otherwise the client
-        # falls back to DOMINO_TOKEN_FILE and then the deprecated DOMINO_USER_API_KEY.
-        domino = Domino(project, auth_token=requests.get("http://localhost:8899/access-token").text.strip())
-else:
-    # Outside Domino: name the project yourself (DOMINO_PROJECT_OWNER and
-    # DOMINO_PROJECT_NAME are not set here) and pass the deployment URL plus a PAT or
-    # service account token.
-    domino = Domino("owner/project-name", host=os.environ["DOMINO_API_HOST"],
-                    auth_token=os.environ["DOMINO_API_TOKEN"])
-```
-
-`domino.authenticate(auth_token=...)` re-authenticates an existing client, which is how a
-long-running script refreshes the short-lived access token. The client is bound to one
-project (`owner/project-name`); `domino.project_id` resolves its id. Most methods call the
-Domino Internal API (`/v4/...`, `/v1/projects/...`) on behalf of that project.
+Client setup (`domino = Domino(...)`) and authentication: [SKILL.md](./SKILL.md#authentication).
+Never pass `api_key=`. The client is bound to one project (`owner/project-name`);
+`domino.project_id` resolves its id. Most methods call the Domino Internal API
+(`/v4/...`, `/v1/projects/...`; non-public routes that may change in a future Domino version) on behalf of that project.
 
 ## Method reference
 
@@ -46,7 +17,7 @@ camelCase names (`runId`, `commitId`).
 
 | Method | Notes |
 |--------|-------|
-| `job_start(command, commit_id=None, hardware_tier_id=None, hardware_tier_name=None, environment_id=None, on_demand_spark_cluster_properties=None, compute_cluster_properties=None, external_volume_mounts=None, title=None, main_repo_git_ref=None, branch=None)` | Returns the created job dict (`id`, `number`, ...). `hardware_tier_name` and `on_demand_spark_cluster_properties` are deprecated in the source; use `hardware_tier_id` and `compute_cluster_properties`. For Git-based projects pass `branch="main"` or `main_repo_git_ref={"type": "branches" or "tags", "value": "..."}` (master adds `"commitId"`); `commit_id` pins the DFS commit, not a git commit. Validates ids and raises `HardwareTierNotFoundException` / `EnvironmentNotFoundException`. |
+| `job_start(command, commit_id=None, hardware_tier_id=None, hardware_tier_name=None, environment_id=None, on_demand_spark_cluster_properties=None, compute_cluster_properties=None, external_volume_mounts=None, title=None, main_repo_git_ref=None, branch=None)` | Returns the created job dict (`id`, `number`, ...). `hardware_tier_name` and `on_demand_spark_cluster_properties` are deprecated in the source; use `hardware_tier_id` and `compute_cluster_properties`. For Git-based projects pass `branch="main"` or `main_repo_git_ref={"type": "branches" or "tags", "value": "..."}` (2.2.0 has no `commitId` type); `commit_id` pins the DFS commit, not a git commit. Validates ids and raises `HardwareTierNotFoundException` / `EnvironmentNotFoundException`. |
 | `job_start_blocking(poll_freq=5, max_poll_time=6000, ignore_exceptions=(RequestException,), **job_start_kwargs)` | Starts, polls `job_status` until `statuses.isCompleted`, prints the log, returns the final status dict. Raises `RunFailedException` only when `statuses.executionStatus == "Failed"`; it returns normally on `Stopped` and `Error`, so check `executionStatus == "Succeeded"` yourself. |
 | `authenticate(api_key=None, auth_token=None, domino_token_file=None, api_proxy=None)` | Re-authenticate an existing client (refresh an expired short-lived token). |
 | `job_status(job_id)` | Dict with `statuses.executionStatus` and `statuses.isCompleted` (plus job fields). |
@@ -57,7 +28,7 @@ camelCase names (`runId`, `commitId`).
 | `get_run_log(run_id, include_setup_log=True)` | Unified setup + stdout text for a job or run id. |
 | `runs_stdout(run_id)` | Stdout only, HTML stripped. |
 
-Legacy v1 Runs API (source docstring: "For new work, prefer job_start()"):
+Legacy v1 Runs API; prefer `job_start()` for new work:
 `runs_start(command, is_direct=False, commit_id=None, title=None, tier=None, publish_api_endpoint=None)`,
 `runs_start_blocking(...)`, `runs_status(run_id)`, `runs_list()`, `get_run_info(run_id)`,
 `run_stop(run_id, save_changes=True)` (logs "Use job_stop method instead" and delegates to it).
@@ -71,7 +42,7 @@ Legacy v1 Runs API (source docstring: "For new work, prefer job_start()"):
 | `files_upload(path, file)` | `path` inside the project (leading `/` added if missing); `file` is an open binary file object. Uploads one file. |
 | `files_download(path, commit_id=None)` | Returns the raw response stream from `blobs_get_v2`; read it with `.read()` / `.data`. **Always pass `commit_id`**: the 2.2.0 default path does `commits_list()[0]["id"]`, but `commits_list()` returns strings (below), so it raises `TypeError`. |
 | `blobs_get_v2(path, commit_id, project_id)` | Public API `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content`. `blobs_get(key)` is deprecated. |
-| `commits_list()` | A list of commit-id **strings**, newest first (`["fb28...", "3c8a..."]`; verified with a read-only call to the legacy `/v1/projects/{owner}/{project}/commits` route on a 6.4.0 deployment, and the SDK's own integration tests pass `commits_list()[0]` straight in as a commit id). `[0]` is the latest commit id. |
+| `commits_list()` | A list of commit-id **strings**, newest first (`["fb28...", "3c8a..."]`, from the legacy `/v1/projects/{owner}/{project}/commits` route). `[0]` is the latest commit id. |
 
 ### Projects, collaborators, project tags
 
@@ -114,7 +85,7 @@ There is no `datasets_snapshot` or `datasets_tag` method. Snapshot and tag route
 | `models_list()` | Model APIs in the project. |
 | `model_publish(file, function, environment_id, name, description, files_to_exclude=None)` | All five leading arguments required. Returns the created Model API JSON. |
 | `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` | |
-| `model_version_export(...)`, `model_version_sagemaker_export(...)`, `model_version_export_status(model_export_id)`, `model_version_export_logs(model_export_id)` | Image export to a registry (`/v4/models`, internal API, may change between Domino versions). Build-then-export sequence and a CI/CD pipeline: [domino-model-delivery](../domino-model-delivery/EXPORT-API.md). |
+| `model_version_export(...)`, `model_version_sagemaker_export(...)`, `model_version_export_status(model_export_id)`, `model_version_export_logs(model_export_id)` | Image export to a registry (`/v4/models`, non-public route; may change in a future Domino version). Build-then-export sequence and a CI/CD pipeline: [domino-model-delivery](../domino-model-delivery/EXPORT-API.md). |
 | `app_publish(unpublish_running_apps=True, hardware_tier_id=None, environment_id=None, external_volume_mount_ids=None, commit_id=None, branch=None, app_id=None)`, `app_unpublish(app_id=None)`, `app_get_status(app_id)`, `app_id` (property) | Legacy app start/stop; new automation uses the Public API in [domino-apps](../domino-apps/API-APPS.md). |
 
 Budgets and billing tags (`budget_*`, `billing_tag*`, `project_billing_tag*`,
@@ -192,7 +163,7 @@ content = domino.files_download("/results/output.csv", commit_id=latest_commit).
 
 ```python
 dataset = domino.datasets_create("training-data", "Preprocessed training data")
-dataset_id = dataset["datasetId"]            # key used by the SDK's own integration tests
+dataset_id = dataset["datasetId"]
 domino.datasets_upload_files(dataset_id, "./processed", target_relative_path="v1")
 for ds in domino.datasets_list(domino.project_id):
     print(ds)
@@ -218,8 +189,7 @@ env = domino.get_environment(env_id)["environment"]     # Public GET: tools, but
 rev_id = env["selectedRevision"]["id"]
 
 # Base image and build configuration are only on the Domino Internal API
-# GET /v4/environments/environmentRevision/{revisionId} (may change between Domino
-# versions). A revision built from another environment has no dockerImage of its own;
+# GET /v4/environments/environmentRevision/{revisionId} (non-public route; may change in a future Domino version). A revision built from another environment has no dockerImage of its own;
 # its base image is under "base".
 details = requests.get(f"{base_url}/v4/environments/environmentRevision/{rev_id}", headers=headers).json()
 current = details["environmentRevision"]
@@ -252,12 +222,11 @@ rev = domino.create_environment_revision(
 `base_url` and `headers` come from the shared setup block in
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication). The route takes an image
 URI, so the new revision is pinned to that URI even when the environment was built "from
-another environment" in the UI. The field names above were read on an internal Domino
-test cluster (6.4.0): the Public `GET` returned `availableTools[].start` where the spec
-says `startScripts`, and `environmentRevision.dockerImage` was present on a Domino
-Standard Environment revision and absent (with `base.dockerImage` set) on revisions built
-from another environment. The `workspace_tools` round trip follows the spec and was not
-live-tested; try it on a scratch environment first. If you would rather start clean, pass
+another environment" in the UI. The field names above are what the server returns: the Public `GET` carries
+`availableTools[].start` where the spec says `startScripts`, and `environmentRevision.dockerImage`
+is present on a Domino Standard Environment revision and absent (with `base.dockerImage` set) on
+revisions built from another environment. The `workspace_tools` round trip follows the spec;
+try it on a scratch environment first. If you would rather start clean, pass
 `base_image` and `workspace_tools` explicitly and accept that nothing else carries over.
 
 ### Publish a Model API
@@ -267,13 +236,13 @@ model = domino.model_publish(
     file="model.py", function="predict", environment_id="<environment-id>",
     name="my-classifier", description="Classification model",
 )
-model_id = model["data"]["_id"]                      # shape used by the SDK's own tests
+model_id = model["data"]["_id"]
 versions = sorted(domino.model_versions_get(model_id)["data"],
-                  key=lambda v: v["metadata"]["number"], reverse=True)   # as in the SDK's examples
+                  key=lambda v: v["metadata"]["number"], reverse=True)
 latest_version_id = versions[0]["_id"]
 ```
 
-`model_publish` posts to `/v1/models` (internal API, may change between Domino versions);
+`model_publish` posts to `/v1/models` (non-public route; may change in a future Domino version);
 the Public API equivalent is `POST /api/modelServing/v1/modelApis`
 ([API-MODELS.md](./API-MODELS.md)).
 

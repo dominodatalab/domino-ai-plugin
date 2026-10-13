@@ -29,7 +29,7 @@ dataset = client.get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
 `get_dataset` takes the Dataset's unique identifier, which the UI prints in the code snippet
 on the Dataset's page (**Data > Datasets** > the Dataset > **Code snippet**); it is not simply
 the display name. From code, `GET /v4/datasetrw/dataset/{datasetId}/connection-snippets`
-(Internal API, may change between Domino versions; verified on 6.4.0) returns the same
+(non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)) returns the same
 snippets as `[{"language": "Python", "snippet": "..."}, ...]`, with the identifier of the form
 `dataset-<name>-<datasetId>` inside. Authentication follows the same order as
 `DataSourceClient` (see SKILL.md).

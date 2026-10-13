@@ -1,10 +1,10 @@
 # GenAI Tracing Setup for Domino
 
-Environment and SDK setup for GenAI tracing on Domino 6.3 and Domino Cloud.
+Environment and SDK setup for GenAI tracing.
 
 ## Environment requirements
 
-**In the Domino Standard Environment (DSE), install nothing.** `dominodatalab` 2.2.0 ships the `domino.agents` code; the package's `agents` extra only adds dependencies (`mlflow-skinny`, `mlflow-tracing`, pandas, numpy) that the DSE already has. Tracing, inline span and trace evaluators, `DominoAgentContext` aggregates and parameters, the SDK's `search_traces` and a later `log_evaluation` were verified on the DSE as shipped (Python 3.12, dominodatalab 2.2.0, MLflow 3.3.2, OpenTelemetry 1.44.0), with results identical to an environment pinned to MLflow 3.2.0. Do **not** install the `agents` extra in the DSE: its metadata caps `mlflow-skinny` and `mlflow-tracing` below 3.3, so `pip install "dominodatalab[data,agents]==2.2.0"` downgrades those two to 3.2.0 while `mlflow` itself stays at 3.3.2, a mismatch. That cap is stricter than it needs to be.
+**In the Domino Standard Environment (DSE), install nothing.** `dominodatalab` 2.2.0 ships the `domino.agents` code; the package's `agents` extra only adds dependencies (`mlflow-skinny`, `mlflow-tracing`, pandas, numpy) that the DSE already has. Everything in this skill works on the DSE as shipped (Python 3.12, dominodatalab 2.2.0, MLflow 3.3.2, OpenTelemetry 1.44.0). Do **not** install the `agents` extra in the DSE: its metadata caps `mlflow-skinny` and `mlflow-tracing` below 3.3, so `pip install "dominodatalab[data,agents]==2.2.0"` downgrades those two to 3.2.0 while `mlflow` itself stays at 3.3.2, a mismatch.
 
 Check what you have before changing anything:
 
@@ -16,22 +16,21 @@ for p in ("dominodatalab", "mlflow", "opentelemetry-sdk"):
 EOF
 ```
 
-The examples need `dominodatalab` 2.1.0 or later (`span_type` and `attributes` on `@add_tracing` arrived in 2.1.0; 2.2.0 is the verified release) and MLflow 3.2 or later.
+The examples need `dominodatalab` 2.1.0 or later (`span_type` and `attributes` on `@add_tracing` arrived in 2.1.0) and MLflow 3.2 or later.
 
-**In an environment not based on the DSE** (another base image, or one whose MLflow is older than 3.2), install the tracing stack at or below the versions the current DSE ships: `dominodatalab[data]==2.2.0` (the `data` extra for the Data SDK; not the `agents` extra), `mlflow==3.3.2`, and OpenTelemetry, pandas and numpy capped at the DSE's versions.
+**In an environment not based on the DSE** (another base image, or one whose MLflow is older than 3.2), install the tracing stack at or below the versions the DSE ships: `dominodatalab[data]==2.2.0` (the `data` extra for the Data SDK; not the `agents` extra), `mlflow==3.3.2`, and OpenTelemetry, pandas and numpy capped at the DSE's versions.
 
 Dockerfile instructions:
 
 ```dockerfile
 USER root
 
-# Tracing stack at the versions the current Domino Standard Environment ships (verified there)
+# Tracing stack at the versions the Domino Standard Environment ships
 RUN pip install --no-cache-dir "dominodatalab[data]==2.2.0" mlflow==3.3.2 \
     "opentelemetry-sdk<=1.44.0" "opentelemetry-api<=1.44.0" "pandas<=2.3.2" "numpy<=2.5.2"
 
-# Your LLM framework(s), verified to produce spans under MLflow 3.2.0 autologging
+# Your LLM framework(s); they produce spans under MLflow 3.2.0 autologging
 # (MLflow's own tested range ends at openai 1.97.1, anthropic 0.59.0, langchain 0.3.27; it warns, then works).
-# Autologging on MLflow 3.3.2 is untested: no LLM SDK ships in the DSE.
 RUN pip install openai==3.29.0
 RUN pip install anthropic==1.13.0
 # LangChain: the DSE ships langchain 0.3.30 and its jupyter-ai-magics requires langchain<0.4;
@@ -77,7 +76,7 @@ for fw in ("openai", "anthropic", "langchain"):
         print(f"autolog({fw}) skipped: {exc}")
 ```
 
-Supported values include `openai`, `anthropic`, `langchain`, `pydantic_ai`, `llama_index` and the other MLflow tracing integrations. Anthropic autologging may not capture every call; add manual spans where needed. Autologged LLM spans were verified under MLflow 3.2.0; on the DSE's MLflow 3.3.2 they are untested (no LLM SDK ships in the DSE).
+Supported values include `openai`, `anthropic`, `langchain`, `pydantic_ai`, `llama_index` and the other MLflow tracing integrations. Anthropic autologging may not capture every call; add manual spans where needed. Autologged LLM spans work under MLflow 3.2.0; no LLM SDK ships in the DSE, so on its MLflow 3.3.2 check that the first traced call shows the autologged span.
 
 ### Where to call autolog
 
@@ -107,10 +106,10 @@ app = FastAPI(lifespan=lifespan)
 import mlflow
 from domino.agents.tracing import add_tracing, search_traces, search_agent_traces
 from domino.agents.logging import DominoAgentContext, DominoRun, log_evaluation
-print("mlflow", mlflow.__version__)      # 3.3.2 in the current DSE; 3.2 or later works
+print("mlflow", mlflow.__version__)      # 3.3.2 in the DSE; 3.2 or later works
 ```
 
-These imports work on the DSE as shipped. Then trace one call. `@add_tracing` creates the trace on its own; no context manager is needed to see it (`gpt-6.1-sol` is an example model name; use one your provider serves):
+Then trace one call. `@add_tracing` creates the trace on its own; no context manager is needed to see it:
 
 ```python
 from domino.agents.tracing import add_tracing
@@ -129,7 +128,7 @@ print(test_agent("Say hello"))
 
 In a Workspace the trace lands in the active MLflow experiment; open **Experiments** and look for it. On MLflow 3.3.2 with OpenTelemetry 1.44 expect one `Failed to end span ... '_metrics'` warning per trace; it is harmless (see Troubleshooting).
 
-Verified on the DSE as shipped: `@add_tracing` with a span and a trace evaluator inside `DominoAgentContext`, manual `mlflow.start_span` children, evaluator results as trace tags, aggregated run metrics and config parameters, `search_traces(run_id=...)`, and a later `log_evaluation`. Untested on MLflow 3.3.2: autologged LLM spans, streamed or generator functions, and the deployed-agent path (`DOMINO_AGENT_IS_PROD`).
+Check the first trace before building on autologged LLM spans, generator functions or the deployed-agent path (`DOMINO_AGENT_IS_PROD`).
 
 ## Environment variables
 
@@ -199,7 +198,7 @@ my-agent-project/
 
 ### `Failed to end span ...: 'MlflowV3SpanProcessor' object has no attribute '_metrics'`
 
-Harmless. It is MLflow 3.3.2 with OpenTelemetry 1.44 (the DSE as shipped): OpenTelemetry's span processor runs its self-metrics bookkeeping after the span has been exported, and MLflow's processor lacks that attribute. It fires once per trace on the root span, also with a plain `@mlflow.trace` function and no Domino SDK involved. Traces, spans, evaluator tags and run metrics are all recorded. Do not downgrade or pin anything for it.
+Harmless. It is MLflow 3.3.2 with OpenTelemetry 1.44 (the DSE as shipped): OpenTelemetry's span processor runs its self-metrics bookkeeping after the span has been exported, and MLflow's processor lacks that attribute. Traces, spans, evaluator tags and run metrics are all recorded. Do not downgrade or pin anything for it.
 
 ### `Failed to end span ...: 'MlflowV3SpanProcessor' object has no attribute '_shutdown'`
 

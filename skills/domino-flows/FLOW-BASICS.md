@@ -1,6 +1,6 @@
 # Domino Flows: definitions, configuration, launching, monitoring
 
-Applies to Domino 6.3 and Domino Cloud. Sources: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows, `.../launch-flows`, `.../monitor-flows`, `.../reproducibility-flows`, `.../advanced-flows` (the 6.3 pages are identical).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows, `.../launch-flows`, `.../monitor-flows`, `.../reproducibility-flows`, `.../advanced-flows` (the 6.3 pages are identical).
 
 ## Two ways to declare a task
 
@@ -41,7 +41,7 @@ How to consume a task result depends on how many outputs the task declares, for 
 - **One output**: the call returns a single promise. Pass it as is (`value=prep_results`, `return train_results`). Do not write `prep_results["processed_data"]`: it compiles, but flytekit binds it as a lookup *inside* the output value (an attribute path on the file), not as selecting the output.
 - **Two or more outputs**: the call returns a namedtuple of promises. Select by attribute (`res.train`, `res.test`) or unpack (`train, test = split(...)`). String indexing (`res["train"]`) fails at compile time with `TypeError: tuple indices must be integers or slices, not str`.
 
-The docs.domino.ai define-flows page shows string indexing (`data_prep_results["processed_data"]`); that form fails for multi-output tasks and binds the wrong thing for single-output ones (verified with `flytekit` 1.15 and `flytekitplugins-dominojob` 0.18 on an internal Domino test cluster). Passing one task's output into another creates the dependency edge; tasks without a data dependency run in parallel. A `@workflow` function may return nothing, one output, or a tuple. `@workflow` compiles lazily, so call `my_workflow.compile()` in a Workspace to surface these errors before `pyflyte run`.
+The define-flows docs page shows string indexing (`data_prep_results["processed_data"]`); do not copy it. Passing one task's output into another creates the dependency edge; tasks without a data dependency run in parallel. A `@workflow` function may return nothing, one output, or a tuple. `@workflow` compiles lazily, so call `my_workflow.compile()` in a Workspace to surface these errors before `pyflyte run`.
 
 ## Types
 
@@ -127,7 +127,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/hardwaretiers/v1
 curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/environments/beta/environments?limit=100"   # id, name
 ```
 
-Dataset ids and snapshot versions come from the Dataset page in the project or the datasets API (`domino-datasets`). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header. Inside a Workspace the plugin can also print the valid values for the current project in one call: `from flytekitplugins.domino.helpers import retrieve_valid_properties; retrieve_valid_properties()` (it reads the `/v4/jobs/.../retrieveValidProperties` route through the API proxy, a Domino Internal API route that may change between Domino versions, and prints environments with their revisions and the other job properties; `page_size` raises the number of environments listed).
+Dataset ids and snapshot versions come from the Dataset page in the project or the datasets API (`domino-datasets`). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header. Inside a Workspace the plugin can also print the valid values for the current project in one call: `from flytekitplugins.domino.helpers import retrieve_valid_properties; retrieve_valid_properties()` (it reads the `/v4/jobs/.../retrieveValidProperties` route through the API proxy, a non-public route that may change in a future Domino version ([route types](../domino-api-intro/SKILL.md#route-types)), and prints environments with their revisions and the other job properties; `page_size` raises the number of environments listed).
 
 ## Launch
 
@@ -138,7 +138,22 @@ pyflyte run --remote --name nightly-2026-10-12 --tag team=risk workflow.py train
 
 Run from a Workspace terminal or as a Job command on an environment built from the Domino Standard Environment 6.0 or later. The flow is registered and started immediately; any change to `workflow.py` registers a new flow version on the next launch, and runs are grouped by version in the UI. Run names are unique per project. Commit the flow code: Domino stores the serialized definition, not its source.
 
-Re-run from the UI (**Flows** > flow > version > run > **Re-run**): new name, cache overwrite choice, same or new inputs, and per-task overrides of environment, hardware tier or Git reference. **Recover** resumes a run after a transient failure (timeout, capacity, spot pre-emption, server error), reusing finished outputs. **Rerun Node** re-executes one node with new inputs. All three need an unchanged definition; code changes go through the CLI.
+## Re-run, recover, stop and archive
+
+UI (**Flows** > flow > version > run): **Re-run** starts a new run with a new name, a cache-overwrite choice, the same or new inputs, and per-task overrides of environment, hardware tier or Git reference; **Recover** resumes a run after a transient failure (timeout, capacity, spot pre-emption, server error), reusing finished outputs; **Rerun Node** re-executes one node with new inputs. All three use the run's registered definition; code changes go through the CLI.
+
+The same actions are Flyte API calls, documented at https://docs.domino.ai/cloud/reference/api/flyte/flyte-native-api (the routes below) and https://docs.domino.ai/cloud/reference/api/flyte/flyte-extensions-api (artifact routes). Run them from inside a Workspace or Job: `$FLYTE_PLATFORM_URL_HTTP` (`http://127.0.0.1:7180`) takes the REST routes with no auth header, and `$FLYTE_PLATFORM_URL` is the gRPC address `pyflyte` uses. From outside Domino, `<deployment URL>/flows/api/v1/...` accepts only the browser login and rejects Domino API tokens, so script these actions as a Job or from a Workspace terminal. The Flyte `project` is the Domino project id (`$DOMINO_PROJECT_ID`, also exported as `$FLYTE_DEFAULT_PROJECT`), the `domain` is `development`, and `name` is the run name shown in the UI.
+
+| Action | Call (base `$FLYTE_PLATFORM_URL_HTTP`) |
+|--------|----------------------------------------|
+| Inspect a run | `GET /api/v1/executions/{project}/development/{name}`: `spec.launchPlan` identifies what it ran, `closure.phase` is `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED`, `ABORTED` or `TIMED_OUT`; inputs from `GET /api/v1/data/executions/{project}/development/{name}` (`fullInputs`) |
+| Re-launch with the same inputs | `POST /api/v1/executions/relaunch` with `{"id": {"project", "domain", "name"}, "name": "<new run name>", "overwrite_cache": false}` |
+| Re-run with new inputs | `POST /api/v1/executions` with `{"project", "domain", "name": "<new run name>", "spec": {"launchPlan": <the run's spec.launchPlan>, "overwrite_cache": false}, "inputs": {"literals": {...}}}`, literals in the shape `fullInputs` returns |
+| Recover | `POST /api/v1/executions/recover` with `{"id": {"project", "domain", "name"}}`; finished nodes are reused, the failed ones run again |
+| Stop | `DELETE /api/v1/executions/{project}/development/{name}` (optional `{"cause": "..."}`); the run ends `ABORTED` |
+| Archive or restore | `PUT /api/v1/executions/{project}/development/{name}` with `{"state": "EXECUTION_ARCHIVED"}` or `{"state": "EXECUTION_ACTIVE"}` |
+
+Omit `name` on re-launch or recover and Flyte generates one. Each create call returns the new run's `id` (`{project, domain, name}`); poll `GET /api/v1/executions/{project}/development/{name}` until `closure.phase` is terminal.
 
 ## Monitor
 
@@ -146,14 +161,14 @@ Re-run from the UI (**Flows** > flow > version > run > **Re-run**): new name, ca
 - Flow details: run list per version, **Graph** of the structure, run or archive.
 - Run details: nodes with status, Graph view, **Launch Inputs**, rerun or archive.
 - Node details: versioned inputs and outputs (previews need a typed file), a link to the Domino Job, execution logs.
-- Flyte console: `<deployment URL>/flows/console/select-project` (timeline view, blob URIs of outputs); some native Flyte actions are not supported.
+- Flyte console: `<deployment URL>/flows/console/select-project` (timeline view, blob URIs of outputs); its **Relaunch** and **Recover** are the API calls above.
 - Jobs started by a flow show the flow and task in the Job details and cannot be re-run from the Jobs UI.
 
 ## Reproducibility checklist
 
 Every launch serializes the flow structure, each task's job config (commit, environment revision, tier, snapshots) and the inputs; identical definitions reuse the version. For deterministic reruns:
 
-1. Replace `use_latest=True` with a complete config: `CommitId`, `MainRepoGitRef` pinned to a commit (Git-based projects), `EnvironmentId`, `EnvironmentRevisionSpec`, `HardwareTierId`, `VolumeSizeGiB`, `DatasetSnapshots`, `NetAppVolumeSnapshots` and `ExternalVolumeMountIds` (empty lists where unused); the constructor raises if any is missing. Example 3 in [EXAMPLES.md](./EXAMPLES.md) shows the full set.
+1. Replace `use_latest=True` with a complete config (the field list in "Complete config or `use_latest`" above); Example 3 in [EXAMPLES.md](./EXAMPLES.md) shows the full set.
 2. Read external data from a pinned Dataset or NetApp Volume snapshot (`DatasetSnapshots`, `NetAppVolumeSnapshots`); for anything else (a Data Source table, a bucket), snapshot it in a first task that copies it to an output.
 3. Write results only as outputs, never to a shared mutable location.
 

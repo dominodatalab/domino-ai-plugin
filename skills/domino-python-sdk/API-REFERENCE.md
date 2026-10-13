@@ -1,17 +1,14 @@
 # Domino REST API reference
 
-Route index for the Domino Public API, verified against
+Route index for the Domino Public API as published at
 https://docs.domino.ai/api-specs/6.3/public-api.json and
-https://docs.domino.ai/api-specs/cloud/public-api.json (October 2026). Request bodies with
+https://docs.domino.ai/api-specs/cloud/public-api.json. Request bodies with
 their required fields live in the per-area files; this file is the map.
 
 ## Authentication and base URL
 
 Rules and the shared `base_url` / `headers` setup block:
-[domino-api-intro](../domino-api-intro/SKILL.md#authentication). In a run, prefer
-`$DOMINO_API_PROXY` with no header; otherwise `$DOMINO_API_HOST` with a bearer token from
-`http://localhost:8899/access-token`; outside Domino, the deployment URL with a PAT or
-service account token. Legacy API keys are deprecated.
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ```python
 response = requests.get(f"{base_url}/api/projects/beta/projects", headers=headers,
@@ -21,8 +18,8 @@ projects = response.json()["projects"]
 
 ## Route index
 
-Routes marked **Cloud** exist only in the Cloud (6.4.0) spec; routes marked **6.3** only in
-the 6.3 spec. Everything else is in both.
+Routes marked **Cloud** exist only on Domino Cloud (6.4.0 and later); routes marked
+**6.3** only on Domino 6.3.
 
 ### Users, auth, admin ([API-ADMIN.md](./API-ADMIN.md))
 
@@ -149,14 +146,14 @@ no create route in the Public API. See [domino-workspaces](../domino-workspaces/
 |------|---------|
 | 200 | Success. Job start, project create and most creates return 200 with the object. |
 | 201 | Created (taxonomy creates). |
-| 204 | No content (taxonomy deletes; remotefs `delete-volume`, `delete-snapshot` and tag delete). The remotefs attach, detach, mark, restore-volume and restore-snapshot RPCs are specified as 204 but returned 200 with a record live. |
+| 204 | No content (taxonomy deletes; remotefs `delete-volume`, `delete-snapshot` and tag delete). The remotefs attach, detach, mark, restore-volume and restore-snapshot RPCs are specified as 204 but return 200 with a record. |
 | 400, 401, 403, 404, 409, 500 | See [ERRORS.md](../domino-api-intro/ERRORS.md). |
 
 ### Error body
 
 Read whichever of `errors`, `error` and `message` is present: the specs declare
 `{"error"}` for most Nucleus 4xx/5xx, `{"code", "message"}` for 401/403 and
-`{"errors", "requestId"}` for a few routes (the shape live 400/500 bodies have used);
+`{"errors", "requestId"}` for a few routes;
 taxonomy and NetApp return `{"message"}`. Details: [ERRORS.md](../domino-api-intro/ERRORS.md#error-bodies).
 
 ### Pagination
@@ -174,7 +171,7 @@ returns `metadata.nextPageToken`. Details: [LIMITS.md](../domino-api-intro/LIMIT
 | `/api/<service>/v1`, `/v2` | Stable Public API |
 | `/api/<service>/beta` | Public API, beta: responses carry `metadata.notices` and fields may change |
 | `/remotefs/v1`, `/datasetrw`, `/model-monitor` | Public API served by separate services |
-| `/v4/...`, `/v1/projects/...` | Domino Internal API. Not in the published specs; documented per deployment under `https://<domino-domain>/docs/openapi/openapi-internal.json`. Label any use "internal API, may change between Domino versions". |
+| `/v4/...`, `/v1/projects/...` | Domino Internal API. Not in the published specs; documented per deployment under `https://<domino-domain>/docs/openapi/openapi-internal.json`. Label any use `(non-public route; may change in a future Domino version)`; see [domino-api-intro](../domino-api-intro/SKILL.md#route-types). |
 
 Field names differ between surfaces: `POST /api/jobs/v1/jobs` takes `runCommand` and
 `hardwareTier`; python-domino `job_start` takes `command` and `hardware_tier_id`; the

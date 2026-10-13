@@ -1,6 +1,6 @@
 # VS Code Workspaces in Domino
 
-Applies to Domino 6.3 and Domino Cloud. Launching, persistence, SSH and the session API are in [SKILL.md](./SKILL.md).
+Launching, persistence, SSH and the session API are in [SKILL.md](./SKILL.md).
 
 Domino serves VS Code in the browser with code-server. The Domino Standard Environment includes it with the Python and Jupyter tooling and the AI coding-assistant extensions pre-installed.
 
@@ -14,21 +14,7 @@ Resume a stopped Workspace with **Start** or `POST /api/projects/v1/projects/{pr
 
 ## Extensions
 
-Extensions installed from the Extensions panel land in `$HOME/.local/share/code-server/extensions` and disappear on restart unless **Home Directory Persistence** is on. To make them part of the environment (docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/launch-a-workspace/launch-a-vs-code-workspace):
-
-- **Pre Run Script** of the environment (installs on every start; the script runs as root, so use the `ubuntu` home explicitly):
-  ```shell
-  code-server --install-extension <publisher.extension> --extensions-dir /home/ubuntu/.local/share/code-server/extensions
-  chown -R ubuntu:ubuntu /home/ubuntu/.local/share/code-server
-  ```
-- **Dockerfile Instructions** (baked into the image; runs as root, hand ownership back to `ubuntu`):
-  ```dockerfile
-  USER root
-  RUN code-server --install-extension <publisher.extension> --extensions-dir /home/ubuntu/.local/share/code-server/extensions \
-      && chown -R ubuntu:ubuntu /home/ubuntu/.local/share/code-server
-  USER ubuntu
-  ```
-  Extensions not in the open marketplace can be downloaded as `.vsix` and installed with `code-server --install-extension /tmp/x.vsix --force`.
+Extensions installed from the Extensions panel land in `$HOME/.local/share/code-server/extensions` and disappear on restart unless **Home Directory Persistence** is on. To make them part of the environment, install them from its **Pre Run Script** or **Dockerfile Instructions** (`code-server --install-extension ...`, also for a downloaded `.vsix`): [WORKSPACE-TOOLS.md](../domino-environments/WORKSPACE-TOOLS.md#vs-code).
 
 ## Settings that survive restarts
 
@@ -69,7 +55,7 @@ Cursor users import the Remote-SSH extension the same way. Custom TLS CAs must b
 
 ## Coding assistants
 
-The DSE pre-installs AI coding-assistant extensions and CLIs; sign in once in the extension panel (copy the login URL manually if the link does not open) and keep **Home Directory Persistence** on so the login survives restarts. Where an administrator has installed the LLM Gateway 2.0 Extension (early access), ask the user which they want: route the assistant's model calls through the gateway ([CODING-ASSISTANTS.md](../domino-llm-gateway/CODING-ASSISTANTS.md)) so they fall under its grants and budgets, or keep the vendor sign-in above. Do not switch to the gateway unless they choose it. Details and troubleshooting: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+The DSE pre-installs AI coding-assistant extensions and CLIs; sign in once in the extension panel (copy the login URL manually if the link does not open) and keep **Home Directory Persistence** on so the login survives restarts. Where an administrator has installed the LLM Gateway 2.0 Extension, offer to route the assistant through it, never by default ([CODING-ASSISTANTS.md](../domino-llm-gateway/CODING-ASSISTANTS.md)). Details and troubleshooting: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
 
 ## Troubleshooting
 

@@ -12,15 +12,9 @@ Programmatic lifecycle for Domino endpoints (**Model APIs** in the API) and regi
 
 ## Authentication and base URL
 
-https://docs.domino.ai/cloud/reference/api/domino-api-authentication. Legacy API keys are deprecated; do not use them.
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication). Legacy API keys are deprecated; do not use them.
 
-| Context | Base | Authorization |
-|---------|------|---------------|
-| In a run, `DOMINO_API_PROXY` set | `$DOMINO_API_PROXY` | none (the proxy adds the token) |
-| In a run, no proxy | `$DOMINO_API_HOST` | `Bearer` from `http://localhost:8899/access-token` |
-| Outside Domino | deployment URL | `Bearer` PAT or service-account token |
-
-Smoke test: `GET /api/modelServing/v1/modelApis?limit=1` returns 200.
+Connectivity check: `GET /api/modelServing/v1/modelApis?limit=1` returns 200.
 
 ## Three surfaces (do not mix them)
 
@@ -40,25 +34,25 @@ Management calls go to the base above under `/api/...`. Predictions go to the de
 
 1. Train and, optionally, register (`POST /api/registeredmodels/v2`, or the MLflow client).
 2. `POST /api/modelServing/v1/modelApis` with `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`, `environmentVariables`, `version{projectId, source, logHttpRequestResponse, monitoringEnabled}`; `source.type` is `File` (`file`, `function`) or `Registry` (`registeredModelName`, `registeredModelVersion`). Optional `hardwareTierId`, `replicas`.
-3. Poll the version: `GET .../modelApis/{modelApiId}/versions/{modelApiVersionId}` until `deployment.status` is `Running` and `isPending` is false (`deployment` is absent before the first deployment; treat absence as pending), then confirm `activeVersion.id` on the Model API. `Running` is not health: fetch `.../instanceLogs?maxResults=3000` (no `tail`), keep `model-` container lines, expect `WSGI app 0 (mountpoint='') ready` (`no app loaded. GAME OVER` is a crash loop), then one test prediction. Sync or commit before step 2 and pin `version.commitId`; the head lags uploads by seconds.
+3. Poll the version: `GET .../modelApis/{modelApiId}/versions/{modelApiVersionId}` until `deployment.status` is `Running` and `isPending` is false (absent `deployment` means pending), then confirm `activeVersion.id` on the Model API. `Running` is not health: fetch `.../instanceLogs?maxResults=3000` (no `tail`), keep `model-` container lines, expect `WSGI app 0 (mountpoint='') ready` (`no app loaded. GAME OVER` is a crash loop), then one test prediction. Sync or commit before step 2 and pin `version.commitId`; the head lags uploads by seconds.
 4. New code: `POST .../modelApis/{modelApiId}/versions` (same `version` fields plus `shouldDeploy: true`). Poll that version, not the Model API; the old one stays active until the new one runs.
-5. Change replicas, hardware tier, name or environment: `PUT .../modelApis/{modelApiId}` (`name`, `description`, `replicas`, `environmentId` required; send current values back, including `resourceQuotaId`). Scale changes apply after an endpoint restart (UI; no API restart, see LIFECYCLE.md).
-6. Retire: stop the running version first (UI **Versions** > **Actions**, or `POST /v4/models/{modelApiId}/{versionId}/stopModelDeployment` with `{}`; internal API, may change between Domino versions), then `DELETE .../modelApis/{modelApiId}`: 500 while a version runs; after success `GET` is 404 and the endpoint leaves all lists.
+5. Change replicas, hardware tier, name or environment: `PUT .../modelApis/{modelApiId}` (`name`, `description`, `replicas`, `environmentId` required; send current values back, including `resourceQuotaId`). Scale changes need a restart: UI, or internal `stopModelDeployment` then `startModelDeployment` (LIFECYCLE.md).
+6. Retire: stop the running version first (UI **Versions** > **Actions**, or `POST /v4/models/{modelApiId}/{versionId}/stopModelDeployment` with `{}`; non-public route; may change in a future Domino version), then `DELETE .../modelApis/{modelApiId}`: 500 while a version runs; after success `GET` is 404 and the endpoint leaves all lists.
 7. Verify each mutation with a `GET`; 2xx means accepted, not applied.
 
 Logs: `GET .../versions/{modelApiVersionId}/buildLogs`, `exportLogs`, `instanceLogs`.
 
-`/api/modelServing/v1/modelDeployments` (with `start`, `stop`, `credentials`, `logs`, `versions`) is a separate entity: a registered model deployed onto an admin-defined external deployment target, SageMaker only today. It is not a Model API; see [domino-model-delivery](../domino-model-delivery/EXPORT-TARGETS.md#amazon-sagemaker).
+`/api/modelServing/v1/modelDeployments` (with `start`, `stop`, `credentials`, `logs`, `versions`) is a separate entity: a registered model deployed onto an admin-defined external deployment target, SageMaker only. It is not a Model API; see [domino-model-delivery](../domino-model-delivery/EXPORT-TARGETS.md#amazon-sagemaker).
 
 ## Registered models
 
-- List: `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register: `POST /api/registeredmodels/v2` (`modelName`, `modelSource{sourceType, mlflowSource|huggingFaceSource}`, `create`). `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated since 6.2.1.
-- Get and patch: `GET|PATCH /api/registeredmodels/v1/{modelName}` (`PATCH` takes `description` and `discoverable`; `GET` returns neither `discoverable` nor aliases, verified on Cloud 6.4); versions at `/api/registeredmodels/v1/{modelName}/versions/{version}`; endpoints serving a version at `.../versions/{version}/modelapis`.
+- List: `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register: `POST /api/registeredmodels/v2` (`modelName`, `modelSource{sourceType, mlflowSource|huggingFaceSource}`, `create`). `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated.
+- Get and patch: `GET|PATCH /api/registeredmodels/v1/{modelName}` (`PATCH` takes `description` and `discoverable`; `GET` returns neither `discoverable` nor aliases); versions at `/api/registeredmodels/v1/{modelName}/versions/{version}`; endpoints serving a version at `.../versions/{version}/modelapis`.
 - Aliases and tags are MLflow features: the MLflow client on `MLFLOW_TRACKING_URI`, or `/api/2.0/mlflow/registered-models/...` on the deployment URL; see `domino-experiment-tracking`.
 
 ## Prediction auth
 
-Restricted **sync** endpoints require HTTP Basic with the endpoint access token as username and password. **Async** endpoints require `Authorization: Bearer <token>`. Unrestricted endpoints need neither. Tokens come from the endpoint's **Settings** > **Invocation**. Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization.
+Restricted **sync** endpoints require HTTP Basic with the endpoint access token as username and password. **Async** endpoints require `Authorization: Bearer <token>`. Unrestricted endpoints need neither. Tokens: the user's, or create one (`domino-model-endpoints` DEPLOY-ENDPOINT.md); never print it. Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization.
 
 ## Which path applies
 
@@ -66,7 +60,7 @@ Restricted **sync** endpoints require HTTP Basic with the endpoint access token 
 curl -s "$DOMINO_API_HOST/version"   # "version": "6.3.x" self-managed; "6.4.x" or later on Domino Cloud
 ```
 
-Domino Cloud adds `/api/modelServing/beta/modelApis/{modelApiId}/visibility` (`Public`, `Discoverable`, `Private`), `.../access` and `.../collaborators` (roles `Owner`, `Editor`, `Operator`, `Viewer`); absent from the 6.3 spec, where you set them in the UI (**Settings** > **Access and Sharing**). Everything else is in both specs.
+Domino Cloud adds `/api/modelServing/beta/modelApis/{modelApiId}/visibility` (`Public`, `Discoverable`, `Private`), `.../access` and `.../collaborators` (roles `Owner`, `Editor`, `Operator`, `Viewer`); not on 6.3, where you set them in the UI (**Settings** > **Access and Sharing**).
 
 ## Related
 

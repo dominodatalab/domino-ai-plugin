@@ -15,9 +15,8 @@ All examples assume `BASE` and `H` from [SKILL.md](./SKILL.md#configuration).
 | `/property-values/{entityType}/{entityId}` | DELETE | Remove every stored value |
 
 `entityType` is one of the target's entity types ([SKILL.md](./SKILL.md#which-path-applies)).
-All three take a `version` query parameter whose rule, per the spec, is: "Required for
-`app_version`; omitted for all other types (`model_version` is referenced by its version
-UUID)".
+All three take a `version` query parameter: required for `app_version`, omitted for all
+other types (`model_version` is referenced by its version UUID).
 
 ## Versioned entities
 
@@ -113,10 +112,9 @@ curl -s -X PATCH -H "$H" -H "Content-Type: application/json" \
 ```
 
 Values on a template's Datasets, NetApp Volumes and Apps carry over to the corresponding
-assets in the new project. `POST /rpc/copy-property-values` is an internal,
-service-account-only route that replaces the target's values
-([BULK-OPS.md](./BULK-OPS.md#copy-routes-internal-service-account-only)); to copy values
-between two existing entities as a user, `GET` the source and `PATCH` the target.
+assets in the new project. To copy values between two existing entities, `GET` the
+source and `PATCH` the target; `POST /rpc/copy-property-values` is not a user route
+([BULK-OPS.md](./BULK-OPS.md#copy-routes-internal-service-account-only)).
 
 ## Delete all values
 

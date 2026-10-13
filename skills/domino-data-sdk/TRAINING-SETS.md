@@ -37,7 +37,7 @@ version = ts.create_training_set_version(
     monitoring_meta=model.MonitoringMeta(
         timestamp_columns=["event_ts"],
         categorical_columns=["churned", "plan"],  # a classification target must be listed here
-        ordinal_columns=["tier"],                 # currently skipped by Model Monitoring
+        ordinal_columns=["tier"],                 # not used by Model Monitoring
     ),
     meta={"source": "warehouse", "quarter": "2026Q3"},
 )
@@ -96,7 +96,7 @@ v.meta = {**v.meta, "status": "final"}
 v = ts.update_training_set_version(v)
 ```
 
-The attribute is `meta` (the docs page writes `metadata`; the dataclass has no such field).
+The attribute is `meta`, not `metadata`.
 
 ## Delete
 
@@ -112,10 +112,9 @@ ts.delete_training_set("old-set")
 ## Authentication
 
 The client reads `DOMINO_API_HOST` (or `DOMINO_USER_HOST`) for the host and authenticates with
-`DOMINO_API_PROXY`, then `DOMINO_TOKEN_FILE`, then the deprecated `DOMINO_USER_API_KEY`; all are
-injected in executions. It has no `token=` parameter. Domino endpoints receive none of these;
-the docs' workaround sets `DOMINO_USER_API_KEY`, which is the deprecated legacy key, so load
-training data for an endpoint at build time or from a Dataset instead.
+`DOMINO_API_PROXY`, then `DOMINO_TOKEN_FILE`, then `DOMINO_USER_API_KEY` (deprecated); all are
+injected in executions. It has no `token=` parameter. Domino endpoints receive none of these,
+so load training data for an endpoint at build time or from a Dataset instead.
 
 ## Errors
 

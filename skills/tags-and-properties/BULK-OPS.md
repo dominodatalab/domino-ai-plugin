@@ -22,11 +22,10 @@ curl -s -X POST -H "$H" -H "Content-Type: application/json" \
 ```
 
 Both routes take `{"ids": [...]}` (`ids` required, at least one id) and return
-`{"deletedCount": N}`, per both published specs. Deleting a tag removes its entity
-assignments ("Delete a tag and unassign all its entity assignments"). Deleting a
-namespace removes its tags, but the single-namespace delete is specified to fail while
-any of those tags still has assignments; expect the bulk route to apply the same rule
-and untag (or bulk-delete the tags) first. There is no undo, so confirm with the user and
+`{"deletedCount": N}`. Deleting a tag removes its entity assignments. Deleting a
+namespace removes its tags, but fails while any of those tags still has assignments
+([API-TAGS.md](./API-TAGS.md#namespace-delete-fails)); expect the bulk route to apply
+the same rule and untag (or bulk-delete the tags) first. There is no undo, so confirm with the user and
 prefer `status: deprecated` on shared deployments.
 
 ## Merge tags
@@ -40,20 +39,19 @@ done
 ```
 
 `sourceTagIds` and `targetTagId` are required. Every assignment on the source tags moves
-to the target and the source tags are deleted; the docs state merging cannot be undone.
-Merge **one source tag per call**: on an internal Domino test cluster (6.4.0), a single
-call with two source tags that sat on the same entity returned `500 failed to merge
-tags`, while one source at a time succeeded (`reassignedEntities` is 0 when the entity
+to the target and the source tags are deleted; merging cannot be undone.
+Merge **one source tag per call**: a single call with two source tags that sit on the same
+entity returns `500 failed to merge tags`, while one source at a time succeeds (`reassignedEntities` is 0 when the entity
 already carried the target).
 
 ## Copy routes (internal, service-account only)
 
 `POST /rpc/copy-entity-tags` and `POST /rpc/copy-property-values` take
-`{"entityType", "sourceEntityId", "targetEntityId"}` (all required, same type). Both
-specs describe them as "Internal, service-account only" and say they copy the source's
-assignments **replacing the target's existing tags** (or values). Do not offer them as a
+`{"entityType", "sourceEntityId", "targetEntityId"}` (all required, same type). The
+spec marks them "Internal, service-account only"; they copy the source's assignments
+**replacing the target's existing tags** (or values). Do not offer them as a
 user workflow: with a user token both return
-`403 insufficient permissions: requires service account` (verified live), and a
+`403 insufficient permissions: requires service account`, and a
 service-account call against an entity that already has tags or values wipes them. To give a new project the same
 classification as an existing one, create it from a Project Template (tags and property
 values carry over) or re-apply the tags with `POST /rpc/tag-entity`.

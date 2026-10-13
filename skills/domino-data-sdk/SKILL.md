@@ -11,8 +11,8 @@ Applies to Domino 6.3 and Domino Cloud.
 `dominodatalab-data` is the Python half of the Domino Data API. It talks to the Data Source
 proxy that Domino injects into every execution, so the Data Source credentials stay with the
 Data Source, managed by Domino, and never appear in code. Docs: https://docs.domino.ai/cloud/reference/api/data_api (same path under
-`/6.3/`). Source: https://github.com/dominodatalab/domino-data. Both docs sets require
-`dominodatalab-data>=6.7.4`; 6.7.4 is the current PyPI release and needs Python 3.10 or later.
+`/6.3/`). Source: https://github.com/dominodatalab/domino-data. Requires
+`dominodatalab-data>=6.7.4`; 6.7.4 needs Python 3.10 or later.
 
 ## Install
 
@@ -30,7 +30,6 @@ explicitly or an older preinstalled copy stays.
 Two import styles work: `from domino_data.data_sources import DataSourceClient` (the package)
 or `from domino.data_sources import DataSourceClient` (python-domino re-exports it when the
 `[data]` extra is installed; `domino.training_sets` exposes the client as `TrainingSetClient`).
-The docs use the second form; this skill uses the first.
 
 ## Modules
 
@@ -42,8 +41,7 @@ The docs use the second form; this skill uses the first.
 | `domino_data.vectordb` | Parameters that route the `pinecone` client through a Domino Data Source | [VECTORDB.md](./VECTORDB.md) |
 
 The package also ships `domino_data.netapp_volumes`; the netapp-volumes skill covers that
-storage type. Feature Store is deprecated in Domino and was removed from this library in
-February 2026 (`clean up feature store`, before 6.7.4); it is not covered.
+storage type. Feature Store is not in this library and is not covered.
 
 ## Quick start
 
@@ -99,7 +97,7 @@ per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. Hosts come from
 
 - **Domino endpoints (model APIs)** get no automatic token. Store a service-account token as
   an environment variable on the endpoint and pass it: `DataSourceClient(token=os.environ["DATA_API_TOKEN"])`
-  (`token=` is an SDK parameter; the docs page shows `api_key=`, deprecated, and `token_file=`).
+  (`token=`, not the deprecated `api_key=`).
 - **Apps acting for the calling user**: use the bearer from the incoming request,
   `DatasetClient(token=request.headers["Authorization"][7:])`.
 - **Outside Domino**: the Data Source proxy hosts are internal to the deployment, so run Data
@@ -111,7 +109,7 @@ Docs: https://docs.domino.ai/cloud/reference/api/data_api/authentication.
 
 ## Errors
 
-What 6.7.4 actually raises (examples in the reference files):
+Exceptions raised by 6.7.4 (examples in the reference files):
 
 - Client construction with no credential source, and `get_datasource` on a non-200: a bare
   `Exception` with the message.

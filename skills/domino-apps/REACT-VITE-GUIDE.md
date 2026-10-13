@@ -110,7 +110,7 @@ app.use((req, res) => {                       // SPA fallback for extension-less
 app.listen(8888, '0.0.0.0', () => console.log('listening on 0.0.0.0:8888'))
 ```
 
-The same server can call the Domino platform API as the publisher (`DOMINO_API_PROXY` with no header, or a bearer from `http://localhost:8899/access-token` on `DOMINO_API_HOST`) or as the viewer by forwarding the incoming `Authorization` header when extended identity propagation is enabled for the App.
+The same server can call the Domino platform API as the publisher or, when extended identity propagation is enabled for the App, as the viewer by forwarding the incoming `Authorization` header ([SKILL.md](./SKILL.md#calling-domino-apis-and-model-endpoints-from-an-app)).
 
 ### Frontend call
 
@@ -136,9 +136,9 @@ Never read a token from `import.meta.env`: Vite inlines every `VITE_` variable i
 | Variable | Where to set it | Value |
 |---|---|---|
 | `MODEL_API_URL` | Project environment variables (project **Settings**, or the API in [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)) or user environment variables | The endpoint's URL from its overview page (the deployment's external URL; `$DOMINO_API_HOST` does not route `/models/`) |
-| `MODEL_API_TOKEN` | Same; never in the repository | A Model Access Token created on the endpoint under **Settings > Invocation > Add Model Access Token**, shown once; no API returns it |
+| `MODEL_API_TOKEN` | Same; never in the repository | A Model Access Token: the user's (created under **Settings > Invocation > Add Model Access Token**, shown once) or one the agent creates and stores ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`) |
 
-Both values have to come from a person with access to the endpoint's page; an agent cannot look them up.
+The URL has to come from a person with access to the endpoint's page; the token can be created by the agent.
 
 A changed variable takes effect on the next start of the App. `.env.example` documents the names; `.env` files stay out of git. For a local run, `node --env-file=.env server.js`.
 

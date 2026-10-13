@@ -6,12 +6,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 # Domino Python SDK and REST API
 
-Applies to Domino 6.3 and Domino Cloud.
-
-## Activation
-
-Use this skill when the user wants to call Domino programmatically: the python-domino
-SDK, the REST API, CI/CD integration, or custom tooling. Read
+Applies to Domino 6.3 and Domino Cloud. Read
 [domino-api-intro](../domino-api-intro/SKILL.md) first for auth and base URLs.
 
 ## Two surfaces
@@ -22,8 +17,7 @@ SDK, the REST API, CI/CD integration, or custom tooling. Read
 | Use for | Quick scripts inside Domino, existing automation | New automation and anything the SDK lacks |
 
 Other Domino skills show REST, not python-domino; the SDK wraps older routes and lags the
-Public API. Every method cited here exists in `domino/domino.py` on `master` of
-https://github.com/dominodatalab/python-domino (checked against 2.2.0).
+Public API. Method names follow python-domino 2.2.0.
 
 ## Installation
 
@@ -74,7 +68,7 @@ domino = Domino(
 
 Notes: the `project` argument (`owner/name`) is required; the constructor calls
 `GET /version` and refuses incompatible Domino versions; `api_proxy` only works inside a
-run (the docs state it does not work against an HTTPS endpoint).
+run (it does not work against an HTTPS endpoint).
 
 REST calls use the shared setup block in
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication) (`base_url`, `headers`).
@@ -86,7 +80,7 @@ environments, Model APIs, apps and CI/CD: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md).
 
 ## REST API
 
-Route catalog with spec-verified request bodies: [API-REFERENCE.md](./API-REFERENCE.md).
+Route catalog with request bodies from the specs: [API-REFERENCE.md](./API-REFERENCE.md).
 Per-area files:
 
 | Guide | Description |
@@ -106,7 +100,7 @@ Per-area files:
 
 - Verify every route against both published specs before using it
   ([API-SPECS.md](../domino-api-intro/API-SPECS.md)). `/v4/*` routes are the Domino
-  Internal API; the files above label the few that remain.
+  Internal API: non-public routes that may change in a future Domino version; the files above label the few that remain.
 - Field names are not interchangeable across routes: `POST /api/jobs/v1/jobs` takes
   `runCommand` and `hardwareTier`; python-domino `job_start` takes `command` and
   `hardware_tier_id`.

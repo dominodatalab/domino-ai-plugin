@@ -1,6 +1,6 @@
 ---
 name: domino-datasets
-description: Create, upload to, mount and read a Domino Dataset; take, list, read or restore (copy to a new Dataset) a snapshot; tag snapshots; share a Dataset with another Project or user. Covers mount paths (/domino/datasets/local/<name> in DFS Projects, /mnt/data/<name> in Git-based Projects), the UI and domino CLI steps, and the /api/datasetrw REST routes with verified bodies, including how to read a snapshot you just took from the same run. Use whenever a task mentions a Dataset, a snapshot, a dataset mount path, versioned or shared data in Domino, or reading, counting or writing files under /domino/datasets or /mnt/data.
+description: Create, upload to, mount and read a Domino Dataset; take, list, read or restore (copy to a new Dataset) a snapshot; tag snapshots; share a Dataset with another Project or user. Covers mount paths (/domino/datasets/local/<name> in DFS Projects, /mnt/data/<name> in Git-based Projects), the UI and domino CLI steps, and the /api/datasetrw REST routes with request bodies, including how to read a snapshot you just took from the same run. Use whenever a task mentions a Dataset, a snapshot, a dataset mount path, versioned or shared data in Domino, or reading, counting or writing files under /domino/datasets or /mnt/data.
 compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
 ---
 
@@ -23,8 +23,8 @@ file-count cap. Object storage: domino-data-sdk skill; NetApp ONTAP: netapp-volu
 | Its snapshots (RO) | `/domino/datasets/snapshots/<name>/<n>` and `/<tag>` | `/mnt/imported/data/snapshots/<name>/<n>` and `/<tag>` |
 
 `<n>` is the snapshot number, `<tag>` the most recently added tag. Every Project starts with a
-default Dataset named after the Project: Project `churn` has `/mnt/data/churn` (Git-based) or
-`/domino/datasets/local/churn` (DFS). Detect the layout from the injected variables:
+default Dataset named after the Project (`/mnt/data/churn` Git-based, `/domino/datasets/local/churn`
+DFS). Detect the layout from the injected variables:
 
 ```python
 import os
@@ -46,15 +46,16 @@ UI lists mounted paths under **Data > Datasets** (Workspace) and **Details > Dat
 - **REST**: `POST /api/datasetrw/v1/datasets` with
   `{"name": "...", "description": "...", "projectId": "<project-id>", "grants": []}`;
   `name` is required and unique in the Project; `snapshotId` instead of `projectId` copies a
-  snapshot into a new Dataset. All routes, bodies and auth: [API.md](./API.md).
+  snapshot into a new Dataset. All routes and bodies: [API.md](./API.md); auth:
+  [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 - **python-domino**: `Domino.datasets_create(dataset_name, dataset_description)` (positional
   names, not `name=`/`description=`) creates it in the client's configured Project through the
-  legacy `/dataset` routes, which are not in the Public API; prefer the REST route.
+  legacy `/dataset` routes (not Public API); prefer the REST route.
 
 ## Upload files
 
 - **UI**: open the Dataset, **Upload files**: up to 50 GB or 50,000 files per upload;
-  drag-and-drop keeps folder structure.
+  drag-and-drop keeps folders.
 - **CLI** (larger uploads): `domino upload-dataset [--fileUploadSetting Ignore|Overwrite|Rename]
   [--targetRelativePath <dir>] <owner>/<project>/<dataset> <local-folder>`; flags and values
   are case-sensitive. Install and sign in: [domino-cli](../domino-cli/SKILL.md).
@@ -67,10 +68,10 @@ UI lists mounted paths under **Data > Datasets** (Workspace) and **Details > Dat
 A snapshot is a read-only, immutable copy taken at a point in time. Do not modify files while
 one is in progress; time scales with size.
 
-**Key fact**: a snapshot is mounted only in executions started after it became `active`. Read
+A snapshot is mounted only in executions started after it became `active`. Read
 one from the current run with `GET $DOMINO_API_PROXY/v4/datasetrw/snapshot/{snapshotId}/file/raw?path=<file>`
-(Internal API, may change between Domino versions). The docs' API reference lists this route
-without `/v4`; that form returns 404.
+(non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)). The docs list this route without `/v4`;
+that form returns 404.
 
 - **Create**: UI **Take Snapshot** (all or selected files, optional tag);
   `domino create-snapshot <owner>/<project>/<dataset>`; or
@@ -108,22 +109,21 @@ paths. Reads without a mount (Apps, endpoints): `DatasetClient` in the domino-da
 Owners mark for deletion; an admin purges. Dataset: UI **More Actions > Delete Dataset** or
 `DELETE /api/datasetrw/v1/datasets/{datasetId}` (soft, cancellable, affects every Project
 that mounts it; confirm first). Snapshot: UI, or
-`DELETE /v4/datasetrw/snapshot/{snapshotId}` (internal API, may change between Domino
-versions); restore with `PUT` `{"status": "Active"}`. Details: [API.md](./API.md).
+`DELETE /v4/datasetrw/snapshot/{snapshotId}` (non-public route; may change in a future Domino version); restore with `PUT` `{"status": "Active"}`. Details: [API.md](./API.md).
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---|---|
 | Path missing in the execution | `DOMINO_IS_GIT_BASED`; Dataset mounted in this Project; execution started after the mount |
-| Permission denied writing | Dataset role (Reader is read-only); snapshot paths are always read-only; a pinned snapshot replaces the live mount; test with `os.access(path, os.W_OK)` |
+| Permission denied writing | Dataset role (Reader is read-only); snapshot paths are always read-only; a pinned snapshot replaces the live mount |
 
 ## Reference files
 
 - [MOUNT-PATHS.md](./MOUNT-PATHS.md): mount trees, detection, pinned snapshots
-- [API.md](./API.md): routes, bodies, auth, examples
+- [API.md](./API.md): routes, bodies, examples
 - [BEST-PRACTICES.md](./BEST-PRACTICES.md): layout, formats, snapshot limits, large reads
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets and child
-pages, https://docs.domino.ai/cloud/admin/data-administration/datasets,
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets,
+https://docs.domino.ai/cloud/admin/data-administration/datasets,
 https://docs.domino.ai/cloud/reference/cli/cli-reference (`/6.3/` for self-managed).

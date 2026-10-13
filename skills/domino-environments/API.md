@@ -1,12 +1,12 @@
 # Environments REST API
 
-Applies to Domino 6.3 and Domino Cloud. Routes verified against `https://docs.domino.ai/api-specs/6.3/public-api.json` and `https://docs.domino.ai/api-specs/cloud/public-api.json`. Authentication and hosts: [domino-api-intro](../domino-api-intro/SKILL.md); inside a run use `$DOMINO_API_PROXY` with no `Authorization` header.
+Authentication and hosts: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ## Which path applies
 
 Read `GET $DOMINO_API_HOST/version` (`{"version": "6.3.x"}` or a later version; Domino Cloud reports 6.4 or later). On `6.3.x` use only the "6.3" column; on 6.4 and later use the "6.4+" routes. When unsure, call the route: a `404` means it is absent on that deployment.
 
-| Route | 6.3 | 6.4+ (Domino Cloud today) |
+| Route | 6.3 | 6.4+ (including Domino Cloud) |
 |---|---|---|
 | `GET /api/environments/beta/environments` (list) | yes | yes |
 | `GET /api/environments/v1/environments/{environmentId}` | yes | yes |
@@ -43,7 +43,7 @@ env = requests.get(f"{base}/api/environments/v1/environments/{env_id}").json()["
 
 ## Create an environment
 
-### 6.4+ (Domino Cloud today): `POST /api/environments/v2/environments`
+### 6.4+ (including Domino Cloud): `POST /api/environments/v2/environments`
 
 ```python
 body = {
@@ -96,7 +96,7 @@ The UI's YAML form of the same data is in [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS
 
 ## Project default environment and tier
 
-A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (internal API, may change between Domino versions; live-verified on Domino 6.4, confirm on 6.3 in your deployment's `/docs`). Every field is optional and a partial body changes only what it names:
+A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (non-public route; may change in a future Domino version; on 6.3 confirm in your deployment's `/docs`). Every field is optional and a partial body changes only what it names:
 
 ```python
 base = os.environ["DOMINO_API_PROXY"]
@@ -114,4 +114,4 @@ r.raise_for_status()                                        # 200 with an empty 
 
 ## Not in the Public API
 
-Build logs have no route anywhere (environment **Revisions** tab only). The rest of the revision lifecycle is Internal API (internal API, may change between Domino versions): set the Active revision with `POST /v4/environments/{environmentId}/setactive?revisionId=<revision id>` (live-verified) or `PATCH /v4/environments/{environmentId}` with `{"assignLatestRevisionAsActive": true|false}`; cancel a running build with `POST /v4/environments/{environmentId}/environmentRevision/{revisionId}/cancel`; set the deployment-wide default (admin) with `POST /v4/environments/setDefaultEnvironment` `{"environmentId": "<id>"}` and read it with `GET /v4/environments/defaultEnvironment`. The cancel and default-setting calls were not exercised in this skill's live tests. python-domino offers `environments_list`, `get_environment`, `create_environment`, `create_environment_revision`, `archive_environment` and `restrict_environment_revision` over the public and internal routes; see [domino-python-sdk](../domino-python-sdk/SKILL.md).
+Build logs have no route anywhere (environment **Revisions** tab only). The rest of the revision lifecycle is Internal API (non-public route; may change in a future Domino version): set the Active revision with `POST /v4/environments/{environmentId}/setactive?revisionId=<revision id>` or `PATCH /v4/environments/{environmentId}` with `{"assignLatestRevisionAsActive": true|false}`; cancel a running build with `POST /v4/environments/{environmentId}/environmentRevision/{revisionId}/cancel`; set the deployment-wide default (admin) with `POST /v4/environments/setDefaultEnvironment` `{"environmentId": "<id>"}` and read it with `GET /v4/environments/defaultEnvironment`. python-domino offers `environments_list`, `get_environment`, `create_environment`, `create_environment_revision`, `archive_environment` and `restrict_environment_revision` over the public and internal routes; see [domino-python-sdk](../domino-python-sdk/SKILL.md).

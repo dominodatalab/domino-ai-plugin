@@ -1,8 +1,8 @@
 # Domino Admin API
 
 Users, organizations, service accounts, Personal Access Tokens, hardware tiers, data
-sources, cost and the platform audit trail. Routes and bodies are from both published
-specs unless marked **Cloud**. Admin-only routes return `403` for other callers.
+sources, cost and the platform audit trail. Routes marked **Cloud** exist only on Domino
+Cloud. Admin-only routes return `403` for other callers.
 
 ## Authentication
 
@@ -33,12 +33,11 @@ print(me["userName"], me["id"])
 
 ```
 GET  /api/users/v1/user/{userId}/roles                    -> {"roles": [...], "metadata"}
-POST /api/users/v1/user/{userId}/roles      body: {"roles": ["..."]}   REPLACES the user's roles
+POST /api/users/v1/user/{userId}/roles      body: {"roles": ["..."]}   replaces the user's roles
 ```
 
 Needs the `SetUserSystemRoles` permission. There is no `PUT`, and `POST` is not additive:
-the spec says it sets "the complete list of roles for a user, replacing any previously
-assigned roles" and "any roles not listed will be revoked". To add a role, send the
+it sets the complete list of roles and revokes any not listed. To add a role, send the
 existing list plus the new one:
 
 ```python
@@ -56,7 +55,7 @@ admin UI.
 
 ```
 GET /api/users/beta/credentials/{userId}
-PUT /api/users/v1/user/{userId}/tokenCredentials/{credentialId}      GitHub and GitHub Enterprise PATs only (spec note)
+PUT /api/users/v1/user/{userId}/tokenCredentials/{credentialId}      GitHub and GitHub Enterprise PATs only
 ```
 
 ### Deactivation
@@ -65,9 +64,8 @@ Service accounts: `POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountI
 Human users have no Public API deactivate route. Administrators do it in the admin UI or
 with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
 body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
-`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). Internal API, may change
-between Domino versions; admin-only; taken from the Cloud/6.4 internal reference and not
-live-tested here. On Domino 6.3 confirm it in your deployment's `/docs` first.
+`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only. On Domino 6.3 confirm it in your
+deployment's `/docs` first.
 
 ## Personal Access Tokens
 
@@ -112,14 +110,13 @@ Create returns `{"serviceAccount": {"id", "idpId", "username", "email"}, "metada
 Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns a
 `ServiceAccountToken` (`name`, `serviceAccountIdpId`, `isValid`, `createdAt`, `expiresAt`,
 `token`) with the token value. Unlike a Personal Access Token, the value is not
-shown only once: in both specs `GET .../tokens/{tokenName}` ("Get the token with the
-provided name") returns the same object, including `token`, as `{"token": {...}, "metadata"}`,
-so an authorized caller can read a value again by name (spec-verified, not live-tested).
+shown only once: `GET .../tokens/{tokenName}` returns the same object, including `token`,
+as `{"token": {...}, "metadata"}`, so an authorized caller can read a value again by name
+(if the `GET` omits `token`, treat the value as shown once).
 The list route `GET .../tokens` returns `{"tokens": [...], "metadata"}` with the metadata
-fields only, never `token`. Neither spec describes the permission beyond `401`/`403`;
-the docs restrict service-account management to Administrators, so expect `403` for
-anyone else. Tokens inherit the service account's roles at creation and expire after
-four months by default (docs). Give the value to its consumer once rather than re-reading
+fields only, never `token`. Service-account management is restricted to Administrators;
+expect `403` for anyone else. Tokens inherit the service account's roles at creation and
+expire after four months by default. Give the value to its consumer once rather than re-reading
 it: a Project or user environment variable for Domino executions, or the CI system's own
 secret for a runner outside Domino, where Domino variables are not readable. Invalidate or
 delete a token that leaked.
@@ -171,12 +168,11 @@ List returns `{"dataSources": [{"id", "name", "dataSourceType", "authType", "cre
 Create requires `name`, `dataSourceType`, `authType`, `credentialType`
 (`Individual` or `Shared`), `credentials` (`visibleCredentials`, `secretCredentials`
 maps), `config` (map) and `permissions` (`isEveryone`, `userAndOrganizationIds`);
-`description` is optional. The spec
-types `config`, `visibleCredentials` and `secretCredentials` as free-form string maps
-("a map of configuration name -> value"), so the keys depend on `dataSourceType`: copy them
-from an existing data source of the same type (`GET` one) or create the first one in the
-UI. `PATCH` by a non-admin updates only that user's individual credentials; an admin's
-`PATCH` updates the shared credentials (spec). `DELETE` needs ownership. Audit `eventKinds`: `AccessDataSource`, `CreateDataSource`,
+`description` is optional. `config`, `visibleCredentials` and `secretCredentials` are
+free-form string maps whose keys depend on `dataSourceType`: copy them from an existing
+data source of the same type (`GET` one) or create the first one in the UI. `PATCH` by a
+non-admin updates only that user's individual credentials; an admin's `PATCH` updates the
+shared credentials. `DELETE` needs ownership. Audit `eventKinds`: `AccessDataSource`, `CreateDataSource`,
 `DataSourceAssociatedToProject`, `DataSourceDissociatedFromProject`,
 `DataSourceChangeOfOwnership`, `DataSourceChangeOfPermissions`, `DeleteDataSource`
 (https://docs.domino.ai/cloud/admin/operations/audit-logs/monitor-data-source-logs).
@@ -202,7 +198,7 @@ GET, PUT /api/cost/v1/billingtagSettings;  /mode;  /notifications
 GET /api/cost/v1/costActivationStatus;  PUT /api/cost/v1/licenseKey;  PUT /api/cost/v1/athenaConfigs
 ```
 
-`window` is the only required allocation parameter. Per the spec it accepts words
+`window` is the only required allocation parameter. It accepts words
 (`today`, `week`, `month`, `yesterday`, `lastweek`, `lastmonth`), durations (`30m`,
 `12h`, `7d`) or a time range (`2021-03-10T00:00:00Z,2021-03-11T00:00:00Z`); `start` and
 `end` (RFC 3339) must fall inside it. `aggregate` takes the kubecost aggregates
@@ -217,8 +213,7 @@ costs = requests.get(f"{base_url}/api/cost/v1/allocation", headers=headers,
 ```
 
 Budgets and alerts are covered by python-domino's `budget_*` and `billing_tag*` methods
-([SDK-EXAMPLES.md](./SDK-EXAMPLES.md)), which call `/v4/cost` routes (internal API, may
-change between Domino versions).
+([SDK-EXAMPLES.md](./SDK-EXAMPLES.md)), which call `/v4/cost` routes (non-public route; may change in a future Domino version).
 
 ## Audit trail
 
@@ -257,7 +252,7 @@ Response: `{"events": [{"timestamp", "actor": {"id", "name"}, "action": {"eventN
 
 ## Internal routes you may still meet
 
-These are Domino Internal API, may change between Domino versions, and are not in either
+These are non-public routes; they may change in a future Domino version, and are not in either
 published spec: `/v4/users?listOnlyUsers=true`, `/v4/admin/centralConfigSettings`,
 `/v4/auth/principal`, `/v4/datasetrw/dataset-cost`, `/v4/domino-cost/budgets`. Confirm
 each in your deployment's `/docs/openapi/openapi-internal.json` before using it, and

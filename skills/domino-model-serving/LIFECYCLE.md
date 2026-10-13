@@ -1,6 +1,6 @@
 # Model serving lifecycle: worked requests
 
-Applies to Domino 6.3 and Domino Cloud. Every route here is in both public API specs unless marked (Cloud). Read calls were verified against Domino Cloud 6.4 on 2026-10-12; field names come from the spec schemas (`ModelApiCreationRequest`, `ModelApiVersionCreationRequest`, `ModelApiUpdateRequest`, `ModelApi`, `NewRegisteredModelV2`).
+Request and response shapes: spec schemas `ModelApiCreationRequest`, `ModelApiVersionCreationRequest`, `ModelApiUpdateRequest`, `ModelApi`, `NewRegisteredModelV2` ([API-SPECS.md](../domino-api-intro/API-SPECS.md)). Routes that exist only on Domino Cloud are marked.
 
 ## Setup
 
@@ -9,13 +9,8 @@ import os
 import time
 import requests
 
-if os.environ.get("DOMINO_API_PROXY"):                 # in a run, proxy available
-    base, headers = os.environ["DOMINO_API_PROXY"], {}
-else:                                                  # in a run without the proxy
-    base = os.environ["DOMINO_API_HOST"]
-    token = requests.get("http://localhost:8899/access-token").text.strip()
-    headers = {"Authorization": f"Bearer {token}"}
-# Outside Domino: base = deployment URL; headers = {"Authorization": "Bearer <PAT or service-account token>"}
+# base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
+base, headers = os.environ["DOMINO_API_PROXY"], {}        # in a run with the proxy
 ```
 
 ## List and inspect
@@ -39,7 +34,7 @@ Versions: `GET .../modelApis/{modelApiId}/versions` lists `ModelApiVersion` obje
 
 ## Create from project files
 
-The version is built from the `version.commitId` you pass, or the Project's head commit if you omit it, never from a Workspace's disk. In a DFS Project sync the Workspace first (**File Changes** > **Sync to Domino**); in a Git-based Project commit and push the code and sync the artifacts. Include the model artifacts the function loads. Then pin the commit: the head lags an upload by a few seconds, and a version created right after a sync was built from the previous commit and crash-looped with `FileNotFoundError` (see `domino-model-endpoints`, "Sync or commit first"). Use the `commitId` the MCP upload tool returned, or read `GET /api/projects/beta/projects/{projectId}/commits/latest` (`commitId`) and confirm `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` is 200 for each model file.
+The version is built from the `version.commitId` you pass, or the Project's head commit if you omit it, never from a Workspace's disk. In a DFS Project sync the Workspace first (**File Changes** > **Sync to Domino**); in a Git-based Project commit and push the code and sync the artifacts. Include the model artifacts the function loads. Then pin the commit: the head lags an upload by a few seconds, and a version built from the stale head crash-loops with `FileNotFoundError` (see `domino-model-endpoints`, "Sync or commit first"). Use the `commitId` the MCP upload tool returned, or read `GET /api/projects/beta/projects/{projectId}/commits/latest` (`commitId`) and confirm `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` is 200 for each model file.
 
 ```python
 commit_id = requests.get(f"{base}/api/projects/beta/projects/{os.environ['DOMINO_PROJECT_ID']}/commits/latest",
@@ -62,7 +57,7 @@ body = {
     "environmentVariables": [{"key": "MODEL_PATH", "value": "models/gbm.pkl"}],
     "version": {
         "projectId": os.environ["DOMINO_PROJECT_ID"],
-        "commitId": commit_id,                    # the verified commit; omitting it takes the head, which can be stale
+        "commitId": commit_id,                    # the commit you synced; omitting it takes the head, which can be stale
         "source": {"type": "File", "file": "model.py", "function": "predict", "excludeFiles": ["data/"]},
         "logHttpRequestResponse": False,
         "monitoringEnabled": False,
@@ -70,14 +65,14 @@ body = {
     },
 }
 r = requests.post(f"{base}/api/modelServing/v1/modelApis", headers=headers, json=body)
-r.raise_for_status()                              # spec says 201; Domino Cloud 6.4 returned 200. Check for 2xx
+r.raise_for_status()                              # spec says 201, Cloud returns 200; accept any 2xx
 model_api_id = r.json()["id"]
 versions = requests.get(f"{base}/api/modelServing/v1/modelApis/{model_api_id}/versions", headers=headers).json()
 version_id = max(versions, key=lambda v: v["number"])["id"]
 wait_version_running(model_api_id, version_id)
 ```
 
-Verified live on Domino Cloud 6.4 (2026-10-12): this body (with `replicas: 1` and no `hardwareTierId`) created the endpoint, which reached `Running` in about 2.5 minutes. Two things to know from that run: the response carried `hardwareTierId: "small-k8s"` rather than the tier flagged `isDefaultForModelApi`, so pass `hardwareTierId` explicitly; and an access token is created automatically but its value is not in the response (read it under **Settings** > **Invocation**).
+Pass `hardwareTierId` explicitly ([SCALING.md](../domino-model-endpoints/SCALING.md)). The create response never carries the auto-created access token; read it under **Settings** > **Invocation**.
 
 ## Create from a registered model
 
@@ -111,31 +106,7 @@ def wait_version_running(model_api_id, version_id, timeout_s=1800):
 
 `Running` is the documented ready state. The spec types `deployment.status` as a free string and does not enumerate the other values, so the helper prints them and keeps polling until the deadline; a status that stops changing is the cue to read the build and instance logs (below).
 
-`Running` is not a health check: a crash-looping container reports `Running` between restarts and the status later flips to `Starting` with `isPending: true`. After the helper returns, read the instance logs **without** `tail` and with a large window, keep the model container's lines (tag `kubernetes.container_name` starting with `model-`; the `istio-proxy` sidecar's hundreds of lines otherwise crowd them out and a small `tail` window shows no crash at all), and accept the version only on `WSGI app 0 (mountpoint='') ready`; `no app loaded. GAME OVER` after a `Traceback` is a crash loop and the exception line is the cause. Then make one test prediction (200 with your result shape; 503 means no healthy instance).
-
-```python
-def model_container_health(model_api_id, version_id):
-    """'ready', 'crash' (with the cause), or 'pending' when the model container has not logged yet."""
-    r = requests.get(f"{base}/api/modelServing/v1/modelApis/{model_api_id}/versions/{version_id}/instanceLogs",
-                     headers=headers, params={"maxResults": 3000})      # no tail
-    r.raise_for_status()
-    lines = [e["log"] for e in r.json().get("logs", [])
-             if any(t["key"] == "kubernetes.container_name" and t["value"].startswith("model-")
-                    for t in e.get("tags", []))]
-    text = "\n".join(lines)
-    if not lines:
-        return "pending", None                                           # never treat an empty result as healthy
-    if "no app loaded. GAME OVER" in text:
-        errors = [line for line in lines if "Error" in line or "Exception" in line]
-        return "crash", (errors[-1] if errors else text[-2000:])
-    if "WSGI app 0 (mountpoint='') ready" in text:
-        return "ready", None
-    return "pending", None
-
-state, cause = model_container_health(model_api_id, version_id)
-if state == "crash":
-    raise RuntimeError(f"version {version_id} is crash-looping: {cause}")
-```
+`Running` is not a health check: a crash-looping container reports `Running` between restarts and the status later flips to `Starting` with `isPending: true`. After the helper returns, read the instance logs **without** `tail` (`maxResults=3000`), keep the model container's lines (tag `kubernetes.container_name` starting with `model-`), and accept the version only on `WSGI app 0 (mountpoint='') ready`; `no app loaded. GAME OVER` after a `Traceback` is a crash loop and the exception line is the cause. The filtering snippet is under "Health check after publishing" in [DEPLOY-ENDPOINT.md](../domino-model-endpoints/DEPLOY-ENDPOINT.md#health-check-after-publishing). Then make one test prediction (200 with your result shape; 503 means no healthy instance).
 
 ## Prediction URL
 
@@ -145,7 +116,7 @@ sync_url = f"{deployment_url}/models/{model_api_id}/latest/model"
 async_url = f"{deployment_url}/api/modelApis/async/v1/{model_api_id}"
 ```
 
-Sync calls use `auth=(token, token)`; async calls use `Authorization: Bearer <token>`; the token is an endpoint access token, not your API token. Neither value can be fetched by an agent: the deployment URL is external only (`DOMINO_API_HOST` and `DOMINO_API_PROXY` return 404 for `/models/...`, and no run variable holds it), and the access token is created and shown only in the UI (**Settings** > **Invocation**; the API returns token ids, never values, and a user bearer token or PAT gets 401 even on a Public endpoint). Ask the user for both, or have them use the **Tester** tab or set the endpoint to **Unrestricted**. Request formats are in `domino-model-endpoints`.
+Sync calls use `auth=(token, token)`; async calls use `Authorization: Bearer <token>`; the token is an endpoint access token, not your API token (a user bearer token or PAT gets 401 even on a Public endpoint). The deployment URL is external only: no API field returns it, `DOMINO_API_HOST` and `DOMINO_API_PROXY` return 404 for `/models/...` inside a run, and no run variable holds it, so outside Domino use the URL you sign in at, and inside a run read a stored variable or ask the user. The token: the user's, or create one and store it as an environment variable without printing it ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`). Request formats are in `domino-model-endpoints`.
 
 ## New version
 
@@ -179,20 +150,37 @@ r = requests.put(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers
 r.raise_for_status()
 ```
 
-The PUT is accepted immediately (verified on Cloud 6.4: 200, `replicas` read back as the new value while the running version stayed `Running` untouched), but the docs say a scale change takes effect only after you restart the endpoint, and the public API has no restart route. The Domino Internal API does not give you one either: in the same live test `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` stopped the version (`{"status": "not_running"}`), and `POST /v4/models/{modelApiId}/{modelApiVersionId}/startModelDeployment` called right afterwards returned `400 Cannot start model version <id>. Current state is 'not_running'`, leaving the version stopped; `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` reports that state (all three internal API, may change between Domino versions, verified on Cloud 6.4 only; on 6.3 confirm them in your deployment's `/docs`). So stop-then-start is not a restart recipe. Restart from the endpoint page in the UI, or publish a new version, then confirm with `GET` (`replicas`, `hardwareTierId`) and the version's deployment status.
+The PUT returns 200 at once, but a scale change takes effect only when the version restarts. The public API has no restart route: restart from the endpoint page in the UI, or stop and start the active version with the Domino Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); on 6.3 confirm the routes in your deployment's `/docs`):
+
+```python
+v = f"{base}/v4/models/{model_api_id}/{api['activeVersion']['id']}"       # non-public route; may change in a future Domino version
+requests.post(f"{v}/stopModelDeployment", headers=headers, json={}).raise_for_status()    # -> {"status": "not_running"}
+for _ in range(6):
+    r = requests.post(f"{v}/startModelDeployment", headers=headers)         # no body; -> {"status": "starting"}
+    if r.status_code != 400:                                                # 400: the stop has not settled yet
+        break
+    time.sleep(5)
+r.raise_for_status()
+for _ in range(30):
+    if requests.get(f"{v}/getModelDeploymentStatus", headers=headers).json()["status"] == "running":
+        break
+    time.sleep(10)
+```
+
+`getModelDeploymentStatus` returns `{modelId, modelVersionId, status}`; `status` is `not_running`, `starting` or `running`, and a restarted version is usually `running` within a minute. Then confirm the change with `GET` on the Model API (`replicas`, `hardwareTierId`) and run the health check from "Wait until a version is Running".
 
 ## Stop and delete
 
-The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API". Live behaviour on Domino Cloud 6.4 (2026-10-12):
+The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API"; what it does:
 
 - `DELETE` while a version is running returns `500 "Model API with id <id> is running"`. Stop the running version first.
-- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (internal API, may change between Domino versions; verified on Cloud 6.4, confirm on 6.3 in `/docs`); it returned `{"status": "not_running"}` and `activeVersion.deployment` disappeared from the public view. `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` (internal, same caveats) returns the same `{modelId, modelVersionId, status}` record.
+- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (non-public route; may change in a future Domino version; on 6.3 confirm it in `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `startModelDeployment` brings the version back (restart snippet above).
 - After a successful `DELETE` (200, empty body) the endpoint is gone from the caller's view: `GET` returns `404 No model API found` and it no longer appears in list results, with or without filters. Do not expect to read it back with `isArchived: true`; export the logs and settings you need before deleting.
 
 ```python
 api = requests.get(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers=headers).json()
 version_id = api["activeVersion"]["id"]
-requests.post(f"{base}/v4/models/{model_api_id}/{version_id}/stopModelDeployment",   # internal API, may change between Domino versions
+requests.post(f"{base}/v4/models/{model_api_id}/{version_id}/stopModelDeployment",   # non-public route; may change in a future Domino version
               headers=headers, json={}).raise_for_status()
 requests.delete(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers=headers).raise_for_status()
 assert requests.get(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers=headers).status_code == 404
@@ -235,10 +223,10 @@ requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}", hea
 requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}/modelapis", headers=headers).json()
 ```
 
-Verified on Domino Cloud 6.4 (2026-10-12): `PATCH` with `description` and `discoverable` returns 200 and the description persists, but `GET /api/registeredmodels/v1/{modelName}` returns neither `discoverable` nor aliases; its keys are `name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `createdAt`, `updatedAt`, `requestingUserAccess`. Aliases live in MLflow: read them with `GET /api/2.0/mlflow/registered-models/get?name=...` (`aliases`) on the deployment URL with the same bearer token, or with the MLflow client (see `domino-experiment-tracking`).
+`PATCH` with `description` and `discoverable` returns 200 and the description persists, but `GET /api/registeredmodels/v1/{modelName}` returns neither `discoverable` nor aliases; its keys are `name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `createdAt`, `updatedAt`, `requestingUserAccess`. Aliases live in MLflow: read them with `GET /api/2.0/mlflow/registered-models/get?name=...` (`aliases`) on the deployment URL with the same bearer token, or with the MLflow client (see `domino-experiment-tracking`).
 
-`mlflowSource` takes `experimentRunId` (required) plus `artifactPath` or `loggedModelId`. With an MLflow 3 client, `log_model` stores the model as a LoggedModel (`m-<id>`, `mlflow.last_logged_model()` or the `model_id` on the returned model info) rather than as a run artifact, so pass `loggedModelId`; verified on an internal Domino test cluster (6.4.0, MLflow 3.3.2), `artifactPath: "model"` also returned 200 but the version pointed at a nonexistent run artifact and `mlflow.pyfunc.load_model` failed, while the `loggedModelId` version loaded. Use `artifactPath` only for models logged as run artifacts by MLflow 2 clients. `huggingFaceSource` takes `modelId` (required), `modelRevision`, `huggingFaceToken`. `sourceType` is `mlflow` or `huggingface` and names which of the two you filled in. List with `GET /api/registeredmodels/v2?projectId=...&maxResults=25`; the response's `metadata.nextPageToken` goes into the next request's `pageToken` query parameter until it is absent. `POST /api/registeredmodels/v1/{modelName}/versions` (`description`, `experimentRunId`, `artifact`) still exists but is deprecated since 6.2.1.
+`mlflowSource` takes `experimentRunId` (required) plus `artifactPath` or `loggedModelId`. With an MLflow 3 client, `log_model` stores the model as a LoggedModel (`m-<id>`, `mlflow.last_logged_model()` or the `model_id` on the returned model info) rather than as a run artifact, so pass `loggedModelId`: with an MLflow 3 client, `artifactPath` also returns 200 but the version does not load; the `loggedModelId` version does. Use `artifactPath` only for models logged as run artifacts by MLflow 2 clients. `huggingFaceSource` takes `modelId` (required), `modelRevision`, `huggingFaceToken`. `sourceType` is `mlflow` or `huggingface` and names which of the two you filled in. List with `GET /api/registeredmodels/v2?projectId=...&maxResults=25`; the response's `metadata.nextPageToken` goes into the next request's `pageToken` query parameter until it is absent. `POST /api/registeredmodels/v1/{modelName}/versions` (`description`, `experimentRunId`, `artifact`) is deprecated.
 
 ## python-domino equivalents
 
-`Domino("owner/project")` (the project argument is required) exposes `models_list()`, `model_publish(file, function, environment_id, name, description, files_to_exclude=None)`, `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` and the export helpers `model_version_export`, `model_version_sagemaker_export`, `model_version_export_status`, `model_version_export_logs`. They call the older `/v1/models` and `/v4` routes (Domino Internal API, may change between Domino versions) and know nothing about replicas, hardware tiers, async endpoints or registry sources; use the public REST routes above for those. See `domino-python-sdk`.
+`Domino("owner/project")` (the project argument is required) exposes `models_list()`, `model_publish(file, function, environment_id, name, description, files_to_exclude=None)`, `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` and the export helpers `model_version_export`, `model_version_sagemaker_export`, `model_version_export_status`, `model_version_export_logs`. They call the older `/v1/models` and `/v4` routes (non-public route; may change in a future Domino version) and know nothing about replicas, hardware tiers, async endpoints or registry sources; use the public REST routes above for those. See `domino-python-sdk`.

@@ -17,7 +17,7 @@ Serving metrics (CPU, latency, status codes) are in `domino-model-endpoints`; th
 | Domino endpoint | Integrated endpoint monitoring | Domino captures predictions into a project Dataset; you register a TrainingSet and, optionally, ground truth |
 | App, Launcher, Job, or outside Domino | Model Monitor | You connect a data source (S3, generic S3, Azure Blob or Data Lake, GCS, HDFS, NFS, Snowflake) and register training, prediction and ground-truth files with a Monitoring Config JSON |
 
-Prefer deploying as a Domino endpoint: integrated monitoring captures predictions into the project Dataset automatically, with no external data source. The Model Monitor data-source path (S3, Snowflake and the others above) is the documented exception: models served as an App, Launcher or Job or outside Domino, and ground-truth files. Both show up in **Model Monitor** as one list. Endpoint monitoring is not supported for endpoints deployed to a remote data plane.
+Prefer deploying as a Domino endpoint: integrated monitoring captures predictions into the project Dataset automatically, with no external data source. The Model Monitor data-source path (S3, Snowflake and the others above) is the exception: models served as an App, Launcher or Job or outside Domino, and ground-truth files. Both show up in **Model Monitor** as one list. Endpoint monitoring is not supported for endpoints deployed to a remote data plane.
 
 ## Set up monitoring for a Domino endpoint
 

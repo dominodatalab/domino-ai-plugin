@@ -2,9 +2,9 @@
 
 Policy admin drafts a policy, creates a version, PUTs the definition (escaped YAML), publishes, bulk-attaches to in-scope bundles, triggers re-evidence, retires the old version.
 
-HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
-Administrators usually author policies in the UI (Policy Builder or YAML); every step below is the public API equivalent, present in both specs (6.3.1 and 6.4.0).
+Administrators usually author policies in the UI (Policy Builder or YAML); every step below is the public API equivalent.
 
 ## Core calls
 

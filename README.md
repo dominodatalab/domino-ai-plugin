@@ -28,11 +28,11 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
-| `skills/` (34 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
+| `skills/` (33 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
 | Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; Cursor asks for `DOMINO_HOST` and `DOMINO_TOKEN` at install) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ❌ not registered; `mcp_config.json` carries only the docs server (register it by hand as the server README shows) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
-| Subagents (`agents/`) | ✅ routers that preload their skills | ❌ | Routing prompts only: Cursor loads `agents/` without `skills:` or `tools:`, so nothing is preloaded | ❌ Gemini CLI reads `agents/` but expects its own sub-agent frontmatter | Imported as prompts (`agy` reports 3 agents); `skills:` and `tools:` are Claude Code fields |
+| Subagents (`agents/`) | ✅ routers that preload their skills | ❌ | Routing prompts only: Cursor loads `agents/` without `skills:` or `tools:`, so nothing is preloaded | ❌ the files are `_`-prefixed, which Gemini CLI skips (its sub-agent schema differs) | Imported as prompts (`agy` reports 3 agents); `skills:` and `tools:` are Claude Code fields |
 | Output styles (`output-styles/`) | ✅ | ❌ Claude-only | ❌ | ❌ | ❌ |
 | Hook examples (`hooks/`) | Docs only | ❌ | ❌ | ❌ | ❌ |
 | Manifest | `.claude-plugin/plugin.json` | `plugin.json` ([Agent Plugins](https://agent-plugins.org) format) | `.cursor-plugin/plugin.json` | `gemini-extension.json` | `plugin.json`, read by `agy`, plus `mcp_config.json` |
@@ -298,10 +298,10 @@ the declared settings and every key of a trusted workspace's `.env` file. Lint t
 `${` in any `SKILL.md`, except files listed in `scripts/gemini-substitution.allow` for product
 syntax such as Launcher `${param}` placeholders, which Gemini would rewrite only if a project
 `.env` defined those names.
-The `agents/` and `output-styles/` directories are Claude Code formats: Gemini CLI ignores
-`output-styles/` and logs one "Error loading agent" line per file in `agents/` at startup, because
-its sub-agent frontmatter differs (`tools` as a list, no `skills`). The lines are harmless; the
-skills, context file and MCP servers load normally.
+The `agents/` and `output-styles/` directories are Claude Code formats. Gemini CLI ignores
+`output-styles/`, and the agent files are named `_<name>.md` because Gemini CLI skips
+underscore-prefixed files in `agents/` (its own sub-agent schema would reject Claude's `skills:`
+field); the skills, context file and MCP servers load, and nothing is logged.
 
 ## Installation: Antigravity
 
@@ -313,7 +313,7 @@ public release:
 
 ```bash
 git clone https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
-agy plugin validate ~/domino-ai-plugin   # optional: 34 skills, 3 agents, 1 MCP server
+agy plugin validate ~/domino-ai-plugin   # optional: 33 skills, 3 agents, 1 MCP server
 agy plugin install ~/domino-ai-plugin
 ```
 
@@ -355,7 +355,7 @@ Domino MCP server to be deployed at a public HTTPS endpoint using Streamable HTT
 that deployment doesn't exist yet. Until it does, ship skills-only.
 
 The listing icon is `assets/logo.svg`, used for both `logo` and `composerIcon`. It is the
-pinwheel mark from `skills/domino-ui-design/assets/domino-logo.svg` on a square `#2E2E38` tile,
+Domino pinwheel mark on a square `#2E2E38` tile,
 because the portal requires square icons of at least 48×48. The build fails if any icon or
 screenshot path in `plugin.json` is missing or outside `assets/`.
 
@@ -415,30 +415,50 @@ installed copy. The commands below use the branch; the tag works in its place.
   claude plugin install dominodatalab@domino-marketplace
   ```
 
-  Back to the public release: remove the marketplace again, add it without `#rc/...`, install.
+  If `dominodatalab@claude-plugins-official` (the Anthropic directory copy) is installed too, both
+  load under the same `dominodatalab:` prefix and every skill appears twice: run `claude plugin
+  disable dominodatalab@claude-plugins-official` while testing and `claude plugin enable
+  dominodatalab@claude-plugins-official` afterwards. Newer candidate: `claude plugin marketplace
+  update domino-marketplace`, then `claude plugin update dominodatalab@domino-marketplace`, then
+  restart. Back to the public release: remove the marketplace again, add it without `#rc/...`,
+  install.
 - **Codex**: `codex plugin marketplace add dominodatalab/domino-ai-plugin@rc/2026.603.5`, then
-  `codex plugin add dominodatalab@domino-marketplace`. Back: `codex plugin marketplace remove
-  domino-marketplace`, add it without the ref, `codex plugin add` again.
+  `codex plugin add dominodatalab@domino-marketplace`. Newer candidate: `codex plugin marketplace
+  upgrade domino-marketplace`, then `codex plugin add dominodatalab@domino-marketplace` again.
+  Back: `codex plugin marketplace remove domino-marketplace`, add it without the ref, `codex
+  plugin add` again.
 - **Gemini CLI**: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref rc/2026.603.5`
-  (or `--pre-release` for the newest candidate). Back: `gemini extensions uninstall dominodatalab`,
-  then install without the ref.
+  (or `--pre-release` for the newest candidate; `npx -y @google/gemini-cli` stands in for `gemini`
+  when it isn't installed). Run it in a terminal: it asks a `[Y/n]` consent question, then for the
+  Domino URL and token, which can be left empty; without a terminal it waits at the consent prompt.
+  Newer candidate: `gemini extensions update dominodatalab`. Back: `gemini extensions uninstall
+  dominodatalab`, then install without the ref.
 - **Cursor**: choosing a ref for a GitHub-imported marketplace isn't documented, so clone the
   branch into the local plugins folder: `git clone -b rc/2026.603.5
   https://github.com/dominodatalab/domino-ai-plugin ~/.cursor/plugins/local/dominodatalab`, then
-  Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
+  Developer: Reload Window. Newer candidate: `git -C ~/.cursor/plugins/local/dominodatalab pull`,
+  then Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
 - **Antigravity**: `agy` installs a copy of a local checkout, so clone the branch and install it:
   `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin-rc && agy plugin install ~/domino-ai-plugin-rc`.
+  Newer candidate: `git -C ~/domino-ai-plugin-rc pull && agy plugin install ~/domino-ai-plugin-rc`.
   Back: `agy plugin uninstall dominodatalab`, then `agy plugin install` from a `main` checkout.
 - **Domino Workspaces**: the image's updater follows `release-X.Y` by name and never an `rc/`
   branch, so check the candidate out by hand in the image's clone, which Claude Code reads in
-  place (see [Updating](#updating-claude-code)):
+  place (see [Updating](#updating-claude-code)). The clone's `origin` may still point at the old
+  `domino-claude-plugin` repository, which has no `rc/` branches, so set it first:
 
   ```bash
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin remote set-url origin https://github.com/dominodatalab/domino-ai-plugin.git
   git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.5
   git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B rc/2026.603.5 origin/rc/2026.603.5
   ```
 
-  Start a new session. Back: `... checkout -B main origin/main`.
+  Start a new session. `claude plugin list` keeps showing the image's marketplace entry
+  (`1.0.0`) even while the candidate is loaded; check the loaded version with
+  `grep '"version"' ~/.claude/marketplaces/domino/plugins/domino-claude-plugin/.claude-plugin/plugin.json`.
+  Newer candidate: the same `fetch` and `checkout -B` again. Back: check out the release branch
+  the image expects (`release-X.Y` for your Domino version, or `main`), for example
+  `... checkout -B main origin/main`; if unsure, start a new Workspace.
 
 ---
 
@@ -462,7 +482,7 @@ DFS-based projects.
 Requires `uv`. Tools, routes and each host's registration are documented in
 [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
 
-### Skills (34 total)
+### Skills (33 total)
 
 | Skill | Description |
 | --- | --- |
@@ -475,7 +495,6 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-apps` | Deploy web apps (React, Streamlit, Dash) behind Domino's proxy |
 | `domino-app-init` | Scaffold a new Domino-ready app with framework templates |
 | `domino-debug-proxy` | Diagnose reverse-proxy and routing issues in apps |
-| `domino-ui-design` | Domino UI styling for integrated app design |
 | `domino-ui-bootstrap` | Bootstrap a Vite + React project on the Domino design system |
 | `domino-extensions` | Build and operate Domino UI Extensions |
 | `domino-experiment-tracking` | MLflow experiment tracking and model registry |
@@ -514,7 +533,7 @@ without skill preload; Codex and Gemini CLI don't use them.
 
 | Agent | Routes to |
 | --- | --- |
-| `domino-deploy` | `domino-apps`, `domino-app-init`, `domino-debug-proxy`, `domino-ui-bootstrap`, `domino-ui-design`, `domino-model-endpoints`, `domino-model-serving`, `domino-environments` for deploying apps and model endpoints |
+| `domino-deploy` | `domino-apps`, `domino-app-init`, `domino-debug-proxy`, `domino-ui-bootstrap`, `domino-model-endpoints`, `domino-model-serving`, `domino-environments` for deploying apps and model endpoints |
 | `domino-debug` | `domino-apps`, `domino-jobs`, `domino-environments`, `domino-api-intro` and the skill for the failing workload, with the log locations and Public API routes for fetching evidence |
 | `domino-setup` | `domino-projects`, `domino-environments`, `domino-experiment-setup`, `domino-trace-setup`, `domino-datasets`, `domino-data-sdk`, `domino-data-connectivity`, `domino-llm-gateway`, `domino-llm-access`, `domino-model-monitoring` for new projects and configuration |
 
@@ -542,7 +561,7 @@ domino-ai-plugin/
 ├── mcp_config.json              # Docs MCP server for Antigravity
 ├── rules/domino.md              # Always-on guidance for every host
 ├── assets/logo.svg              # OpenAI listing icon (square)
-├── skills/                      # Shared, provider-neutral skills (34)
+├── skills/                      # Shared, provider-neutral skills (33)
 ├── mcp-servers/domino_mcp_server/
 ├── evals/                       # claude plugin eval cases (not shipped to OpenAI)
 ├── agents/                      # Subagents: thin routers to skills (Claude Code; Cursor reads them too)
@@ -577,6 +596,10 @@ domino-ai-plugin/
   the rest of the repo. Links between skills are fine.
 - Skill files don't mention Claude unless listed in `scripts/claude-mentions.allow` with a reason
   (for example, Claude as a model name, or a table that covers both Claude Code and Codex).
+- Skill, agent and rule text states facts and instructions only: content-noise rules L1 to L16
+  (CONTRIBUTING standards 12 and 13) fail on provenance narrative, test logs, change history,
+  process jargon, shouting labels, when-to-use headings, self-describing preambles and names of
+  removed skills, and warn on timings, stage labels and spec attestations.
 
 Run it locally with `uv run --with pyyaml python scripts/lint-skills.py`.
 

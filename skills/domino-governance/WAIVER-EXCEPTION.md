@@ -2,7 +2,7 @@
 
 Submitter and approver request a deviation on a bundle, document justification, get approver sign-off, track expiry via finding due date, write an audit entry, bundle proceeds despite missing evidence.
 
-HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## Core calls
 

@@ -6,7 +6,6 @@ layout applies, what is read-write, and how pinned snapshots and tags change the
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/use-datasets-and-snapshots
 (section "Understand Dataset paths") and
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/version-data-with-snapshots.
-Identical on Domino 6.3 and Domino Cloud.
 
 ## Detect the layout
 
@@ -33,7 +32,7 @@ default_dataset = f"{local_root}/{os.environ['DOMINO_PROJECT_NAME']}"
 The roots are deployment settings (`/mnt` and `/domino/datasets` by default), which is why the
 code derives them from `DOMINO_DATASETS_DIR` instead of hardcoding.
 
-Verified in live Workspaces (2026-10-12): a Git-based Project `my-project` has
+A Git-based Project `my-project` has
 `DOMINO_DATASETS_DIR=/mnt/data` and its default Dataset at `/mnt/data/my-project`; a DFS Project
 has `DOMINO_DATASETS_DIR=/domino/datasets` and the Dataset at `/domino/datasets/local/my-project`.
 
@@ -121,10 +120,9 @@ neither is a Dataset.
 Snapshot mounts are set up when an execution starts. A snapshot taken during a Workspace or
 Job is therefore **not** visible in that execution: there is no `snapshots/<name>/<n>` entry for
 it, and a Workspace that has taken its Dataset's first snapshots has no `snapshots/` directory
-at all. Executions started after the snapshot became `active` mount it. Verified on Domino
-6.4.0: a Job started after five snapshots existed listed `/mnt/data/snapshots/<name>/2` to `/5`
-with their files, while the Workspace that took them saw none. Snapshot 0 (the empty initial
-snapshot every Dataset starts with) and snapshots whose status is `failed` are not mounted.
+at all. Executions started after the snapshot became `active` mount it. Snapshot 0 (the empty
+initial snapshot every Dataset starts with) and snapshots whose status is `failed` are not
+mounted.
 
 To read a snapshot from the execution that took it, use the internal file route through the
 proxy or `DatasetClient` with `DatasetConfig(snapshot_id=...)`, both in [API.md](./API.md)
@@ -133,9 +131,9 @@ and the domino-data-sdk skill, or start a Job that mounts it.
 ## Read-write or read-only
 
 - Live Dataset directories follow the user's Dataset role: Owner and Editor read-write, Reader
-  read-only. Roles are granted per Dataset, independently of Project roles. For a Dataset
-  shared from another Project the docs disagree with themselves (the path list says read-only,
-  the tree says by role); check before writing: `os.access(path, os.W_OK)`.
+  read-only. Roles are granted per Dataset, independently of Project roles. A Dataset shared
+  from another Project may mount read-only regardless of role; check before writing:
+  `os.access(path, os.W_OK)`.
 - Every snapshot directory (numbered or tagged) is read-only.
 - An execution pinned to one snapshot mounts that snapshot read-only at the live path
   (`/mnt/data/<name>` or `/domino/datasets/local/<name>`) and mounts nothing under

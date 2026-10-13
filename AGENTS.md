@@ -31,7 +31,7 @@ customer environments from a **public** repository. Three facts drive most rules
 |---|---|
 | `skills/<name>/SKILL.md` | One skill per directory. Reference files sit beside `SKILL.md`. |
 | `skills/<name>/assets/` | Templates a skill copies into the user's project (no `templates/` or `commands/` dirs) |
-| `agents/`, `output-styles/` | Claude Code components; not in the OpenAI package. An agent is a thin router: it preloads the skills for its area (`skills:`, Claude Code 2.0.43+; loading further plugin skills from a subagent needs 2.1.133+) and holds no procedure of its own. Cursor reads `agents/` as plain prompts (its frontmatter has no `skills:` or `tools:`), Gemini CLI rejects the files (its sub-agent schema differs) |
+| `agents/`, `output-styles/` | Claude Code components; not in the OpenAI package. An agent is a thin router: it preloads the skills for its area (`skills:`, Claude Code 2.0.43+; loading further plugin skills from a subagent needs 2.1.133+) and holds no procedure of its own. Cursor reads `agents/` as plain prompts (its frontmatter has no `skills:` or `tools:`). The files are named `_<name>.md`: Gemini CLI skips underscore-prefixed files in `agents/` (its strict sub-agent schema would reject `skills:` and log an error per file), while Claude Code, Cursor and Antigravity take the agent's name from the frontmatter `name` |
 | `hooks/` | Documentation only (`hooks/README.md`); no `hooks.json` is shipped, so neither Claude Code nor Gemini CLI loads anything from it. The plugin's only hook is the inline `SessionStart` entry in `.claude-plugin/plugin.json` |
 | `rules/domino.md` | Always-on Domino guidance, loaded into every session: by a `SessionStart` hook in `.claude-plugin/plugin.json` (Claude Code), as an always-on rule (Antigravity reads `trigger: always_on`, Cursor reads `alwaysApply: true`), as the Gemini CLI extension's context file (`contextFileName` in `gemini-extension.json`), and as the bundled MCP server's instructions (lead section only, for Codex). Every user pays for it on every turn, so it holds only what an assistant needs to work in Domino: lint caps it at 2,600 characters, ASCII, host-neutral, with a lead section under 900 bytes |
 | `mcp-servers/` | Bundled MCP server, started by `.mcp.json` (Claude Code), `mcp.json` (Codex), `.cursor-plugin/mcp.json` (Cursor) and `gemini-extension.json` (Gemini CLI). All four also register the Domino docs MCP server, `domino_docs` at `https://docs.domino.ai/mcp`; `mcp_config.json` registers it for Antigravity |
@@ -84,7 +84,8 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
   `$DOMINO_API_HOST/assets/public-api.json` is a subset and misses whole services.
 - `/v4/*` routes are the Domino Internal API (documented per cluster under `/docs`, absent from
   the Public API). Use the `/api/...` equivalent; where none exists, label the call
-  "internal API, may change between Domino versions" where it appears.
+  `(non-public route; may change in a future Domino version)` where it appears and link the
+  canonical note in `skills/domino-api-intro/SKILL.md` ("Route types").
 - Product behaviour comes from docs.domino.ai (`/cloud/...` and `/6.3/...`; `llms.txt` indexes
   every page, and any page is Markdown with `.md` appended). Cite docs.domino.ai, not
   `docs.dominodatalab.com/en/latest`.
@@ -103,6 +104,17 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
 - No internal references in skill content: no Jira, Confluence, Slack or internal-repo links,
   ticket keys, or paths users cannot obtain. No placeholder hosts such as `your-domino.com`;
   use `$DOMINO_API_HOST` or the value an API response returns.
+- Skill content states facts and instructions only: no provenance (how, when or where
+  something was verified, audits, reviews, test clusters). Put verification evidence in the PR
+  description. Real uncertainty becomes reader guidance ("if this returns 404, confirm the route
+  in your deployment's `/docs`"); version facts and the "non-public route; may change in a future Domino version" label stay (CONTRIBUTING standard 12).
+- A skill holds facts, routes, steps, real constraints, decision rules and the short reasons
+  behind them, and nothing else: no change history ("now", "no longer", "previously"), no
+  project jargon (PR, audit, round, release candidate, E2E, harness, eval, ticket keys), no ids
+  or error text from test runs, no long rationale or hedging, no paragraph another skill owns
+  (link it), no tangents, no marketing or all-caps emphasis. When-to-use text goes in
+  `description`. Write and revise skills with the `skill-creator` skill from Anthropic's
+  `claude-plugins-official` marketplace (CONTRIBUTING standard 13).
 
 Existing skills predate these requirements and many violate them (missing
 frontmatter, stale links). Fix violations in the files you are already changing. Do not sweep

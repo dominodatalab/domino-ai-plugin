@@ -1,7 +1,7 @@
 # Domino Projects API
 
 Create and manage projects, collaborators, git repositories, goals and shared datasets.
-All routes and bodies below are in both published specs unless marked **Cloud**.
+Routes marked **Cloud** exist only on Domino Cloud.
 Product docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/projects.
 
 ## Authentication
@@ -20,14 +20,12 @@ filter client-side, or resolve one project by name with the Domino Internal API
 `GET /v4/gateway/projects/findProjectByOwnerAndName?ownerName=<owner>&projectName=<name>`
 (returns the project with `id`, `name`, `owner`, `visibility`, `hardwareTierId`,
 `environmentName`, `requestingUserRole`, ...; 404 when there is none). It is what
-python-domino's `project_id` property calls; internal API, may change between Domino
-versions; verified on an internal Domino test cluster (6.4.0), so on Domino 6.3 confirm it
-in your deployment's `/docs`. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
+python-domino's `project_id` property calls; non-public route; may change in a future Domino version; on Domino 6.3 confirm it in your deployment's `/docs`. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
 Each project has `id`, `name`, `description`, `visibility`, `ownerId`, `ownerUsername`,
-`collaborators`, `isRestricted`, optional `billingTag` and `mainRepository`. The spec
-enum for `visibility` is lowercase (`public`, `searchable`, `private`); live (Domino
-Cloud 6.4.0) the server accepts either case on create and returns `Private`, so compare
-case-insensitively. An unknown value fails with a 500 naming the accepted set.
+`collaborators`, `isRestricted`, optional `billingTag` and `mainRepository`. The
+`visibility` enum is lowercase (`public`, `searchable`, `private`); Domino accepts either
+case on create and returns `Private`, so compare case-insensitively. An unknown value
+fails with a 500 naming the accepted set.
 
 ```python
 projects = requests.get(f"{base_url}/api/projects/beta/projects", headers=headers,
@@ -58,7 +56,7 @@ project_id = project["id"]
 
 Response: `{"project": {...}, "metadata": {...}}` with HTTP 200. A `mainRepository`
 of `{"uri": "https://github.com/org/repo", "serviceProvider": "github", "defaultRef": {"refType": "head"}}`
-creates a Git-based project (verified live; the server echoes `Head` and `Github`).
+creates a Git-based project (the server echoes `Head` and `Github`).
 
 ## Get a project
 
@@ -183,8 +181,8 @@ PUT /api/projects/beta/projects/{projectId}/results-settings      body: {"branch
 ```
 
 Response: `{"resultsSettings": {"branch"}, "metadata"}`. These settings concern Git-based
-projects. On a DFS project (internal Domino test cluster, 6.4.0) `GET` returned
-`400 an implementation is missing` while `PUT` returned 200, so expect `GET` to work only
+projects. On a DFS project `GET` returns `400 an implementation is missing` while `PUT`
+returns 200, so expect `GET` to work only
 on Git-based projects.
 
 ## Project settings and defaults
@@ -192,8 +190,7 @@ on Git-based projects.
 The Public API has no route for project settings (default hardware tier, environment).
 On Domino Cloud, `POST /api/jobs/v1/projects/{projectId}/job-defaults` resolves the
 defaults a job would use ([API-JOBS.md](./API-JOBS.md#job-defaults-domino-cloud-only)).
-The Domino Internal API reads and writes them (internal API, may change between Domino
-versions; verified on an internal Domino test cluster (6.4.0); on Domino 6.3 confirm both
+The Domino Internal API reads and writes them (non-public route; may change in a future Domino version; on Domino 6.3 confirm both
 routes in your deployment's `/docs` first):
 
 ```
@@ -202,9 +199,9 @@ PUT /v4/projects/{projectId}/settings   body: any of {"defaultEnvironmentId", "d
 ```
 
 `defaultEnvironmentRevisionSpec` is `ActiveRevision`, `LatestRevision`,
-`RestrictedRevision` or `{"revisionId": "..."}`. `PUT` returned 200 with an empty body; a
-body with only `defaultVolumeSizeGiB` changed that field and left the environment and
-tier as they were. Keep the volume size inside the `min`/`max` the `GET` reports.
+`RestrictedRevision` or `{"revisionId": "..."}`. `PUT` returns 200 with an empty body and
+is a partial update: omitted fields keep their values. Keep the volume size inside the
+`min`/`max` the `GET` reports.
 
 ```python
 requests.put(f"{base_url}/v4/projects/{project_id}/settings", headers=headers,

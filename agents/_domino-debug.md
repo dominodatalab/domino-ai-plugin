@@ -59,7 +59,7 @@ legacy API keys.
 | Job | Jobs, select the Job, **Logs** tab: Setup Output, User Output, Deployment Logs, Support Bundle ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs)) | `GET /api/jobs/beta/jobs/{jobId}` for status, `GET /api/jobs/beta/jobs/{jobId}/logs` for logs |
 | App | The App's details page, logs per version and per instance ([docs](https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning)) | `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`, then `.../instances/{instanceId}/logs` |
 | Model API | The Model API version's build and instance logs | `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` and `.../instanceLogs` |
-| Workspace | Workspaces, select the Workspace, **Logs** ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/view-workspace-details)) | No Public API route. Internal API, may change between Domino versions: `GET /v4/workspace/project/{projectId}/workspace/{workspaceId}/sessions` for the session id, then `GET /v4/workspace/{projectId}/{sessionId}/logs` (or `.../realTimeLogs`) |
+| Workspace | Workspaces, select the Workspace, **Logs** ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/view-workspace-details)) | No Public API route; non-public route, may change in a future Domino version: `GET /v4/workspace/project/{projectId}/workspace/{workspaceId}/sessions` for the session id, then `GET /v4/workspace/{projectId}/{sessionId}/logs` (or `.../realTimeLogs`) |
 | Environment build | Environments, the environment's **Revisions** tab, the revision's build log | no route in the Public or the Internal API; use the UI |
 
 ## How to work

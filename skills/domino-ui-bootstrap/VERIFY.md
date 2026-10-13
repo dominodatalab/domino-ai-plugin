@@ -10,7 +10,7 @@ The most reliable verification is a clean production build:
 npm run build
 ```
 
-**`npm install` is not a sufficient check.** It can succeed while the toolchain is broken in ways that only surface at build time — most commonly the rolldown native-binding error when Vite 8 runs on a Node outside `^20.19.0 || >=22.12.0`, which `install` happily writes to disk and only fails when `build` tries to load. Always run `npm run build` before reporting success.
+**`npm install` is not a sufficient check.** It can succeed while the toolchain is broken in ways that only surface at build time (see the rolldown failure below). Always run `npm run build` before reporting success.
 
 This catches version mismatches deterministically. If it passes, the pinning and the entry-point wiring are correct.
 
@@ -47,6 +47,6 @@ Tell the user:
 - How to start the dev server.
 - That future component additions should go through the Storybook MCP (which the instructions file you wrote will remind the next session about).
 - Anything that changed in their existing code (downgraded versions, swapped router, edited entry point) so they're not surprised.
-- **Bundle-size warning is expected.** Vite emits a `>500 KB chunk` warning on build because the Domino component library bundles a lot. It's not a failure — don't chase it.
-- **Port 8888 means two different things.** A published Domino App must listen on `0.0.0.0:8888`. Inside a Domino workspace that port belongs to the workspace IDE (Jupyter, for example), so the Vite dev server cannot bind it there, and Vite ignores a relative `base` in dev mode anyway. Test inside Domino with **App Preview** in the workspace, which runs `app.sh` in a real App runtime behind the real proxy; keep `npm run dev` for a laptop.
+- The `>500 KB chunk` build warning is expected (Step 12).
+- **Port 8888 means two different things.** A published Domino App must listen on `0.0.0.0:8888`; inside a Domino workspace that port belongs to the IDE, so test there with **App Preview** and keep `npm run dev` for a laptop ([domino-apps/REACT-VITE-GUIDE.md](../domino-apps/REACT-VITE-GUIDE.md#developing-in-a-domino-workspace)).
 - **Next step toward a deployable app:** suggest that the user create an `app.sh` launch script that runs `npm ci`, `npm run build`, and then serves `dist/` on `0.0.0.0:8888` (`npx serve -s dist -l 8888`, or an Express server when the app calls a model endpoint or the Domino API, so tokens stay server-side). `npm run build` alone does not serve anything. Point them at the `domino-apps` skill for the full deploy shape.

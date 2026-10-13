@@ -1,12 +1,11 @@
 # OpenAPI specs and route discovery
 
-Verify every route and body against these before writing an example. Do not guess
-routes from memory.
+Check that a route and its body exist in the spec for the target Domino version before
+calling it; do not guess routes from memory.
 
 ## Published Public API specs
 
-One per supported target. A route must exist in the spec for every Domino version a skill
-claims.
+One per supported target.
 
 | Target | OpenAPI JSON | Reference UI |
 |--------|--------------|--------------|
@@ -21,7 +20,7 @@ curl -s https://docs.domino.ai/api-specs/cloud/public-api.json \
   | jq '.paths["/api/jobs/v1/jobs"].post.requestBody.content["application/json"].schema'
 ```
 
-Differences between the two (October 2026): the Cloud spec adds
+Differences between the two: the Cloud spec adds
 `POST /api/jobs/v1/projects/{projectId}/job-defaults`, `/api/environments/v2/environments`,
 environment name/description `PUT`s, Model API collaborators/visibility under
 `/api/modelServing/beta`, app roles, and repository default-ref/readme routes. The 6.3 spec
@@ -39,7 +38,7 @@ curl -s https://<domino-domain>/docs/configuration.json | jq '.sources[] | {titl
 | Document | Contents |
 |----------|----------|
 | `/docs/openapi/openapi-public.json` | That deployment's full Public API |
-| `/docs/openapi/openapi-internal.json` | The Domino Internal API (the `/v4/*` routes) |
+| `/docs/openapi/openapi-internal.json` | The internal API (the `/v4/*` routes; non-public, may change in a future Domino version) |
 | `/docs/openapi/data_taxonomy_service-swagger.json` | Tags and properties service |
 | `/docs/openapi/data_remotefs_service-swagger.json` | NetApp Volumes service |
 | `/docs/openapi/rai_guardrails_service-swagger.json` | Governance service |
@@ -52,7 +51,7 @@ treat it as complete.
 
 `/v4/*` routes are the Domino Internal API. They are not in the Public API spec and are
 not versioned for external use. Prefer the `/api/...` equivalent; where none exists,
-label the call **internal API, may change between Domino versions** at the point of use.
+label the call **non-public route; may change in a future Domino version** at the point of use ([route types](./SKILL.md#route-types)).
 
 ## Product docs
 

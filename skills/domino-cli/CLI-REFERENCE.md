@@ -70,7 +70,7 @@ domino download-results --filter 'myfolder/*' 548fda01e4b0a8f06b7e8d99
 domino download-results --filter 'myfolder/*' 1
 ```
 
-Notes from the product pages: an `upload` of more than 1,000 files at once can hit a timeout
+Notes: an `upload` of more than 1,000 files at once can hit a timeout
 (split it); `sync` failing with "too many open files" is solved by an empty `.noLock` file at the
 project root; `.dominoignore` lists files and folders (with `*` wildcards) that sync skips.
 

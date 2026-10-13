@@ -12,17 +12,14 @@ Domino Volumes for NetApp ONTAP mount NetApp ONTAP filesystems directly into Dom
 Workspaces, Jobs, Apps and Launchers. They are global entities (not scoped to a project)
 that you attach to any project that needs them. Product docs:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/netapp-volumes.
-
-## Activation
-
-Use this skill when the user wants to create or manage NetApp Volumes, snapshot or tag
-them, share large data across projects, read NetApp data from a Workspace or Job, mount
-volumes in Jobs, or call the `/remotefs/v1` API.
+Auth: [domino-api-intro](../domino-api-intro/SKILL.md#authentication); in a run the
+`/remotefs/v1` routes answer only on `DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT` with a bearer
+([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#authentication-and-base-urls)).
 
 ## NetApp Volumes or Domino Datasets?
 
-Per the docs, NetApp Volumes cover nearly the same ground as Datasets and are recommended
-wherever the organization runs ONTAP. Differences:
+NetApp Volumes cover nearly the same ground as Datasets and are recommended wherever the
+organization runs ONTAP. Differences:
 
 - Snapshots are near-instant regardless of size (about 3 seconds) and use
   redirect-on-write, so they consume no extra storage at creation; a Dataset snapshot
@@ -76,9 +73,8 @@ Paths mirror the Dataset scheme; volumes are global, so there is no local/import
 | DFS | `/domino/netapp-volumes/<name>` | `/domino/netapp-volumes/snapshots/<name>/<number>` | `/domino/netapp-volumes/snapshot-tags/<name>/<tag>` |
 | Git-based | `/mnt/netapp-volumes/<name>` | `/mnt/netapp-volumes/snapshots/<name>/<number>` | `/mnt/netapp-volumes/snapshot-tags/<name>/<tag>` |
 
-`<number>` is the snapshot's `version` from the API (the docs give `snapshots/<name>` and
-say the paths mirror the Dataset scheme). Owners and Editors mount read-write; Readers mount read-only; Apps
-mount with the App owner's permission. If a snapshot has several tags, only the most
+`<number>` is the snapshot's `version` from the API. Owners and Editors mount read-write;
+Readers mount read-only; Apps mount with the App owner's permission. If a snapshot has several tags, only the most
 recently added tag is mounted. Renaming a volume changes its mount path. At launch you can
 pin a volume to one snapshot (**Data Plane & Hardware** tab); it then mounts read-only at
 the read-write path and `snapshots/<name>` is disabled. Details:
@@ -104,7 +100,7 @@ the job.
 
 ## Roles
 
-| Role | API value | Capabilities (docs) |
+| Role | API value | Capabilities |
 |------|-----------|---------------------|
 | Reader | `VolumeReader` | Read data and view snapshots; attach to projects read-only; can only mark a snapshot for deletion |
 | Editor | `VolumeEditor` | Reader plus write data, edit the description, take and delete snapshots, mount, mark for deletion or restore |
@@ -122,7 +118,7 @@ off. Body: [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#mount-volumes-in-a-jo
 
 ## Reference files
 
-- [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md): REST API with spec-verified bodies (volumes, filesystems, attach/detach, snapshots, tags, grants, deletion, listing, files, jobs)
+- [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md): REST API with request bodies (volumes, filesystems, attach/detach, snapshots, tags, grants, deletion, listing, files, jobs)
 - [DATA-ACCESS.md](./DATA-ACCESS.md): comparison with Datasets, mount paths, snapshot mounting, read/write examples, best practices
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): missing mounts, permission errors, tag paths, no filesystems, slow reads
 

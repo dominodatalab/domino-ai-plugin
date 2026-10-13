@@ -8,9 +8,6 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-Read this skill first whenever you automate Domino over HTTP or the Python SDK. The
-other Domino skills assume the rules below.
-
 ## Authentication
 
 Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
@@ -23,10 +20,7 @@ Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 | Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you; **Account Settings** or `POST /api/pat/v1/tokens`, value returned once: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#personal-access-tokens)) or a **service account token** (unattended automation) |
 
 Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`, `api_key=`) are
-deprecated: the auth page says they still work but are "scheduled for deprecation in
-future versions", and the environment-variable glossary marks `DOMINO_USER_API_KEY` as
-sunsetting. Never recommend them, not even as a fallback. `DOMINO_TOKEN_FILE` no longer
-exists as an environment variable.
+deprecated. Never recommend them, not even as a fallback.
 
 ### Environment variables as the secret store
 
@@ -35,9 +29,9 @@ Domino environment variables, nothing else: a **user** variable (**Account > Acc
 Settings > User environment variables**) for a personal credential, injected into every
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
-share. Set them in the UI or with the Domino Internal API below (no Public API or
-python-domino route; may change between Domino versions; verified on an internal Domino
-test cluster (6.4.0); on 6.3 confirm the routes in your deployment's `/docs`). When an
+share. Set them in the UI or with the non-public routes below (no Public API or
+python-domino route; may change in a future Domino version; on 6.3 confirm the routes in
+your deployment's `/docs`). When an
 agent stores a secret for the user it writes it with these routes and confirms by
 **name only**: the `GET`s return values, so never echo them into a reply or a log. Never
 call the wipe-all `DELETE /v4/users/environmentVariables` unless the user explicitly asks
@@ -61,8 +55,7 @@ names = [v["name"] for v in requests.get(f"{base_url}/v4/projects/{project_id}/e
                                          headers=headers).json()]
 ```
 
-A Job started afterwards listed the Project and user variables by name. User overrides
-Project, which overrides the Compute Environment. Neither reaches a
+User overrides Project, which overrides the Compute Environment. Neither reaches a
 Model API: pass `environmentVariables` (`[{"key", "value"}]`) on
 `POST /api/modelServing/v1/modelApis` when you create it, or set them later under the
 endpoint's own **Settings** (the update route has no variables field). Code reads them by name
@@ -99,26 +92,29 @@ elif os.environ.get("DOMINO_RUN_ID"):           # inside a run, proxy not inject
 else:                                           # outside Domino: PAT or service account token
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
     headers = {"Authorization": f"Bearer {os.environ['DOMINO_API_TOKEN']}"}
+base = base_url                                 # examples in other skills use either name
 ```
 
 `DOMINO_RUN_ID`, `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME`
 and `DOMINO_API_HOST` are injected into every execution (glossary:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables).
 
-## Routes
+## Route types
 
-Prefer Public API routes (`/api/...`, plus `/remotefs/v1` and `/model-monitor`) from the
-published specs. `/v4/*` routes are the Domino Internal API: use them only when no Public
-API equivalent exists, and label them "internal API, may change between Domino versions"
-where they appear. The spec's `/datasetrw/...` snapshot-file routes did not answer on a
-6.4.0 deployment (only `/v4/datasetrw/...` did; [HOSTS.md](./HOSTS.md)), so read dataset
-files from the mount path or python-domino. Discovery: [API-SPECS.md](./API-SPECS.md).
+Most Domino endpoints are stable. Public API routes (`/api/...`, plus `/remotefs/v1` and
+`/model-monitor`) are versioned and documented in the published specs. Non-public routes,
+meaning the internal API (`/v4/...`, documented per deployment at `https://<domino-domain>/docs`)
+and web UI routes, also work, but can change in a future version of Domino. Use a public route
+when one exists; where none does, the skills label the call `(non-public route; may change in a
+future Domino version)` at the point of use. If a non-public call fails after an upgrade, check
+the route in your deployment's `/docs`. Dataset file routes: [HOSTS.md](./HOSTS.md).
+Discovery: [API-SPECS.md](./API-SPECS.md).
 
 ## Reference files (this skill)
 
 | File | Use when |
 |------|----------|
-| [HOSTS.md](./HOSTS.md) | Base URL for each API family, Model API invocation, governance, the API gateway flag |
+| [HOSTS.md](./HOSTS.md) | Base URL for each API family, Model API invocation, governance, 404 on the in-run base |
 | [LIMITS.md](./LIMITS.md) | Pagination envelopes, caps, deprecated credentials and variables |
 | [ERRORS.md](./ERRORS.md) | Status codes, retries, error bodies, job status fields |
 | [SDK-MAP.md](./SDK-MAP.md) | Which plugin skill covers each API surface |

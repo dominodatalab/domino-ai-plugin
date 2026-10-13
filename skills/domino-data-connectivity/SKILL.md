@@ -28,7 +28,7 @@ Read `GET $DOMINO_API_HOST/version` (no auth) and look at `version`:
 
 - `6.3.x`: self-managed Domino 6.3. Your platform team administers the Kubernetes cluster,
   Keycloak and configuration records, so every mechanism below is available.
-- A Domino-hosted deployment (Domino Cloud reports a newer line, `6.4.0` on 2026-10-12): Domino
+- A Domino-hosted deployment (Domino Cloud reports a line newer than 6.3): Domino
   operates the cluster. Use Data Sources and External Data Volumes (EDVs need a remote Data
   Plane on Cloud). IAM authentication, credential propagation, CSI drivers and Domsed mutations
   are requested through Domino Support; the admin pages for them exist only under `/6.3/`.

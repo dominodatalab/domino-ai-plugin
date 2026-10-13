@@ -1,8 +1,8 @@
 # Domino Models API
 
 Model APIs (hosted prediction endpoints), Model Deployments, the Registered Models
-registry, and how to invoke an endpoint. Routes and fields are from both published specs
-unless marked **Cloud**. Lifecycle guidance and the v1/v2 registry split:
+registry, and how to invoke an endpoint. Routes marked **Cloud** exist only on Domino
+Cloud. Lifecycle guidance and the v1/v2 registry split:
 [API-MODEL-SERVING.md](./API-MODEL-SERVING.md) and
 [domino-model-serving](../domino-model-serving/SKILL.md); deployment workflow and
 monitoring: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
@@ -11,7 +11,8 @@ monitoring: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
 
 Use the shared setup block (`base_url`, `headers`) from
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication). Invoking an endpoint
-uses that endpoint's own access token instead (below).
+uses that endpoint's own access token instead (below); to create one, see
+[Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`.
 
 ## Model APIs
 
@@ -37,7 +38,7 @@ items = requests.get(f"{base_url}/api/modelServing/v1/modelApis", headers=header
 ### Create
 
 ```
-POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 201; an internal Domino test cluster (6.4.0) returned 200)
+POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 201; Domino returns 200)
 ```
 
 Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`,
@@ -71,15 +72,12 @@ model_api = requests.post(f"{base_url}/api/modelServing/v1/modelApis", headers=h
 model_api_id = model_api["id"]
 ```
 
-Live check on an internal Domino test cluster (6.4.0) used a smaller body than the one
-above: the required fields, `replicas: 1`, `source.excludeFiles: []`, and **no**
-`hardwareTierId`, `shouldDeploy` or version `description`. With `hardwareTierId`
-omitted, the record came back with `hardwareTierId: "small-k8s"` (the project default,
-not the deployment's `isDefaultForModelApi` tier); an access token was created
-automatically (id only, no value); `activeVersion` had no `deployment` key until the
-build finished, and after about 2.5 minutes `activeVersion.deployment` was
-`{"status": "Running", "isPending": false}`. The optional fields in the example above
-come from the spec and were not exercised.
+Omitting `hardwareTierId` uses the project default tier (not the deployment's
+`isDefaultForModelApi` tier). An access token is created automatically (id only in the
+response; its value is in the UI or in the fragment returned by the token create route,
+[Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens)).
+`activeVersion.deployment` is absent until the build finishes; poll until it is
+`{"status": "Running", "isPending": false}`.
 
 ```python
 import time
@@ -102,19 +100,20 @@ DELETE /api/modelServing/v1/modelApis/{modelApiId}
 
 The GET response carries `access.accessTokens[]` (token ids and metadata, not the secret
 values) and, once deployed, `activeVersion.deployment.status`. It does not include the
-invocation URL; read that from the Model API's page in Domino.
+invocation URL, and no other route does: the URL is the deployment's external URL (the one
+you sign in at) plus `/models/{modelApiId}/latest/model`, as shown on the Model API's page.
 
 `DELETE` on a running Model API returns `500 Model API with id <id> is running`. The
 Public API has no stop route; stop it first with
 `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` (body `{}`;
-internal API, may change between Domino versions) or from the UI, then `DELETE`. After
+non-public route; may change in a future Domino version) or from the UI, then `DELETE`. After
 deletion `GET` returns 404 and the list no longer includes the record.
 
 **Cloud only:** `PUT /api/modelServing/beta/modelApis/{modelApiId}/access` saves
 `visibility` (`Public`/`Discoverable`/`Private`) and the **complete** collaborator list
 (`collaborators[]` with `id`, `isOrganization`, `role` `Owner`/`Editor`/`Operator`/`Viewer`)
-in one request: per the spec, "anyone omitted loses the assigned role, including the
-caller", and the last Owner cannot be omitted, so load the current list from
+in one request: anyone omitted loses the assigned role, including the caller, and the
+last Owner cannot be omitted, so load the current list from
 `GET .../collaborators` and send it back with your change. `POST .../collaborators`
 adds one principal (fails if the id is already assigned; only Owners can add);
 `PUT .../collaborators/{collaboratorId}` changes a role; `GET/PUT .../visibility`
@@ -125,7 +124,7 @@ flag); `GET .../consumer/access` reports the caller's access.
 
 ```
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions
-POST /api/modelServing/v1/modelApis/{modelApiId}/versions        -> the version record (spec says 201; live returned 200)
+POST /api/modelServing/v1/modelApis/{modelApiId}/versions        -> the version record (spec says 201; Domino returns 200)
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/exportLogs
@@ -136,7 +135,7 @@ New-version body is the `version` object above (`projectId`, `source`,
 `logHttpRequestResponse`, `monitoringEnabled` required; `description` optional). The
 response includes `environmentRevisionId` and `number`, and `deployment.status` /
 `deployment.isPending` once deployed. `shouldDeploy: false` still builds the image (the
-build logs complete) but creates no deployment (verified live).
+build logs complete) but creates no deployment.
 
 ## Model Deployments
 
@@ -166,13 +165,12 @@ shape follows the target type's `effectiveModelDeploymentSchema`. The record's
 
 List and register use v2; per-model reads use v1 keyed by **model name**. Version
 creation goes through `POST /api/registeredmodels/v2` as well: the v1 route
-`POST /api/registeredmodels/v1/{modelName}/versions` is marked deprecated in both specs
-("deprecated as of version 6.2.1. Please migrate to POST /api/registeredmodels/v2").
+`POST /api/registeredmodels/v1/{modelName}/versions` is deprecated.
 
 ```
 GET  /api/registeredmodels/v2            params: projectId, searchPattern, modelCategory (genai|ml), pageToken, maxResults (default 25), orderBy
 POST /api/registeredmodels/v2            register a model or add a version
-GET  /api/registeredmodels/v1            ML models only (spec: "Returns only ML models"); v2 returns all categories by default
+GET  /api/registeredmodels/v1            ML models only; v2 returns all categories by default
 GET  /api/registeredmodels/v1/{modelName};  PATCH /api/registeredmodels/v1/{modelName}
 GET  /api/registeredmodels/v1/{modelName}/versions;  GET .../versions/{version};  GET .../versions/{version}/modelapis
 GET  /api/registeredmodels/v2/{modelName}/versions[/{version}]
@@ -191,10 +189,8 @@ the run). Response: `{"registeredModel": {...}, "modelVersion": {...}}`.
 **Use `loggedModelId` for models logged with MLflow 3.** MLflow 3 clients store
 `log_model` output as a LoggedModel (`m-<id>`) rather than as a run artifact, so a
 version registered with `artifactPath: "model"` points at a path that does not exist and
-`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. Verified on an internal
-Domino test cluster (6.4.0, MLflow client 3.3.2): both bodies return 200, only the
-`loggedModelId` version loads. Get the id from the run (`mlflow.last_logged_model()`, or
-the `model_id` on the logged model info).
+`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. Get the id from the run
+(`mlflow.last_logged_model()`, or the `model_id` on the logged model info).
 
 ```python
 result = requests.post(f"{base_url}/api/registeredmodels/v2", headers=headers, json={
@@ -212,8 +208,10 @@ List responses use `{"items": [...], "metadata": {"nextPageToken", ...}}`; page 
 
 ## Invoking a Model API
 
-Use the invocation URL shown on the Model API's page (not `$DOMINO_API_HOST`), with
-the endpoint's access token. Per
+Use the invocation URL shown on the Model API's page (the deployment's external URL plus
+`/models/{modelApiId}/latest/model`; not the in-run `$DOMINO_API_HOST`), with the
+endpoint's access token: the user's, or one you create and store
+([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens)). Per
 https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization:
 
 - Restricted **synchronous** endpoint: HTTP Basic, username and password both the token.
@@ -234,7 +232,7 @@ Asynchronous endpoints use the Public API routes with the endpoint's own access 
 Call them on the deployment URL (the same base the Model API page shows), not through
 `$DOMINO_API_PROXY`, which would inject a platform token. From outside Domino that is the
 URL you sign in at; from inside a run, prefer the deployment URL as well, since the
-in-run `DOMINO_API_HOST` base was not tested with an endpoint token.
+in-run `DOMINO_API_HOST` base may reject an endpoint token.
 
 ```python
 import time
@@ -263,7 +261,7 @@ print(result["status"], result.get("result"), result.get("errors"))
 `models_list()`, `model_publish(file, function, environment_id, name, description, files_to_exclude=None)`,
 `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)`
 and the `model_version_export*` methods call `/v1/models` and `/v4/models`, which are
-Domino Internal API, may change between Domino versions. Signatures and a publish example:
+non-public routes; they may change in a future Domino version. Signatures and a publish example:
 [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#model-apis-and-apps); the export routes and the build call
 the SDK lacks: [EXPORT-API.md](../domino-model-delivery/EXPORT-API.md); the NVIDIA Fleet Command,
 Snowflake and SageMaker targets: [EXPORT-TARGETS.md](../domino-model-delivery/EXPORT-TARGETS.md).

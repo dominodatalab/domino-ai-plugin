@@ -92,7 +92,8 @@ The directory name **must equal** `name` (agentskills.io rule; Codex and OpenCod
    needs (references, scripts, templates under `assets/`) inside the skill's own directory.
 5. Follow the [Skill Authoring Standards](#skill-authoring-standards) — auth
    pattern, host env vars, no `python-domino` SDK, verified endpoints,
-   smoke-tested payloads, provider-neutral wording
+   smoke-tested payloads, provider-neutral wording, and only what belongs in a skill
+   (standard 13)
 6. Run `uv run --with pyyaml python scripts/lint-skills.py`
 
 ### Adding a User-Invoked Workflow
@@ -105,7 +106,9 @@ the inputs to collect, and put any template files in the skill's `assets/` folde
 
 ### Adding a New Agent
 
-1. Create a markdown file under `agents/`
+1. Create `agents/_<agent-name>.md`. The leading underscore keeps Gemini CLI from loading a
+   Claude-format file (it skips `_`-prefixed files in `agents/`, and its schema would reject
+   `skills:`); the agent's name comes from the frontmatter, not the file name.
 2. Include full frontmatter:
 
 ```yaml
@@ -124,7 +127,7 @@ skills:
 2.0.43 or later); `Skill` in `tools:` lets the agent load any other plugin skill on demand
 (2.1.133 or later), and `mcp__plugin_dominodatalab_<server>__*` grants it the plugin's MCP
 tools. Agents are a Claude Code component and aren't in the OpenAI package; Cursor loads them
-as plain prompts without `skills:` or `tools:`, and Gemini CLI rejects them. So an agent is a
+as plain prompts without `skills:` or `tools:`, and Gemini CLI skips them. So an agent is a
 thin router: it names the skills that apply and the order to apply them, and holds no
 procedure of its own. Anything users on other hosts also need goes into a skill.
 
@@ -272,8 +275,9 @@ also serves its own cluster-specific API reference at `https://<domino-domain>/d
 governance, taxonomy, model monitoring, NetApp volumes and dataset file routes, so do not
 treat it as complete. Routes that exist only in the Internal API (`/v4/*`) are not part of
 the Public API and are not versioned for external use: prefer the `/api/...` equivalent,
-and where none exists label the call **internal API, may change between Domino versions**
-at the point of use. The
+and where none exists label the call `(non-public route; may change in a future Domino version)`
+at the point of use, linking the canonical note in `skills/domino-api-intro/SKILL.md` ("Route
+types") from any file that does not already point to that skill. The
 verified divergence between the two targets is recorded in `coverage/COMPAT.md` (maintainers’ audit workspace, not yet in this repo).
 
 Nothing about versions goes in `description`; it is loaded for every skill on every turn
@@ -352,6 +356,63 @@ Gemini CLI rewrites `${name}` in skill text with its own variables, the extensio
 settings and every key of a trusted workspace's `.env`. Put such examples in a sibling file, or
 list the file in `scripts/gemini-substitution.allow` with a reason when the braces are product
 syntax (Launcher `${param}` placeholders).
+
+### 12. State facts and instructions only, no provenance
+
+Skill content states facts and instructions only: no provenance (how, when or where something
+was verified, audits, reviews, test clusters). Put verification evidence in the PR description.
+A skill says what is true and what to do ("Starting a stopped Model API version returns 400;
+restart it in the UI"), never how that was learned ("our live test showed", "verified on an
+internal cluster", "the audit found"). Where real uncertainty changes what the agent should do,
+state it as reader guidance ("if this returns 404, confirm the route in your deployment's
+`/docs`"), not as a test log. Version facts stay as facts ("on Domino 6.4 the response is X"),
+and the labels "non-public route; may change in a future Domino version" and "on 6.3, confirm in your
+deployment's `/docs`" stay.
+
+### 13. What belongs in a skill
+
+A skill is read by a model in the middle of a task, in a context window it shares with the
+user's files and conversation, so every sentence costs attention and every stale one misleads.
+Write and revise skills with the `skill-creator` skill from Anthropic's `claude-plugins-official`
+marketplace (`claude plugin install skill-creator@claude-plugins-official`, then `/skill-creator`):
+its Skill Writing Guide and "How to think about improvements" are the house style
+here (imperative instructions; progressive disclosure, so `SKILL.md` carries the workflow and
+reference files carry the detail; the reason behind each instruction instead of all-caps MUSTs,
+because a model that knows why handles the case the text did not foresee).
+
+Belongs in a skill:
+
+- Facts the model acts on: routes with method and the fields that matter, config formats,
+  paths, environment variables, limits and defaults.
+- Steps in the order the model performs them, in the imperative.
+- Real constraints, and the decision rules for choosing between options ("if
+  `DOMINO_API_PROXY` is set, call it with no header; otherwise send a bearer token").
+- Short reasons that change behaviour ("listen on `0.0.0.0:8888`; the proxy reaches nothing
+  else").
+- Reader guidance where genuine uncertainty changes the next step (standard 12).
+
+Does not belong, because it costs tokens, dates fast or sends the model the wrong way:
+
+- Provenance (standard 12) and change history: "now", "no longer", "previously", "was fixed",
+  "as of this release". The model acts on the present state; history lives in git.
+- Project and process jargon: PR, audit, round, release candidate, E2E, harness, eval, ticket
+  keys. They mean nothing to the user or the model.
+- Ids, hashes, timestamps or error text copied from a test run.
+- Long rationale, debate or alternatives considered; empty hedging ("it may be possible that").
+- A paragraph that another skill already owns: link the canonical place (`domino-api-intro`
+  for authentication and hosts) instead of repeating it.
+- Tangents outside what the `description` triggers on; host-specific asides beyond standard 11.
+- Marketing, all-caps emphasis, roadmap, "early access" or "coming soon".
+
+When-to-use guidance goes in the `description` (standard 7), not the body. Before opening a PR,
+read the draft as the model would and delete every sentence that does not change what it does
+next. `scripts/lint-skills.py` enforces the mechanical part of standards 12 and 13 as rules L1
+to L16 over `skills/`, `agents/` and `rules/domino.md` (provenance and "live" markers, past-tense
+test logs, skill self-history, dated parentheticals, shouting labels, process jargon,
+first-person provenance, when-to-use headings, self-describing preambles, and names of removed
+skills from `scripts/removed-skills.txt` fail CI; "today", observed timings, stage labels,
+"smoke test" and spec attestations print a warning for a human to judge). Each message names
+the rule, the file and line, and the standard.
 
 ## Release branches, tags and backports
 
@@ -466,27 +527,44 @@ A release that should be tested internally before it goes public is cut as a can
 - **Install a candidate** (the branch name or the tag both work as the ref):
   - Claude Code: `claude plugin marketplace remove domino-marketplace` if the GitHub marketplace
     is already added, then `claude plugin marketplace add dominodatalab/domino-ai-plugin#rc/2026.603.5`
-    and `claude plugin install dominodatalab@domino-marketplace`. Back to the release: remove the
-    marketplace again and add it without `#ref`.
+    and `claude plugin install dominodatalab@domino-marketplace`. If
+    `dominodatalab@claude-plugins-official` is installed too, both load under the same
+    `dominodatalab:` prefix and every skill appears twice: `claude plugin disable
+    dominodatalab@claude-plugins-official` while testing, `claude plugin enable
+    dominodatalab@claude-plugins-official` afterwards. Newer candidate: `claude plugin marketplace
+    update domino-marketplace`, `claude plugin update dominodatalab@domino-marketplace`, restart.
+    Back to the release: remove the marketplace again and add it without `#ref`.
   - Codex: `codex plugin marketplace add dominodatalab/domino-ai-plugin@rc/2026.603.5` (or
-    `--ref rc/2026.603.5`), then `codex plugin add dominodatalab@domino-marketplace`. Back:
-    `codex plugin marketplace remove domino-marketplace` and add it without the ref.
+    `--ref rc/2026.603.5`), then `codex plugin add dominodatalab@domino-marketplace`. Newer
+    candidate: `codex plugin marketplace upgrade domino-marketplace`, then `codex plugin add
+    dominodatalab@domino-marketplace` again. Back: `codex plugin marketplace remove
+    domino-marketplace` and add it without the ref.
   - Gemini CLI: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref rc/2026.603.5`
-    (or `--ref release-2026.603.5-rc.1`, or `--pre-release` for the newest candidate). Back:
-    `gemini extensions uninstall dominodatalab`, then install without the ref.
+    (or `--ref release-2026.603.5-rc.1`, or `--pre-release` for the newest candidate;
+    `npx -y @google/gemini-cli` stands in for `gemini`). Run it in a terminal: it asks a `[Y/n]`
+    consent question, then for the Domino URL and token, which can be left empty; without a
+    terminal it waits at the consent prompt. Newer candidate: `gemini extensions update
+    dominodatalab`. Back: `gemini extensions uninstall dominodatalab`, then install without the ref.
   - Cursor: its docs don't document choosing a ref for a GitHub-imported marketplace (an
     import tracks one branch). Use a local checkout instead:
     `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/.cursor/plugins/local/dominodatalab`,
+    then Developer: Reload Window. Newer candidate: `git -C ~/.cursor/plugins/local/dominodatalab pull`,
     then Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
   - Antigravity: `agy plugin install` takes a local directory and installs a copy, so
     `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin-rc`
-    and `agy plugin install ~/domino-ai-plugin-rc`. Back: `agy plugin uninstall dominodatalab`,
-    then `agy plugin install` from a `main` checkout.
+    and `agy plugin install ~/domino-ai-plugin-rc`. Newer candidate:
+    `git -C ~/domino-ai-plugin-rc pull && agy plugin install ~/domino-ai-plugin-rc`. Back:
+    `agy plugin uninstall dominodatalab`, then `agy plugin install` from a `main` checkout.
   - Domino Workspaces: the DSE updater follows `release-X.Y` by name, so test by hand in the
-    image's clone, which Claude Code reads in place:
-    `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.5`
-    and `... checkout -B rc/2026.603.5 origin/rc/2026.603.5`, then start a new session. Back:
-    `... checkout -B main origin/main`.
+    image's clone, which Claude Code reads in place. Its `origin` may still be the old
+    `domino-claude-plugin` repository, which has no `rc/` branches, so first
+    `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin remote set-url origin https://github.com/dominodatalab/domino-ai-plugin.git`,
+    then `... fetch origin rc/2026.603.5` and `... checkout -B rc/2026.603.5 origin/rc/2026.603.5`,
+    then start a new session. `claude plugin list` keeps showing the image's marketplace entry
+    (`1.0.0`); check the loaded version with `grep '"version"' <clone>/.claude-plugin/plugin.json`.
+    Newer candidate: the same `fetch` and `checkout -B`. Back: check out the release branch the
+    image expects (`release-X.Y` for the Domino version, or `main`); if unsure, start a new
+    Workspace.
 - **Dry run of the gate:** there are no automated tests for `scripts/`; before changing
   `check-version.sh`, build a scratch origin (`git init --bare`, a clone with
   `.claude-plugin/plugin.json` at the shipped version on `main`, `develop`, `release-6.3` and

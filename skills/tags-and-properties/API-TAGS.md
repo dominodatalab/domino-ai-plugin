@@ -3,9 +3,8 @@
 Endpoint-by-endpoint reference for the tag side of `/api/taxonomy/v1`: concepts, the
 endpoint table, curl examples for namespaces, tags, entity tags, the taxonomy tree and
 config limits, and troubleshooting. Properties: [PROPERTIES.md](./PROPERTIES.md) and
-[PROPERTY-VALUES.md](./PROPERTY-VALUES.md). All bodies and parameters below are from the
-published specs (identical on 6.3 and Cloud except the entity-type list, see
-[SKILL.md](./SKILL.md#which-path-applies)).
+[PROPERTY-VALUES.md](./PROPERTY-VALUES.md). Entity types differ per target:
+[SKILL.md](./SKILL.md#which-path-applies).
 
 All examples assume `BASE` and `H` from [SKILL.md](./SKILL.md#configuration).
 
@@ -14,7 +13,7 @@ All examples assume `BASE` and `H` from [SKILL.md](./SKILL.md#configuration).
 | Concept | Description |
 |---------|-------------|
 | **Namespace** | The key of a tag pair (`Indication`, `Analysis`). Fields: `label`, `allowMultipleAssignments`, `status` (`active`, `deprecated`), `tagCount`, `entityCount`. |
-| **Tag** | A value inside a namespace, optionally nested with `parentId`. Fields: `id`, `label`, `description`, `namespaceId`, `namespaceLabel`, `parentId`, `status`, `children`, `entityCount`; the schema also lists an optional `fullPath` (array of ancestor labels) that live responses have been seen to omit. |
+| **Tag** | A value inside a namespace, optionally nested with `parentId`. Fields: `id`, `label`, `description`, `namespaceId`, `namespaceLabel`, `parentId`, `status`, `children`, `entityCount`. |
 | **Entity** | A taggable Domino object identified by `entityType` + `entityId`. Types: [SKILL.md](./SKILL.md#which-path-applies). |
 | **Property / property value** | Typed field and its per-entity value; see the property files. |
 | **`allowMultipleAssignments`** | `true`: an entity can carry several tags from the namespace. `false` (default): a new tag from the namespace replaces the existing one. |
@@ -64,14 +63,13 @@ curl -s -H "$H" "$BASE/namespaces/<id>"
 curl -s -X PUT -H "$H" -H "Content-Type: application/json" \
   -d '{"label":"Indication","description":"updated","status":"active","allowMultipleAssignments":true}' "$BASE/namespaces/<id>"
 
-# Delete: removes the namespace and all its tags. Per the spec it FAILS if any of those
-# tags still has entity assignments, so untag first (DELETE /entity-tags per entity, or
-# DELETE /tags/{id}, which does unassign) or deprecate the namespace instead. No confirmation.
+# Delete: removes the namespace and all its tags; fails while any of its tags is still
+# assigned (see Troubleshooting). No confirmation.
 curl -s -X DELETE -H "$H" "$BASE/namespaces/<id>"
 # 204
 ```
 
-Namespace labels are alphanumeric with hyphens and underscores (docs).
+Namespace labels are alphanumeric with hyphens and underscores.
 
 ## Tags
 
@@ -84,8 +82,8 @@ curl -s -H "$H" "$BASE/tags?namespaceId=<ns>&rootOnly=true&limit=50"
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"label":"SDTM","namespaceId":"<ns>","description":"Study Data Tabulation Model","parentId":"<parent-tag>"}' "$BASE/tags"
 # 201 -> tag record (id, label, description, namespaceId, parentId, status, entityCount, ...).
-#        The schema lists an optional fullPath; on an internal Domino test cluster (6.4.0) neither this response nor
-#        GET /tags/{id} included it, so build the path from parentId or use /tags/autocomplete.
+#        The optional fullPath in the schema is absent from tag responses: build the path
+#        from parentId or use /tags/autocomplete.
 
 # Get one
 curl -s -H "$H" "$BASE/tags/<id>"
@@ -110,8 +108,7 @@ curl -s -X DELETE -H "$H" "$BASE/tags/<id>"
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"entityType":"project","entityId":"<project-id>","tagIds":["<tag-1>","<tag-2>"]}' \
   "$BASE/rpc/tag-entity"
-# 201 -> {"entityId","entityType","entityName","tags":[{"id","label", ...}]}
-#        (the schema also lists namespace and fullPath on each tag; a live response carried id and label only)
+# 201 -> {"entityId","entityType","entityName","tags":[{"id","label"}]}
 # Several tags from one namespace in a single call need allowMultipleAssignments=true on
 # that namespace; otherwise send one request per tag and the newest replaces the previous.
 
@@ -141,7 +138,6 @@ curl -s -H "$H" "$BASE/tags/<tag-id>/entities?entityTypes=project&includeDescend
 curl -s -H "$H" "$BASE/entities?tagIds=<tag-1>&tagIds=<tag-2>&entityTypes=project&entityTypes=app"
 # 200 -> {"data":[{"entityId","entityName","ownerUsername","taggedAt","tags":[{"id","label","namespace"}], ...}],
 #         "meta":{"pagination":{"total","limit","offset"}}}
-#        (the schema also lists entityType per item and fullPath per tag; a live response had neither)
 ```
 
 `includeDescendants=true` also matches entities tagged with child tags.
@@ -167,8 +163,7 @@ curl -s -H "$H" "$BASE/config"
 # {"maxDepth":5,"maxLabelLength":128,"maxSelectAllowedValuesCount":100,"maxSelectAllowedValueLength":2048}
 ```
 
-Values above are from an internal Domino test cluster (6.4.0); read them at startup rather than
-hardcoding.
+Limits differ per deployment; read them at startup.
 
 ## Troubleshooting
 
@@ -192,8 +187,7 @@ namespaces that allow the assignment (see the multiple-assignment rule above).
 ### Namespace delete fails
 
 `DELETE /namespaces/{id}` removes the namespace and its tags but is refused while any
-of those tags is still assigned to an entity (spec: "fails if tags have entity
-assignments"). Either untag the entities first (`DELETE /tags/{id}` or
+of those tags is still assigned to an entity. Either untag the entities first (`DELETE /tags/{id}` or
 `POST /tags/bulk-delete` do unassign; `DELETE /entity-tags` clears one entity) or set the
 namespace to `status: deprecated` and leave it. Prefer deprecating over deleting on
 shared deployments.
