@@ -31,8 +31,10 @@ GEMINI_SHARED = ["name", "version", "description"]
 GEMINI_ONLY = ["contextFileName", "settings", "mcpServers", "excludeTools", "themes", "plan",
                "migratedTo"]
 GEMINI_ORDER = [*GEMINI_SHARED, *GEMINI_ONLY]
-# YYYY.XYY.N is semver because the OpenAI portal rejects anything else.
-VERSION = re.compile(r"[0-9]{4}\.[1-9][0-9]{2,}\.(0|[1-9][0-9]*)")
+# YYYY.XYY.N is semver because the OpenAI portal rejects anything else. A release candidate
+# carries the semver pre-release suffix -rc.M (M >= 1), e.g. 2026.603.5-rc.1, which semver
+# orders before 2026.603.5; it is copied verbatim into every manifest.
+VERSION = re.compile(r"[0-9]{4}\.[1-9][0-9]{2,}\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?")
 # Public-directory limits from the OpenAI submission reference.
 LISTING_LIMITS = {"displayName": 30, "shortDescription": 30, "longDescription": 4000,
                   "developerName": 80}
@@ -42,7 +44,8 @@ MAX_PROMPTS, MAX_PROMPT_LEN = 3, 128
 def load_claude() -> dict:
     claude = json.loads(CLAUDE.read_text())
     if not VERSION.fullmatch(claude.get("version", "")):
-        sys.exit(f"{CLAUDE}: version '{claude.get('version')}' is not YYYY.XYY.N (e.g. 2026.603.3)")
+        sys.exit(f"{CLAUDE}: version '{claude.get('version')}' is not YYYY.XYY.N or YYYY.XYY.N-rc.M "
+                 f"(e.g. 2026.603.3 or 2026.603.5-rc.1)")
     return claude
 
 

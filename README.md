@@ -355,8 +355,11 @@ The version is **`YYYY.XYY.N`**, for example `2026.603.3`, and all four manifest
 (`.claude-plugin/plugin.json`, `plugin.json`, `.cursor-plugin/plugin.json`,
 `gemini-extension.json`) carry the same string. It's the release year, the oldest Domino line the content supports written as X×100+Y
 (`603` = Domino 6.3 and later, including Cloud), and a release counter. The format is valid
-semver, which the OpenAI portal requires. Each release is tagged `release-YYYY.XYY.N`. See
-CONTRIBUTING.md "Release branches, tags and backports".
+semver, which the OpenAI portal requires. Each release is tagged `release-YYYY.XYY.N`. A release
+candidate for internal testing is `YYYY.XYY.N-rc.M` on an `rc/<YYYY.XYY.N>` branch, tagged
+`release-YYYY.XYY.N-rc.M` as a GitHub pre-release (see
+[Testing a release candidate](#testing-a-release-candidate)). See CONTRIBUTING.md "Release
+branches, tags and backports".
 
 Releases up to `2026.6-3.2` used the older `YYYY.X-Y.N` form of the same scheme; `2026.603.3`
 is the first in the current form.
@@ -368,6 +371,43 @@ in `plugin.json`, `.cursor-plugin/plugin.json` or `gemini-extension.json` by han
 ```bash
 scripts/sync-manifests.py
 ```
+
+### Testing a release candidate
+
+A candidate such as `2026.603.5-rc.1` lives on the branch `rc/2026.603.5` and is tagged
+`release-2026.603.5-rc.1` as a pre-release; nothing installs it unless you ask for that ref,
+and `rc.1` < `rc.2` < `2026.603.5`, so each candidate and the final release update an
+installed copy. The commands below use the branch; the tag works in its place.
+
+- **Claude Code** (if the GitHub marketplace is already added, remove it first: `claude plugin
+  marketplace remove domino-marketplace`):
+
+  ```bash
+  claude plugin marketplace add dominodatalab/domino-ai-plugin#rc/2026.603.5
+  claude plugin install dominodatalab@domino-marketplace
+  ```
+
+  Back to the public release: remove the marketplace again, add it without `#rc/...`, install.
+- **Codex**: `codex plugin marketplace add dominodatalab/domino-ai-plugin@rc/2026.603.5`, then
+  `codex plugin add dominodatalab@domino-marketplace`. Back: `codex plugin marketplace remove
+  domino-marketplace`, add it without the ref, `codex plugin add` again.
+- **Gemini CLI**: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref rc/2026.603.5`
+  (or `--pre-release` for the newest candidate). Back: `gemini extensions uninstall dominodatalab`,
+  then install without the ref.
+- **Cursor**: choosing a ref for a GitHub-imported marketplace isn't documented, so clone the
+  branch into the local plugins folder: `git clone -b rc/2026.603.5
+  https://github.com/dominodatalab/domino-ai-plugin ~/.cursor/plugins/local/dominodatalab`, then
+  Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
+- **Domino Workspaces**: the image's updater follows `release-X.Y` by name and never an `rc/`
+  branch, so check the candidate out by hand in the image's clone, which Claude Code reads in
+  place (see [Updating](#updating-claude-code)):
+
+  ```bash
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.5
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B rc/2026.603.5 origin/rc/2026.603.5
+  ```
+
+  Start a new session. Back: `... checkout -B main origin/main`.
 
 ---
 

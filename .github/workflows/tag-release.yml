@@ -1,7 +1,7 @@
 name: Tag release
 
-# On every push to main or a release-X.Y branch, create the tag
-#   release-<plugin.json version>        e.g. release-2026.603.3
+# On every push to main, a release-X.Y branch or an rc/<version> branch, create the tag
+#   release-<plugin.json version>        e.g. release-2026.603.3, release-2026.603.5-rc.1
 # if it does not exist yet, then publish a GitHub Release from it. The tag is derived from
 # the manifest, so tag, Release and manifest always agree. Branch names stay release-X.Y
 # because the Domino DSE update script resolves them by exact name; tags are the per-release
@@ -12,10 +12,16 @@ name: Tag release
 # releases from main are marked latest; a backport on release-X.Y never is, or default users
 # would be moved onto the backport line. No files are attached: a Release with exactly one
 # attached file is installed by Gemini CLI as if that file were the extension.
+#
+# Release candidates: a push to rc/<YYYY.XYY.N> carries version YYYY.XYY.N-rc.M (semver
+# pre-release, sorts before YYYY.XYY.N) and gets a Release marked pre-release and never latest,
+# so testers opt in (`--ref`, `#ref`, `@ref`, or Gemini's `--pre-release`) and default users
+# see nothing. main, develop and release-* never carry the suffix; scripts/check-version.sh
+# enforces the same rules on pull requests.
 
 on:
   push:
-    branches: ["main", "release-*"]
+    branches: ["main", "release-*", "rc/**"]
     paths:
       - ".claude-plugin/plugin.json"
       - "skills/**"
@@ -70,14 +76,27 @@ jobs:
         run: |
           v="$(jq -r '.version // empty' .claude-plugin/plugin.json)"
           [ -n "$v" ] || { echo "::error::plugin.json has no version"; exit 1; }
-          [[ "$v" =~ ^[0-9]{4}\.([1-9][0-9]{2,})\.(0|[1-9][0-9]*)$ ]] || { echo "::error::version '$v' is not YYYY.XYY.N"; exit 1; }
+          [[ "$v" =~ ^[0-9]{4}\.([1-9][0-9]{2,})\.(0|[1-9][0-9]*)(-rc\.([1-9][0-9]*))?$ ]] \
+            || { echo "::error::version '$v' is not YYYY.XYY.N or YYYY.XYY.N-rc.M"; exit 1; }
           line="${BASH_REMATCH[1]}"
+          rc="${BASH_REMATCH[4]}"
+          plain="${v%%-rc.*}"
+          if [[ "$GITHUB_REF_NAME" =~ ^rc/(.+)$ ]]; then
+            target="${BASH_REMATCH[1]}"
+            [ -n "$rc" ] || { echo "::error::branch $GITHUB_REF_NAME carries release candidates; version must be $target-rc.M, got $v"; exit 1; }
+            [ "$plain" = "$target" ] || { echo "::error::branch $GITHUB_REF_NAME candidates version $target, got $v"; exit 1; }
+            prerelease=true
+          else
+            [ -z "$rc" ] || { echo "::error::$GITHUB_REF_NAME never carries a release-candidate suffix (got $v); candidates live on rc/$plain"; exit 1; }
+            prerelease=false
+          fi
           if [[ "$GITHUB_REF_NAME" =~ ^release-([0-9]+)\.([0-9]+)$ ]] \
              && [ "$(( BASH_REMATCH[1] * 100 + BASH_REMATCH[2] ))" != "$line" ]; then
             echo "::error::branch $GITHUB_REF_NAME carries version $v; its line must match the branch"; exit 1
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "tag=release-$v" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
       - name: Create tag if absent
         if: steps.owner.outputs.skip != 'true'
         env:
@@ -90,7 +109,7 @@ jobs:
             if [ "$existing" = "$GITHUB_SHA" ]; then
               echo "$TAG already points at $GITHUB_SHA; nothing to do"; exit 0
             fi
-            echo "::error::$TAG already exists at $existing but this push is $GITHUB_SHA. Two changes landed with the same version. Recover with a bump-only PR to the next N; do not move or delete the existing tag. See CONTRIBUTING.md 'Release branches, tags and backports'."
+            echo "::error::$TAG already exists at $existing but this push is $GITHUB_SHA. Two changes landed with the same version. Recover with a bump-only PR to the next N (or rc.M); do not move or delete the existing tag. See CONTRIBUTING.md 'Release branches, tags and backports'."
             exit 1
           fi
           git config user.name "github-actions[bot]"
@@ -104,6 +123,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.v.outputs.tag }}
           VERSION: ${{ steps.v.outputs.version }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "release $TAG already exists; nothing to do"; exit 0
@@ -111,6 +131,12 @@ jobs:
           code="$(cut -d. -f2 <<<"$VERSION")"
           line="$(( 10#$code / 100 )).$(( 10#$code % 100 ))"
           if [ "$GITHUB_REF_NAME" = "main" ]; then latest=true; else latest=false; fi
-          gh release create "$TAG" --verify-tag --title "$VERSION" --latest="$latest" \
-            --notes "domino-ai-plugin $VERSION for Domino $line and later, including Domino Cloud. Built from \`${GITHUB_REF_NAME}\` at ${GITHUB_SHA}. See the repository README for installation in Claude Code, Codex, ChatGPT and Gemini CLI."
-          echo "published release $TAG (latest=$latest)"
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release create "$TAG" --verify-tag --title "$VERSION" --prerelease --latest=false \
+              --notes "Release candidate $VERSION of domino-ai-plugin for Domino $line and later, including Domino Cloud, for testing before the public release. Built from \`${GITHUB_REF_NAME}\` at ${GITHUB_SHA}. Install it with the ref \`${GITHUB_REF_NAME}\` (or tag \`${TAG}\`) as the README's \"Testing a release candidate\" section shows; default installs are not affected."
+            echo "published pre-release $TAG"
+          else
+            gh release create "$TAG" --verify-tag --title "$VERSION" --latest="$latest" \
+              --notes "domino-ai-plugin $VERSION for Domino $line and later, including Domino Cloud. Built from \`${GITHUB_REF_NAME}\` at ${GITHUB_SHA}. See the repository README for installation in Claude Code, Codex, ChatGPT and Gemini CLI."
+            echo "published release $TAG (latest=$latest)"
+          fi
