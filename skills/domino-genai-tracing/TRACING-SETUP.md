@@ -24,10 +24,11 @@ USER root
 # MLflow 3.2.x, the Domino SDK with agents (tracing) support, and the OpenTelemetry SDK MLflow 3.2.0 works with
 RUN pip install --no-cache-dir mlflow==3.2.0 "dominodatalab[data,agents]==2.2.0" "opentelemetry-sdk<1.36" "opentelemetry-api<1.36"
 
-# Your LLM framework(s); versions that MLflow 3.2.0 autologging supports
-RUN pip install openai==1.97.1
-RUN pip install anthropic==0.59.0
-RUN pip install langchain==0.3.27
+# Your LLM framework(s): current releases, verified to produce spans under MLflow 3.2.0 autologging
+# (MLflow's own tested range ends at openai 1.97.1, anthropic 0.59.0, langchain 0.3.27; it warns, then works)
+RUN pip install openai==3.29.0
+RUN pip install anthropic==1.13.0
+RUN pip install langchain==1.4.5 langchain-openai==1.7.1
 
 USER ubuntu
 ```
@@ -39,9 +40,10 @@ mlflow==3.2.0
 dominodatalab[data,agents]==2.2.0
 opentelemetry-sdk<1.36
 opentelemetry-api<1.36
-openai==1.97.1
-anthropic==0.59.0
-langchain==0.3.27
+openai==3.29.0
+anthropic==1.13.0
+langchain==1.4.5
+langchain-openai==1.7.1
 ```
 
 ## Framework auto-logging

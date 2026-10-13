@@ -45,7 +45,7 @@ kubernetes.use_secret_as_env(task, secret_name="domino-token", secret_key_to_env
 ```python
 from kfp import dsl, kubernetes
 
-@dsl.component(base_image="python:3.11", packages_to_install=["requests"])
+@dsl.component(base_image="python:3.15", packages_to_install=["requests"])
 def run_domino_job(domino_url: str, project_id: str, run_command: str,
                    environment_id: str = "", hardware_tier: str = "") -> str:
     """Start a Domino Job, wait for it, return the output commit id. Fails on Failed, Error, Stopped."""
@@ -75,7 +75,7 @@ def run_domino_job(domino_url: str, project_id: str, run_command: str,
     return job["commitDetails"]["outputCommitId"]
 
 
-@dsl.component(base_image="python:3.11", packages_to_install=["requests"])
+@dsl.component(base_image="python:3.15", packages_to_install=["requests"])
 def fetch_result(domino_url: str, project_id: str, commit_id: str, path: str, out: dsl.OutputPath(str)):
     """Copy one result file from the Job's output commit into a KFP artifact."""
     import os, urllib.parse, requests

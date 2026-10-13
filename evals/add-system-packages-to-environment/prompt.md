@@ -5,6 +5,6 @@ max_turns: 10
 allowed_tools: [Read, Glob, Grep, Skill]
 ---
 
-I need libpq-dev, psycopg2-binary and pandas==2.2.2 permanently available in my Domino compute
+I need libpq-dev, psycopg2-binary and pandas==3.0.6 permanently available in my Domino compute
 environment. Give me the Dockerfile instructions to paste into the environment definition and tell
 me where they go. Put the code in your reply, not in files.

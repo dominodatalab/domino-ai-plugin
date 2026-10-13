@@ -56,7 +56,7 @@ body = {
         "image": "quay.io/domino/domino-standard-environment:<tag>",
         "architectures": ["amd64"],          # optional: amd64, arm64
         "buildConfiguration": {
-            "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir pandas==2.2.2\nUSER ubuntu",
+            "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir pandas==3.0.6\nUSER ubuntu",
             "preSetupScript": "", "postSetupScript": "", "preRunScript": "", "postRunScript": "",
         },
         "environmentVariables": [{"key": "ACME_MODE", "value": "prod"}],

@@ -41,7 +41,7 @@ Then **Supported Clusters** (cluster-node environments only), **Visibility** (Pr
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev graphviz \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir pandas==2.2.2 scikit-learn==1.5.1
+RUN pip install --no-cache-dir pandas==3.0.6 scikit-learn==1.9.1
 RUN R --no-save -e "install.packages(c('tidyverse','caret'), repos='https://cloud.r-project.org')" \
     && chown -R ubuntu:ubuntu /usr/local/lib/R/site-library
 ENV MODEL_PATH=/mnt/artifacts/model.pkl

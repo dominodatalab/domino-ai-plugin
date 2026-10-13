@@ -28,7 +28,7 @@ Each cluster type needs two environments with the **same Python version**:
 1. **Cluster environment** (head/master/scheduler and workers): create it from the Domino image in the Compute Environment Catalog (`quay.io/domino/spark-cluster-environment`, `ray-cluster-environment`, `ray-cluster-gpu-environment`, `dask-cluster-environment`, `mpi-cluster-environment`; tags change per release), tick the framework under **Supported Clusters**, leave Pluggable Workspace Tools empty. A DSE cannot be a worker environment. Pre/post setup and run scripts never run on cluster nodes.
 2. **Execution environment** for the Workspace or Job (driver/client): the matching `domino-spark-environment`, `domino-ray-environment`, `domino-dask-environment` or `domino-mpi-environment` image with workspace tools. MPI needs the same Open MPI version in both.
 
-Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2.8.0`); see [domino-environments](../domino-environments/SKILL.md).
+Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2.14.1`); see [domino-environments](../domino-environments/SKILL.md).
 
 ## Attach a cluster
 

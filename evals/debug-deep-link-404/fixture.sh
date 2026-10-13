@@ -20,6 +20,6 @@ npx serve dist -l 8888
 EOF
 cat > package.json <<'EOF'
 { "name": "reports-ui", "private": true, "scripts": { "dev": "vite", "build": "vite build" },
-  "dependencies": { "react": "18.2.0", "react-dom": "18.2.0", "react-router-dom": "6.26.0", "serve": "^14.2.0" },
-  "devDependencies": { "vite": "^5.4.0", "@vitejs/plugin-react": "^4.3.4" } }
+  "dependencies": { "react": "19.3.0", "react-dom": "19.3.0", "react-router-dom": "7.18.4", "serve": "^14.2.6" },
+  "devDependencies": { "vite": "^8.3.0", "@vitejs/plugin-react": "^6.1.0" } }
 EOF

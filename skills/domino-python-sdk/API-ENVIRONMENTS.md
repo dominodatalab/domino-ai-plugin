@@ -72,7 +72,7 @@ env = requests.post(f"{base_url}/api/environments/v2/environments", headers=head
         "image": "<base-image-uri>",                       # for example a Domino Standard Environment image
         "architectures": ["amd64"],
         "buildConfiguration": {
-            "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir torch==2.4.0\nUSER ubuntu",
+            "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir torch==2.14.1\nUSER ubuntu",
         },
     },
 }).json()["environment"]
@@ -94,7 +94,7 @@ env = requests.post(f"{base_url}/api/environments/beta/environments", headers=he
     "visibility": "private",
     "addBaseDependencies": True,
     "image": "<base-image-uri>",
-    "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir torch==2.4.0\nUSER ubuntu",
+    "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir torch==2.14.1\nUSER ubuntu",
 }).json()["environment"]
 ```
 
@@ -153,7 +153,7 @@ response carried `architectures` and neither carried `status`, so poll the envir
 rev = requests.post(f"{base_url}/api/environments/beta/environments/{env_id}/revisions",
                     headers=headers, json={
     "image": "<base-image-uri>",
-    "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir pandas==2.2.2 scikit-learn==1.5.1\nUSER ubuntu",
+    "dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir pandas==3.0.6 scikit-learn==1.9.1\nUSER ubuntu",
     "summary": "pin pandas and scikit-learn",
 }).json()["environmentRevision"]
 ```
@@ -165,7 +165,7 @@ rev = requests.post(f"{base_url}/api/environments/v2/environments/{env_id}/revis
                     headers=headers, json={
     "image": "<base-image-uri>",
     "architectures": ["amd64"],
-    "buildConfiguration": {"dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir pandas==2.2.2\nUSER ubuntu"},
+    "buildConfiguration": {"dockerfileInstructions": "USER root\nRUN pip install --no-cache-dir pandas==3.0.6\nUSER ubuntu"},
     "environmentVariables": [{"key": "MODEL_PATH", "value": "/mnt/artifacts/model.pkl"}],
     "summary": "pin pandas",
 }).json()["environmentRevision"]
@@ -215,7 +215,7 @@ images must run as the `ubuntu` user, and the docs recommend installing packages
 
 ```dockerfile
 USER root
-RUN pip install --no-cache-dir pandas==2.2.2 "numpy>=1.26" scikit-learn==1.5.1
+RUN pip install --no-cache-dir pandas==3.0.6 "numpy>=2.5" scikit-learn==1.9.1
 RUN apt-get update && apt-get install -y libpq-dev graphviz && rm -rf /var/lib/apt/lists/*
 RUN R -e "install.packages(c('tidyverse', 'caret'), repos='https://cloud.r-project.org')"
 ENV MODEL_PATH=/mnt/artifacts/model.pkl
@@ -223,7 +223,10 @@ USER ubuntu
 ```
 
 Quote version specifiers that contain `>` or `<`; unquoted, the shell treats them as
-redirections.
+redirections. The pins above need the current Domino Standard Environment line, which ships
+Python 3.12 (`ubuntu24-py3.12-r4.5-domino6.3` on 6.3, the same `Py3.12` line on Cloud); on an
+older Py3.10 DSE use `pandas==2.3.3 "numpy>=2.2" scikit-learn==1.7.2`, the last releases that
+support Python 3.10.
 
 ## python-domino
 

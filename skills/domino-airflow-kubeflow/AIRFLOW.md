@@ -7,7 +7,7 @@ Domino: [domino-flows](../domino-flows/SKILL.md) for multi-step pipelines, a sch
 Sources: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Airflow tab),
 python-domino `domino/airflow/_operator.py`, `domino/authentication.py`, `domino/routes.py`,
 `setup.py`, `README.md` and `examples/example_airflow_dag.py` at `Release-2.2.0` / `master`
-(https://github.com/dominodatalab/python-domino), Airflow constraint files 2.10.5 and 2.11.0.
+(https://github.com/dominodatalab/python-domino), Airflow constraint files 3.3.2 and 2.11.2.
 Parameter names below are exact.
 
 ## Credentials on a worker
@@ -74,8 +74,9 @@ documented route; they come with the constraints below.
 
 `dominodatalab` 2.2.0 (`setup.py`) pins `packaging==23.2`, `python-dateutil~=2.8.2`,
 `typing-extensions~=4.13`, `beautifulsoup4~=4.11`, `polling2~=0.5.0`, `frozendict~=2.3`,
-`retry==0.9.2`. Airflow's constraint files pin `packaging==24.2`, `python-dateutil==2.9.0.post0`,
-`typing_extensions==4.12.2` (2.10.5) and `packaging==25.0` (2.11.0). Consequences:
+`retry==0.9.2`. Airflow's constraint files pin `packaging==26.3` and `python-dateutil==2.9.0.post0`
+(3.3.2; `packaging==26.0` in 2.11.2); their `typing_extensions` 4.16.0 and 4.15.0 satisfy
+`~=4.13`, so `packaging` and `python-dateutil` are the conflicts. Consequences:
 
 - `pip install -c constraints-<version>.txt dominodatalab`, the install method Airflow documents
   and managed Airflow services enforce, does not resolve.

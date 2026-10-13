@@ -284,11 +284,11 @@ Floors that match the code above:
 
 | Framework | Packages |
 |---|---|
-| Streamlit | `streamlit>=1.30`, `requests` |
-| Dash | `dash>=3.0` (3.0 removed `run_server`), `plotly`, `requests` |
-| Flask | `flask>=3.0`, `gunicorn>=21`, `requests` |
-| Gradio | `gradio>=4.0`, `requests` |
-| FastAPI | `fastapi`, `uvicorn`, `jinja2`, `requests` |
+| Streamlit | `streamlit>=1.65`, `requests` |
+| Dash | `dash>=4` (3.0 removed `run_server`; the code above runs on 4.4), `plotly`, `requests` |
+| Flask | `flask>=3.1`, `gunicorn>=26`, `requests` |
+| Gradio | `gradio>=6`, `requests` |
+| FastAPI | `fastapi>=0.143`, `uvicorn>=0.54`, `jinja2`, `requests` |
 
 ## Environment variables
 

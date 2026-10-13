@@ -238,14 +238,14 @@ rev = domino.create_environment_revision(
     env_id,
     base_image=image,
     dockerfile_instructions=(build.get("dockerfileInstructions") or "")
-        + "\nUSER root\nRUN pip install --no-cache-dir pandas==2.2.2\nUSER ubuntu",
+        + "\nUSER root\nRUN pip install --no-cache-dir pandas==3.0.6\nUSER ubuntu",
     pre_setup_script=build.get("preSetupScript") or "",
     post_setup_script=build.get("postSetupScript") or "",
     pre_run_script=build.get("preRunScript") or "",
     post_run_script=build.get("postRunScript") or "",
     workspace_tools=[as_workspace_tool(t) for t in env["selectedRevision"]["availableTools"]],
     supported_clusters=env["supportedClusters"],
-    summary="add pandas 2.2.2",
+    summary="add pandas 3.0.6",
 )
 ```
 

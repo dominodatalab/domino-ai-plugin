@@ -78,10 +78,10 @@ Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md)
   Dask or MPI `compute_cluster_properties`. It raises only when the Job ends `Failed`; a Job that
   ends `Error` or `Stopped` returns normally and the task goes green. AIRFLOW.md has a subclass
   that checks `executionStatus == "Succeeded"`. `DominoOperator` fails on any non-success.
-- `dominodatalab` 2.2.0 pins `packaging==23.2`, `python-dateutil~=2.8.2` and
-  `typing-extensions~=4.13`; Airflow's constraint files pin others (2.10.5: `packaging==24.2`,
-  `python-dateutil==2.9.0.post0`, `typing_extensions==4.12.2`), so a constraints-based install
-  fails to resolve and a plain install downgrades Airflow's dependencies. Give the worker a
+- `dominodatalab` 2.2.0 pins `packaging==23.2` and `python-dateutil~=2.8.2`; Airflow's
+  constraint files pin `packaging==26.3` (3.3.2; `26.0` in 2.11.2) and
+  `python-dateutil==2.9.0.post0`, so a constraints-based install fails to resolve and a plain
+  install downgrades Airflow's dependencies. Give the worker a
   dedicated virtual environment where those pins are acceptable, or use the pattern above.
   The `[airflow]` extra pins `apache-airflow==2.2.4`; do not use it on an existing Airflow.
 - Both operators import `airflow.utils.decorators.apply_defaults`, removed in Airflow 3.0.
@@ -91,7 +91,7 @@ Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md)
 
 No Domino-specific KFP component exists: install a client and call the API. The same
 `requests` function as the Airflow task above, wrapped in
-`@dsl.component(base_image="python:3.11", packages_to_install=["requests"])`, with the token
+`@dsl.component(base_image="python:3.15", packages_to_install=["requests"])`, with the token
 mounted from a Kubernetes Secret by `kfp.kubernetes.use_secret_as_env(task, secret_name=...,
 secret_key_to_env={"token": "DOMINO_TOKEN"})` (`pip install kfp[kubernetes]`). The component
 returns the output commit id so the next component can read a result file from it. Full

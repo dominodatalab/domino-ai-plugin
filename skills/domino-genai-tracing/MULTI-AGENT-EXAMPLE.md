@@ -533,6 +533,6 @@ mlflow==3.2.0
 dominodatalab[data,agents]==2.2.0
 opentelemetry-sdk<1.36
 opentelemetry-api<1.36
-openai==1.97.1
-pyyaml==6.0.2
+openai==3.29.0
+pyyaml==6.0.3
 ```
