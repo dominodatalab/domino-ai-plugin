@@ -91,7 +91,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.15'
+          python-version: '3.12'   # matches the Domino Standard Environment's Python 3.12
 
       - name: Deploy to Domino
         env:

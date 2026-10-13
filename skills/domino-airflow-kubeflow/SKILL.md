@@ -91,7 +91,7 @@ Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md)
 
 No Domino-specific KFP component exists: install a client and call the API. The same
 `requests` function as the Airflow task above, wrapped in
-`@dsl.component(base_image="python:3.15", packages_to_install=["requests"])`, with the token
+`@dsl.component(base_image="python:3.12", packages_to_install=["requests"])`, with the token
 mounted from a Kubernetes Secret by `kfp.kubernetes.use_secret_as_env(task, secret_name=...,
 secret_key_to_env={"token": "DOMINO_TOKEN"})` (`pip install kfp[kubernetes]`). The component
 returns the output commit id so the next component can read a result file from it. Full
