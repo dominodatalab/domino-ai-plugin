@@ -280,15 +280,15 @@ The App runs in the project's default Compute Environment (or the one chosen at 
 2. **`requirements.txt`** at the project root (Git-based projects: inside the Artifacts folder). Domino installs it at the start of every execution, Apps included; slower starts and PyPI egress (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/add-packages-to-environments/use-requirements-txt).
 3. **Install at start in `app.sh`** for a prototype: `python -m pip install --user -q streamlit && exec python -m streamlit run app.py --server.port 8888 --server.address 0.0.0.0`. Same trade-offs as `requirements.txt`; the `python -m` form avoids depending on `~/.local/bin` being on `PATH`.
 
-Floors that match the code above:
+Versions that match the code above. A package the Domino Standard Environment ships is pinned at or below the DSE's version (a newer one can break ranges its preinstalled MLflow declares, such as `gunicorn<24`); a package it does not ship takes its newest release:
 
 | Framework | Packages |
 |---|---|
-| Streamlit | `streamlit>=1.65`, `requests` |
-| Dash | `dash>=4` (3.0 removed `run_server`; the code above runs on 4.4), `plotly`, `requests` |
-| Flask | `flask>=3.1`, `gunicorn>=26`, `requests` |
-| Gradio | `gradio>=6`, `requests` |
-| FastAPI | `fastapi>=0.143`, `uvicorn>=0.54`, `jinja2`, `requests` |
+| Streamlit | `streamlit>=1.65` (not in the DSE), `requests` |
+| Dash | `dash>=4` (not in the DSE; 3.0 removed `run_server`, the code above runs on 4.4), `plotly<=6.9.0` (the DSE's version), `requests` |
+| Flask | ships in the DSE: `flask<=3.1.3`, `gunicorn<=23.0.0`, `requests` |
+| Gradio | `gradio>=6` (not in the DSE), `requests` |
+| FastAPI | ships in the DSE: `fastapi<=0.136.3`, `uvicorn<=0.52.4`, `jinja2`, `requests` |
 
 ## Environment variables
 
