@@ -10,6 +10,10 @@ HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gatew
 GET /bundles/{bundle_id}
 # record bundle["stage"] as before_stage
 
+GET /bundles/{bundle_id}/approvals
+# one entry per approval: id (the approvalId), stageApprovalId, approvers[], status
+# (PendingSubmission | PendingReview | Approved | ConditionallyApproved | PendingExpiration | Expired)
+
 GET /bundles/{bundle_id}/report
 # response body is application/pdf (binary), not JSON
 
@@ -17,9 +21,14 @@ POST /rpc/publish-approval-event {
     "bundleId": bundle_id,
     "policyId": policy_id,
     "projectId": project_id,
-    "eventType": "RequestApproved",  # or RequestRejected, etc.
+    "eventType": "RequestApproved",  # RequestSubmitted | RequestCancelled | RequestApproved |
+                                     # RequestConditionalApproved | RequestRejected | FindingsApproved |
+                                     # PolicyReactivated | RevalidationRequired | RevalidationExpired |
+                                     # PolicyVersionUpgraded
     "approvalId": approval_id,
 }
+# the caller must be one of the approval's approvers; change them with
+# POST /rpc/update-approval {"approvalId": ..., "policyId": ..., "approvers": [{"id": ..., "name": ...}]}
 
 PATCH /bundles/{bundle_id} {"stage": next_stage_name}
 # only when your policy requires explicitly setting the primary stage name
