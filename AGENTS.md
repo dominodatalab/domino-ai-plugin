@@ -161,8 +161,13 @@ trusting a change. When adding a skill, add a case whose prompt should trigger i
   `skills:` preload list resolves the frontmatter `name`; an unknown name is skipped silently.
 - `SKILL.md` stays at or under 8,000 bytes (lint-enforced): Codex truncates the rest when it
   loads the skill. Put detail in sibling reference files and link them from `SKILL.md`.
-- `mcp-servers/domino_mcp_server` needs `mcp<2`; mcp 2.x renamed `FastMCP` and the server dies
-  on import. Check it starts with `claude --plugin-dir . mcp list` (expect `✔ Connected`).
+- `mcp-servers/domino_mcp_server` runs on the standalone FastMCP 4.x (`fastmcp>=4.1,<5`,
+  `from fastmcp import FastMCP`) over the official `mcp` SDK 2.x; the SDK's own
+  `mcp.server.fastmcp` no longer exists in 2.x, so never import it. Register tools with the
+  server's `@_tool` decorator, not `@mcp.tool`: it passes the whole docstring as the tool
+  description, where FastMCP alone would keep only the summary line and the `Returns:` contract
+  (`commitId`, `run_id`, conflicts) would never reach clients. Check it starts with
+  `claude --plugin-dir . mcp list` (expect `✔ Connected`).
 
 ## Domino API, SDK, and platform skills
 
