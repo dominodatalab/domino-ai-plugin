@@ -23,9 +23,11 @@ endpoint** (last section).
 Write it like any Job script ([SCRIPT-PATTERNS.md](../domino-jobs/SCRIPT-PATTERNS.md) covers
 arguments, environment variables and output paths). Scoring-specific points:
 
-- **Load the model once** at the top of the script, from a project file, a mounted Dataset or
-  the Model Registry (`mlflow` client; see
-  [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md)).
+- **Load the model once** at the top of the script. Preferred: from the **Domino Model
+  Registry** with `mlflow.pyfunc.load_model("models:/<name>/<version>")` or
+  `"models:/<name>@<alias>"`, so the Job records which registered version scored the data and a
+  promotion is an alias move rather than a code change. Also fine: a pickle in the project files
+  or on a mounted Dataset, for a model that was never registered.
 - **Read input** from a mounted Dataset ([domino-datasets](../domino-datasets/SKILL.md)), a Data
   Source ([domino-data-sdk](../domino-data-sdk/SKILL.md)) or a file path passed as an argument.
 - **Write predictions** to a file in the project's results location or to a Dataset or Data
@@ -40,18 +42,38 @@ import argparse, pickle
 import pandas as pd
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--model", required=True,
+                    help="models:/<name>/<version>, models:/<name>@<alias>, or a path to a pickle")
 parser.add_argument("--input", required=True)
 parser.add_argument("--output", required=True)
 args = parser.parse_args()
 
-with open("model.pkl", "rb") as f:
-    model = pickle.load(f)
+if args.model.startswith("models:/"):        # Domino Model Registry; MLFLOW_TRACKING_URI is preconfigured in a Job
+    import mlflow
+    model = mlflow.pyfunc.load_model(args.model)
+else:                                        # a pickle in the project files or on a mounted Dataset
+    with open(args.model, "rb") as f:
+        model = pickle.load(f)
 
 df = pd.read_csv(args.input)
 df["prediction"] = model.predict(df)
 df.to_csv(args.output, index=False)
-print(f"scored {len(df)} rows -> {args.output}")   # the last lines of stdout go into the result email
+print(f"scored {len(df)} rows with {args.model} -> {args.output}")   # the last lines of stdout go into the result email
 ```
+
+Model Registry notes:
+
+- `models:/churn-rf/3` pins version 3; `models:/churn-rf@champion` follows the `champion` alias,
+  which `client.set_registered_model_alias("churn-rf", "champion", version)` moves at promotion
+  time, so a scheduled scoring Job picks up the promoted version without an edit.
+- Inside a Job, `MLFLOW_TRACKING_URI` already points at Domino and `mlflow` is installed in the
+  Domino Standard Environments; do not override the URI. A custom environment needs `mlflow`.
+- `mlflow.pyfunc.load_model` returns a `predict(DataFrame)` wrapper for every MLflow flavor; use
+  the flavor loader (`mlflow.sklearn.load_model(...)`) when you need the native object.
+- Aliases are an MLflow registry feature verified on Domino Cloud; on Domino 6.3 pin a version
+  number, or confirm alias support first as described in
+  [MODEL-REGISTRY.md](../domino-experiment-tracking/MODEL-REGISTRY.md), which also covers
+  registering a model, versions, tags and the Domino registry routes.
 
 ## 2. Run it once
 
@@ -63,7 +85,7 @@ API (Public, both specs):
 # In a run: BASE=$DOMINO_API_PROXY and no AUTH header. Outside: export DOMINO_API_HOST=<deployment URL>, BASE=$DOMINO_API_HOST, AUTH="Authorization: Bearer <PAT>".
 curl -sS -X POST "$BASE/api/jobs/v1/jobs" -H "$AUTH" -H "Content-Type: application/json" -d '{
   "projectId": "'"$DOMINO_PROJECT_ID"'",
-  "runCommand": "python score.py --input /mnt/data/scoring/today.csv --output results/scored.csv",
+  "runCommand": "python score.py --model models:/churn-rf@champion --input /mnt/data/scoring/today.csv --output results/scored.csv",
   "title": "nightly scoring",
   "environmentId": "<environment id>",
   "hardwareTier": "<hardware tier id, e.g. small-k8s>"
