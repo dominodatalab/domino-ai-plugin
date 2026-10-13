@@ -478,6 +478,10 @@ A release that should be tested internally before it goes public is cut as a can
     import tracks one branch). Use a local checkout instead:
     `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/.cursor/plugins/local/dominodatalab`,
     then Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
+  - Antigravity: `agy plugin install` takes a local directory and installs a copy, so
+    `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin-rc`
+    and `agy plugin install ~/domino-ai-plugin-rc`. Back: `agy plugin uninstall dominodatalab`,
+    then `agy plugin install` from a `main` checkout.
   - Domino Workspaces: the DSE updater follows `release-X.Y` by name, so test by hand in the
     image's clone, which Claude Code reads in place:
     `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.5`
