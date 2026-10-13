@@ -14,7 +14,7 @@ add_tracing(
 )
 ```
 
-**Important:** `@add_tracing` creates traces on its own; it does not need `DominoAgentContext` or `DominoRun`. In a deployed agent the decorator alone is sufficient. Apply it directly to the function, with no other decorator in between: it inspects the function's signature to record the arguments by name.
+`@add_tracing` creates traces on its own; it does not need `DominoAgentContext` or `DominoRun`. In a deployed agent the decorator alone is sufficient. Apply it directly to the function, with no other decorator in between: it inspects the function's signature to record the arguments by name.
 
 ## Decorator parameters
 
@@ -33,8 +33,6 @@ Evaluators run only in development mode; when `DOMINO_AGENT_IS_PROD=true` the SD
 Supported function kinds in `dominodatalab` 2.2.0: plain functions, `async def` coroutines, and sync generators. **Async generators (`async def` with `yield`) are not supported**: the decorator treats them as a plain function, the span ends immediately with the generator object as its output, and every inner span becomes its own orphan trace. For a streaming agent, decorate a coroutine that collects the stream and returns the result, and stream to the client from outside it (see "Streaming agents" below). `span_type` and `attributes` need `dominodatalab` 2.1.0 or later.
 
 ## Basic usage
-
-Model names in the examples (`gpt-6.1-sol`) are examples; use a model your provider serves, or an alias from the `domino-llm-gateway` skill where that extension is installed.
 
 ```python
 from domino.agents.tracing import add_tracing
@@ -112,7 +110,7 @@ from domino.agents.tracing import add_tracing
 from openai import AsyncOpenAI
 
 client = AsyncOpenAI()      # OPENAI_API_KEY from a Domino environment variable
-MODEL = "gpt-6.1-sol"          # example model name; use one your provider serves
+MODEL = "gpt-6.1-sol"
 
 def get_data(table: str) -> str:
     return json.dumps({"table": table, "rows": 42})
@@ -242,8 +240,6 @@ def pipeline(text: str) -> dict:
     category = classify(text)             # child span
     return {"category": category, "response": respond(text, category)}   # child span
 ```
-
-If `classify`, `respond` and `pipeline` all carry evaluators, their results land on the one trace that `pipeline` started; `pipeline`'s evaluator runs last and wins any name clash. Prefix metric names per function (`classifier_confidence`, `responder_length`, `pipeline_quality`).
 
 ## Graceful fallback when the SDK is absent
 

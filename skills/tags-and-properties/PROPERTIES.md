@@ -42,8 +42,8 @@ property.
 ## Allowed entities
 
 `allowedEntities` (at least one) lists the entity types the property applies to. Values
-are the target's entity-type list ([SKILL.md](./SKILL.md#which-path-applies)); per the
-docs, properties apply to Apps, Projects, Project Templates, Datasets, NetApp Volumes,
+are the target's entity-type list ([SKILL.md](./SKILL.md#which-path-applies)):
+properties apply to Apps, Projects, Project Templates, Datasets, NetApp Volumes,
 Models and Environments (plus Policies and Policy Versions on Cloud), with Apps, Models
 and Policies also carrying independent per-version values (`app_version`,
 `model_version`, `policy_version`). A Project Template's values are carried into new
@@ -111,8 +111,8 @@ curl -s -X DELETE -H "$H" "$BASE/properties/<id>"
 # 204
 ```
 
-Deletion is a soft delete. Per the spec: "Existing property values are retained but no
-longer surfaced." The property's `status` becomes `deleted` (`GET /properties/{id}` still
+Deletion is a soft delete: existing property values are retained but no longer
+surfaced. The property's `status` becomes `deleted` (`GET /properties/{id}` still
 returns it), it leaves lists and value views, and there is no undelete route, so treat
 deletion as final in practice.
 

@@ -2,7 +2,7 @@
 
 The end-to-end sequence for putting one model under governance, with full request bodies for each step, and where the results appear in the Domino UI.
 
-Auth and `$BASE`: [SKILL.md Configuration](./SKILL.md#configuration). Curl examples use `${TOKEN:+-H "Authorization: Bearer $TOKEN"}`; leave `TOKEN` unset only when the proxy path works. Endpoint table: [API-GOVERNANCE.md](./API-GOVERNANCE.md#endpoints).
+Base URL, auth and the `TOKEN` conditional in the curl examples: [SKILL.md Configuration](./SKILL.md#configuration). Endpoint table: [API-GOVERNANCE.md](./API-GOVERNANCE.md#endpoints).
 
 ## Key Concepts
 
@@ -32,7 +32,7 @@ curl -s "$BASE/policy-overviews" \
 Review available templates. Note the `id` of the policy you want to use.
 
 ### Step 2: Get the Project ID
-The project ID is needed to create a bundle. Use the `DOMINO_PROJECT_ID` environment variable (available inside Domino) or look it up via the gateway API.
+The project ID is needed to create a bundle. Use the `DOMINO_PROJECT_ID` environment variable (available inside Domino) or list projects with `GET /api/projects/beta/projects` ([domino-projects](../domino-projects/PROJECTS-API.md)).
 
 ### Step 3: Create a Bundle
 Attachments may be inline on `POST /bundles` or added later via `POST /bundles/{id}/attachments`. Prefer inline when creating and attaching a model in one step (see [ONBOARD-MODEL.md](./ONBOARD-MODEL.md)).
@@ -54,7 +54,7 @@ Save the returned `id` as your `BUNDLE_ID`.
 curl -s "$BASE/bundles/$BUNDLE_ID" \
   ${TOKEN:+-H "Authorization: Bearer $TOKEN"}
 ```
-This reveals the policy's stage structure, attachments, and approval status. **Note**: This does NOT return evidenceSet IDs — see Step 6 for how to discover those.
+This reveals the policy's stage structure, attachments, and approval status.
 
 ### Step 5: Attach Evidence
 See [EVIDENCE-WORKFLOW.md](./EVIDENCE-WORKFLOW.md) for full details. `type` is one of `ModelVersion`, `Report`, `DatasetSnapshotFile`, `Endpoint`, `NetAppVolumeSnapshotFile`, `FlowArtifact`, `FlowArtifactFile`; the two most common:
@@ -111,9 +111,9 @@ curl -X POST "$BASE/rpc/submit-result-to-policy" \
 - Submit one artifact at a time per call, or multiple artifacts in the same evidence item together
 
 ### Step 7: Progress Stages
-Stage completion is driven by evidence, approvals, and workflow events, not by `status: Complete` on the stage subresource. `PATCH /bundles/{bundleId}/stages/{stageId}` only updates **assignee**. After evidence and approvals:
+Stage completion follows evidence, approvals and workflow events ([BUNDLE-LIFECYCLE.md](./BUNDLE-LIFECYCLE.md#progressing-through-stages)). After evidence and approvals:
 
-1. Publish approval events (see [APPROVAL-GATE.md](./APPROVAL-GATE.md)):
+1. Publish approval events ([APPROVAL-GATE.md](./APPROVAL-GATE.md)):
 ```bash
 curl -X POST "$BASE/rpc/publish-approval-event" \
   ${TOKEN:+-H "Authorization: Bearer $TOKEN"} \
@@ -127,7 +127,7 @@ curl -X POST "$BASE/rpc/publish-approval-event" \
   }'
 ```
 
-2. When the policy requires explicitly setting the primary stage name, use `PATCH /bundles/{bundleId}`:
+2. When the policy requires explicitly setting the primary stage name:
 ```bash
 curl -X PATCH "$BASE/bundles/$BUNDLE_ID" \
   ${TOKEN:+-H "Authorization: Bearer $TOKEN"} \
@@ -135,7 +135,7 @@ curl -X PATCH "$BASE/bundles/$BUNDLE_ID" \
   -d '{"stage": "Next stage name from policy"}'
 ```
 
-Re-fetch the bundle and verify `stage` (primary stage name) or `currentStageInfo.status` (`NotStarted`, `InProgress`, `Done`) changed before continuing. Details: [BUNDLE-LIFECYCLE.md](./BUNDLE-LIFECYCLE.md).
+Re-fetch the bundle and verify `stage` or `currentStageInfo.status` changed before continuing.
 
 ### Step 8: Document Findings (if any)
 ```bash

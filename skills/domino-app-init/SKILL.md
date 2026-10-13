@@ -16,7 +16,7 @@ Collect these before writing files. Skip any the user has already given.
 
 1. **Framework**: `vite-react` (default), `streamlit`, `dash`, `flask`, `gradio` or `fastapi`.
 2. **Project name**: app folder name and `package.json` name (React only).
-3. **Model endpoint integration**: whether the app calls a Domino endpoint. If yes, the call goes through backend code and the user sets `MODEL_API_URL` and `MODEL_API_TOKEN` as Domino Project variables (API: `domino-api-intro`), never in the repository. Both come from the endpoint's page (URL on its overview; token from **Settings > Invocation > Add Model Access Token**, shown once). No API returns it and `$DOMINO_API_HOST`/`$DOMINO_API_PROXY` do not route `/models/`, so ask the user.
+3. **Model endpoint integration**: whether the app calls a Domino endpoint. If yes, the call goes through backend code and the user sets `MODEL_API_URL` and `MODEL_API_TOKEN` as Domino Project variables, never in the repository. Both values come from the user; where they are found: [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#calling-a-model-endpoint-from-any-framework).
 
 If the target directory already contains an app, stop and ask before overwriting anything.
 
@@ -38,10 +38,7 @@ If the target directory already contains an app, stop and ask before overwriting
    - Use relative URLs for assets and API calls. For Vite set `base: './'` and use `HashRouter`.
    - Secrets stay on the server: no token in a `VITE_` variable, no token in the repo.
 4. Add `.env`, `.env.local`, `node_modules/` and `dist/` to `.gitignore`; keep `.env.example`.
-5. **Check that the framework is in the Compute Environment.** The App runs in the project's environment (or the one chosen at publish time); packages `pip`-installed in a Workspace are not in it, and the App dies with `streamlit: not found` (exit 127). Run `python -c "import streamlit"` (or `dash`, `flask`, `gradio`, `fastapi`; `node -v` for Vite) in the Workspace. If it fails, pick one:
-   - **Environment that has it** (best): choose one when publishing (`GET /api/environments/beta/environments` lists them) or build one from the Domino Standard Environment with Dockerfile lines `USER root`, `RUN pip install streamlit`, `USER ubuntu`. Fast starts, no egress needed.
-   - **`requirements.txt`** at the project root (Git-based: inside the Artifacts folder): installed at the start of every execution, Apps included; slower start, PyPI egress (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/add-packages-to-environments/use-requirements-txt).
-   - **Install at start in `app.sh`** (prototype): `python -m pip install --user -q streamlit && exec python -m streamlit run app.py --server.port 8888 --server.address 0.0.0.0`; same trade-offs (`python -m` avoids depending on `PATH`).
+5. **Check that the framework is in the Compute Environment.** The App runs in the project's environment (or the one chosen at publish time); packages `pip`-installed in a Workspace are not in it, and the App dies with `streamlit: not found` (exit 127). Run `python -c "import streamlit"` (or `dash`, `flask`, `gradio`, `fastapi`; `node -v` for Vite) in the Workspace. If it fails: an environment that has the package (best), `requirements.txt` at the project root, or a `pip install` at the top of `app.sh` for a prototype; trade-offs in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#dependencies).
 6. Finish with the post-initialization checklist.
 
 ## Reference snippets
@@ -131,8 +128,8 @@ Tell the user to:
 
 1. Set `MODEL_API_URL` and `MODEL_API_TOKEN` (if used) in the project's environment variables; both come from the endpoint's page (see Inputs).
 2. Make sure the framework is in the App's environment (step 5), not only the Workspace.
-3. **Sync before publishing.** An App runs the project's committed files, not the Workspace's working copy. DFS project: **File Changes > Sync to Domino** (or the bundled MCP server's upload tool), then check `app.sh` and `app.py` under **Code**. Git-based: `git add`, `git commit`, `git push` from the Workspace terminal. An unsynced entry point fails with `entry script 'app.sh' not found in the root directory of your project`. Creating the version over the API right after an upload: pin `content.dfsCommitId` to the uploaded commit; the head can lag by a few seconds (`domino-apps`, API-APPS.md).
-4. Optional smoke test in the Workspace, on another port (8888 is the IDE's) and in one command (each tool call is a new shell): `streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true & pid=$!; sleep 8; curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8501/; kill $pid`. Never `pkill -f` (it matches your own shell). Keep 8888 in `app.sh` for the App container.
+3. **Sync before publishing.** An App runs the project's committed files, not the Workspace's working copy. DFS project: **File Changes > Sync to Domino** (or the bundled MCP server's upload tool), then check `app.sh` and `app.py` under **Code**. Git-based: `git add`, `git commit`, `git push` from the Workspace terminal. Creating the version over the API right after an upload: pin `content.dfsCommitId` to the uploaded commit ([domino-apps/API-APPS.md](../domino-apps/API-APPS.md)).
+4. Optional start check in the Workspace, on another port (8888 is the IDE's) and in one command: the one-liner in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#streamlit). Keep 8888 in `app.sh` for the App container.
 5. Open **App Preview** in the workspace, select `app.sh`, and test: it runs the latest committed code in the real App runtime with the proxy prefix.
 6. **Publish App**, then **Deploy** the version from the App details page and set sharing.
 

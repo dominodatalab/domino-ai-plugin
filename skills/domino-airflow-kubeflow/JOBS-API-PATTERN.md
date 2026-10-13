@@ -1,8 +1,6 @@
 # Start, wait, collect: the Jobs API pattern behind every orchestrator step
 
-Every external orchestrator step is the same three Public API calls. Routes and fields below are
-in both published specs (`https://docs.domino.ai/api-specs/6.3/public-api.json`,
-`https://docs.domino.ai/api-specs/cloud/public-api.json`). Field semantics:
+Every external orchestrator step is the same three Public API calls. Field semantics:
 [domino-jobs](../domino-jobs/SKILL.md).
 
 ## Base URL and token outside Domino
@@ -11,9 +9,6 @@ in both published specs (`https://docs.domino.ai/api-specs/6.3/public-api.json`,
 BASE="$DOMINO_API_HOST"                        # export DOMINO_API_HOST=<the deployment URL users open in a browser>
 AUTH="Authorization: Bearer $DOMINO_TOKEN"     # Personal Access Token or service-account token
 ```
-
-Nothing injected into Domino runs is available here: no `DOMINO_API_PROXY`, no
-`localhost:8899/access-token`, no `127.0.0.1:8763`. Legacy API keys are deprecated.
 
 ## 1. Start
 
@@ -52,7 +47,7 @@ echo "$job" | python3 -c 'import json,sys; s=json.load(sys.stdin)["job"]["status
 ```
 
 `status.isCompleted` is the terminal flag; `status.executionStatus` is a string whose success
-value is `Succeeded` (the spec's example). Treat anything else at completion as failure. The
+value is `Succeeded`. Treat anything else at completion as failure. The
 endpoint is marked beta in the spec; it is the only Public route for Job details.
 
 Other status fields: `isArchived`, `isScheduled`; `stageTimes` (`submissionTime`, `startTime`,

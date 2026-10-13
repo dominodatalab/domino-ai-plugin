@@ -79,8 +79,7 @@ curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d "{\"entityType\":\"project\",\"entityId\":\"<new-id>\",\"tagIds\":$TAGS}" "$BASE/rpc/tag-entity"
 ```
 
-`POST /rpc/copy-entity-tags` and `/rpc/copy-property-values` are internal,
-service-account-only routes that replace the target's data; see
+`POST /rpc/copy-entity-tags` is not a user route:
 [BULK-OPS.md](./BULK-OPS.md#copy-routes-internal-service-account-only).
 
 ## Design practices

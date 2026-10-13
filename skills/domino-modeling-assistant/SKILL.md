@@ -8,8 +8,6 @@ compatibility: Domino 6.3 and Domino Cloud. Inside a Domino Workspace the bundle
 
 Applies to Domino 6.3 and Domino Cloud.
 
-This skill enables a modeling assistant within Domino Data Lab: an AI coding assistant that writes code and runs it on the platform through the Domino MCP server. Vibe modeling means using the assistant beyond code generation, for experiment setup and configuration, data analysis and exploration, model training and evaluation, and results interpretation.
-
 ## Key components
 
 ### MCP (Model Context Protocol)
@@ -29,17 +27,17 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assista
 
 ## Important considerations
 
-You are a Domino Data Lab powered agentic coding tool that helps write code in addition to running tasks on the Domino Data Lab platform on behalf of the user using the tool functions provided by the `domino_server` MCP server. Whenever possible run commands as Domino Jobs rather than on the local terminal.
+Whenever possible run commands as Domino Jobs through the `domino_server` MCP tools rather than on the local terminal.
 
 At the start of every session, call `get_domino_environment_info`. It tells you whether you are inside a Domino Workspace or on a laptop, the project owner, name and id, whether the project is Git-based or DFS, which authentication mode is active, and what is missing. Inside a Workspace everything is auto-detected; you do not need `domino_project_settings.md`. Outside Domino, fall back to `domino_project_settings.md` for the project name, user name, and dfs setting.
 
-**Waiting for a Job happens on the server, never in a loop and never with shell `sleep`** (hosts block it). Start the Job with `run_domino_job(..., wait_seconds=300)`: the call returns when the Job completes, with its final `status`, `waited_seconds`, `results` (the last lines of stdout) and the MLflow link if the output printed one. If it returns with `is_completed` false and a `message` saying to call again, call `check_domino_job_run_status(run_id, wait_seconds=300)` and repeat until `is_completed` is true. One call waits at most 600 s (50 s under Codex; the server detects that client, and you simply call again). Then read the full output with `check_domino_job_run_results` (`stdOut` by default; `log_type="stdErr"` when the status is not `Succeeded`), briefly explain the conclusions, and share any MLflow or experiment run URL: with `open_web_browser` outside Domino, as a link inside a Workspace (there the tool returns `False`).
+Waiting for a Job happens on the server, never in a loop and never with shell `sleep` (hosts block it): start with `run_domino_job(..., wait_seconds=300)`, call `check_domino_job_run_status(run_id, wait_seconds=300)` again while the response says `is_completed` is false, then read the full output with `check_domino_job_run_results` (`log_type="stdErr"` when the status is not `Succeeded`), briefly explain the conclusions, and share any MLflow or experiment run URL (`open_web_browser` outside Domino, a link inside a Workspace). Caps and response fields: [TOOLS.md](./TOOLS.md#waiting-for-a-job).
 
 Pass `hardware_tier` and `environment_id` to `run_domino_job` only when the user asks for a specific tier or environment; both are validated before the Job starts and an unknown value is an error that lists what exists. Omit both for the project defaults.
 
 Assume project data is already in the Domino project and accessible from job runs, under `/mnt/data/` or `/mnt/imported/data/` (Git-based) or `/domino/datasets/` (DFS); confirm the full path by running a job that lists the folder contents recursively. Always create scripts to understand and transform data and run them as jobs; print analytical output as plain-text tables on stdout so job results are easy to check. Do not delete analysis scripts; save summary charts as image files in the project.
 
-Always check whether the local project has uncommitted changes. For Git-based projects, commit and push before running any Domino job, otherwise Domino cannot see the new files; the file tools refuse Git-based projects. For DFS-based projects, use the MCP server file tools instead of git before running any jobs: prefer `smart_sync_file`, which detects conflicts and never replaces a remote file it has not seen in this session unless `force_overwrite=True`; `upload_file_to_domino_project` and `sync_local_file_to_domino` refuse to replace an existing, different file unless `overwrite=True`. Do not force an overwrite without telling the user what will be replaced. Binary files (model artifacts, images) go as `content_base64`, or through `sync_local_file_to_domino`, which reads the local file as bytes.
+Always check whether the local project has uncommitted changes. For Git-based projects, commit and push before running any Domino job, otherwise Domino cannot see the new files; the file tools refuse Git-based projects. For DFS-based projects, sync with the MCP file tools instead of git before running any jobs, preferring `smart_sync_file`, and never force an overwrite without telling the user what will be replaced. Conflict and overwrite rules, text versus binary content: [TOOLS.md](./TOOLS.md#files-text-and-binary-dfs-only).
 
 When training a model, use MLflow instrumentation and assume the tracking server is configured by Domino; do not set a tracking URI.
 

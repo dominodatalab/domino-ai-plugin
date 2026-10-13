@@ -161,7 +161,7 @@ results = tuner.fit()
 print(results.get_best_result().config)
 ```
 
-`tune.report` is exported by recent Ray releases (Domino's validated 2.55.x has it); on older cluster images such as the Ray 2.36 tags use `from ray import train` and `train.report({...})` instead. Log trials to MLflow with `mlflow.get_tracking_uri()` (preconfigured in Domino) to compare them in Experiments; see https://docs.domino.ai/cloud/platform-capabilities/features/development/ray-tune and [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md).
+`tune.report` is exported by recent Ray releases (Ray 2.55 has it); on older cluster images such as the Ray 2.36 tags use `from ray import train` and `train.report({...})` instead. Log trials to MLflow with `mlflow.get_tracking_uri()` (preconfigured in Domino) to compare them in Experiments; see https://docs.domino.ai/cloud/platform-capabilities/features/development/ray-tune and [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md).
 
 ## Dask
 

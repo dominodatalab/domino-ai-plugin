@@ -48,7 +48,7 @@ streamlit run app.py --server.port 8888 --server.address 0.0.0.0
 
 The equivalent one-liner without a config file: `streamlit run app.py --server.port 8888 --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false`.
 
-To smoke-test in a Workspace before publishing, use another port, because 8888 is the IDE's port there (code-server or Jupyter), and start, check and stop in one command: each tool call is a new shell, so a `kill $!` in a later call finds nothing and the test server keeps running.
+To check that the app starts in a Workspace before publishing, use another port, because 8888 is the IDE's port there (code-server or Jupyter), and start, check and stop in one command: each tool call is a new shell, so a `kill $!` in a later call finds nothing and the test server keeps running.
 
 ```bash
 streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true & pid=$!; sleep 8; curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8501/; kill $pid
@@ -276,16 +276,16 @@ Identity headers reach Shiny only under Shiny Server Pro. R is single-process, s
 
 The App runs in the project's default Compute Environment (or the one chosen at publish time). Packages you `pip install` in a Workspace are not in it; an App published that way dies at start with `streamlit: not found` (exit 127). Before publishing, run `python -c "import <framework>"` in the Workspace (`node -v` for Vite); if it fails, do one of:
 
-1. **Put the package in the environment** (best): pick an environment that has it when publishing (`GET /api/environments/beta/environments` lists them), or build one from the Domino Standard Environment with Dockerfile lines `USER root`, `RUN pip install dash`, `USER ubuntu` (Domino's Dash guide does exactly this). Fast starts, no egress needed.
+1. **Put the package in the environment** (best): pick an environment that has it when publishing (`GET /api/environments/beta/environments` lists them), or build one from the Domino Standard Environment with Dockerfile lines `USER root`, `RUN pip install dash`, `USER ubuntu`. Fast starts, no egress needed.
 2. **`requirements.txt`** at the project root (Git-based projects: inside the Artifacts folder). Domino installs it at the start of every execution, Apps included; slower starts and PyPI egress (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/add-packages-to-environments/use-requirements-txt).
 3. **Install at start in `app.sh`** for a prototype: `python -m pip install --user -q streamlit && exec python -m streamlit run app.py --server.port 8888 --server.address 0.0.0.0`. Same trade-offs as `requirements.txt`; the `python -m` form avoids depending on `~/.local/bin` being on `PATH`.
 
-Versions that match the code above. A package the Domino Standard Environment ships is pinned at or below the DSE's version (a newer one can break ranges its preinstalled MLflow declares, such as `gunicorn<24`); a package it does not ship takes its newest release:
+Versions that match the code above. A package the Domino Standard Environment ships is pinned at or below the DSE's version (`pip show <pkg>` reports it; a newer one can break ranges its preinstalled MLflow declares, such as `gunicorn<24`); a package it does not ship takes its newest release:
 
 | Framework | Packages |
 |---|---|
 | Streamlit | `streamlit>=1.65` (not in the DSE), `requests` |
-| Dash | `dash>=4` (not in the DSE; 3.0 removed `run_server`, the code above runs on 4.4), `plotly<=6.9.0` (the DSE's version), `requests` |
+| Dash | `dash>=4` (not in the DSE; `run_server` was removed in 3.0), `plotly<=6.9.0` (the DSE's version), `requests` |
 | Flask | ships in the DSE: `flask<=3.1.3`, `gunicorn<=23.0.0`, `requests` |
 | Gradio | `gradio>=6` (not in the DSE), `requests` |
 | FastAPI | ships in the DSE: `fastapi<=0.136.3`, `uvicorn<=0.52.4`, `jinja2`, `requests` |

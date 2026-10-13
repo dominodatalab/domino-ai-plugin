@@ -1,8 +1,6 @@
 # Prediction capture for Domino endpoints
 
-Applies to Domino 6.3 and Domino Cloud. Source: https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/3-set-up-domino-endpoints/1-set-up-prediction-capture.
-
-When you can choose how to serve a model, serve it as a Domino endpoint: integrated monitoring then captures predictions into the project Dataset `prediction_data` automatically, with no external data source to connect. The Model Monitor data-source path (S3, generic S3, Azure Blob or Data Lake, GCS, HDFS, NFS, Snowflake) is the documented exception, for models served as an App, Launcher or Job or outside Domino, and for ground-truth files.
+Source: https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/3-set-up-domino-endpoints/1-set-up-prediction-capture.
 
 Integrated monitoring only works when the endpoint code records each prediction with Domino's data-capture library. Domino converts the records to Parquet in a project Dataset and the Model Monitor reads them from there; the Model Monitoring API cannot ingest endpoint predictions from any other source.
 
@@ -120,6 +118,6 @@ Register it under **Model Monitor** > model > **Model Quality** > **Register Gro
 
 ## Remediate from captured data
 
-1. On the endpoint, **Open in Workspace**: Domino opens a Workspace on a new branch at the published commit (Git-based projects need the model published on Domino 5.0 or later).
+1. On the endpoint, **Open in Workspace**: Domino opens a Workspace on a new branch at the published commit.
 2. Read `prediction_data` for the affected period, join your labels on the identifier, and retrain.
 3. Merge the branch (Git-based) or **Revert Project** to the branch's commit (DFS), then publish a new endpoint version.

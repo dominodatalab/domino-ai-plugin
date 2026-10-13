@@ -1,7 +1,5 @@
 # Domino Model Registry
 
-Applies to Domino 6.3 and Domino Cloud. Sources: https://docs.domino.ai/cloud/platform-capabilities/features/models/register-and-govern/model-registry and the `/api/registeredmodels/...` routes in both public API specs.
-
 Domino's registry stores MLflow registered models with Domino additions: project-scoped access control, model cards with lineage, discoverability across projects, and deployment to Domino endpoints. Use the MLflow client for versions, aliases and tags, and Domino's `/api/registeredmodels/...` routes for Domino-only attributes. R models are not supported.
 
 ## Register
@@ -30,11 +28,11 @@ Or register an existing run's model: `mlflow.register_model("runs:/<run_id>/mode
 
 ### By REST (Domino)
 
-`POST /api/registeredmodels/v2` registers from an MLflow run or a Hugging Face model (`modelName`, `modelSource{sourceType, mlflowSource{experimentRunId, loggedModelId|artifactPath}|huggingFaceSource{modelId}}`, `create`, optional `projectId`, `description`, `discoverable`). With an MLflow 3 client pass `loggedModelId` (`m-<id>`): a version registered with `artifactPath: "model"` points at a run artifact that MLflow 3 never wrote and does not load. `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated since 6.2.1. Worked example: [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md).
+`POST /api/registeredmodels/v2` registers from an MLflow run or a Hugging Face model (`modelName`, `modelSource{sourceType, mlflowSource{experimentRunId, loggedModelId|artifactPath}|huggingFaceSource{modelId}}`, `create`, optional `projectId`, `description`, `discoverable`). With an MLflow 3 client pass `loggedModelId` (`m-<id>`): a version registered with `artifactPath: "model"` points at a run artifact that MLflow 3 never wrote and does not load. `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated. Worked example: [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md).
 
 ## Versions, aliases and tags
 
-MLflow stages (`Staging`, `Production`, `transition_model_version_stage`) are deprecated upstream since MLflow 2.9. Domino's registry still shows `current_stage` for compatibility, but promotion should use **aliases** (one version per alias name) and **tags**. Aliases are standard MLflow registry features that Domino's own registry pages do not mention. On Domino Cloud 6.4 (MLflow client 3.3.2): `set_registered_model_alias`, `get_model_version_by_alias`, `get_registered_model(name).aliases` and `mlflow.pyfunc.load_model("models:/<name>@champion")` all work, and from outside Domino the same registry answers on the deployment URL with a bearer token (`GET /api/2.0/mlflow/registered-models/alias?name=...&alias=...` returns the version; `POST /api/2.0/mlflow/registered-models/alias` with `{"name": ..., "alias": ..., "version": ...}` sets one). On Domino 6.3, run that GET before relying on aliases; a 404 means the server predates aliases, so use tags instead.
+MLflow stages (`Staging`, `Production`, `transition_model_version_stage`) are deprecated upstream since MLflow 2.9. Domino's registry still shows `current_stage` for compatibility, but promotion should use **aliases** (one version per alias name) and **tags**. On Domino Cloud aliases work through the client (`set_registered_model_alias`, `get_model_version_by_alias`, `get_registered_model(name).aliases`, `mlflow.pyfunc.load_model("models:/<name>@champion")`) and through `/api/2.0/mlflow/registered-models/alias` on the deployment URL with a bearer token (`GET ?name=...&alias=...` returns the version; `POST` with `{"name": ..., "alias": ..., "version": ...}` sets one). On Domino 6.3 run that GET first; a 404 means the server predates aliases, so use tags instead.
 
 ```python
 import mlflow
@@ -75,8 +73,8 @@ Or edit it under **Models** > model > **Overview**. From a version you can walk 
 - Who can view, edit or deploy follows the **project** roles: https://docs.domino.ai/cloud/admin/identity-and-access/manage-users/roles#model-registry-actions.
 - **Global Models** lists models marked discoverable (anyone can read a limited model card and request access); **Collaborating Models** lists what you can use. Toggle discoverability on the model card (System Admin or project owner) or by API.
 
-| Task | Route (both specs) |
-|------|--------------------|
+| Task | Route |
+|------|-------|
 | List registered models | `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=25` (token-paginated with `pageToken`) |
 | Names only | `GET /api/registeredmodels/v1/names` |
 | Get a model | `GET /api/registeredmodels/v1/{modelName}` (`name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `requestingUserAccess`; it returns neither `discoverable` nor aliases, which only MLflow's API shows) |
@@ -99,7 +97,7 @@ Create a Domino endpoint whose source is the registry entry: in the **Create Dom
 
 ## Large models
 
-Set `MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD=true` (optionally `MLFLOW_MULTIPART_UPLOAD_CHUNK_SIZE`, `MLFLOW_MULTIPART_UPLOAD_MINIMUM_FILE_SIZE`) before `log_model` on AWS and GCP deployments; a file splits into at most 1000 chunks.
+Set `MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD=true` before `log_model` on AWS and GCP deployments: [MLFLOW-BASICS.md](./MLFLOW-BASICS.md#large-artifact-upload).
 
 ## Documentation
 

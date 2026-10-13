@@ -1,20 +1,13 @@
 # Projects over REST and python-domino
 
-Applies to Domino 6.3 and Domino Cloud. Routes marked (Cloud) exist only in the Cloud spec; everything else is in both `https://docs.domino.ai/api-specs/6.3/public-api.json` and `https://docs.domino.ai/api-specs/cloud/public-api.json`. The python-sdk catalog for the same surface is [API-PROJECTS.md](../domino-python-sdk/API-PROJECTS.md).
+Routes marked (Cloud) are Domino Cloud only. The python-sdk catalog for the same surface is [API-PROJECTS.md](../domino-python-sdk/API-PROJECTS.md).
 
 ## Setup
 
 ```python
-import os
-import requests
-
-if os.environ.get("DOMINO_API_PROXY"):                       # inside a Domino run with the proxy
-    base, headers = os.environ["DOMINO_API_PROXY"], {}
-else:                                                        # run without the proxy: short-lived token
-    base = os.environ["DOMINO_API_HOST"]
-    token = requests.get("http://localhost:8899/access-token").text.strip()
-    headers = {"Authorization": f"Bearer {token}"}
-# Outside Domino: base = deployment URL, headers = {"Authorization": "Bearer <PAT or service-account token>"}
+import os, requests
+# base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
+base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run with the proxy
 ```
 
 ## Read
@@ -73,7 +66,7 @@ r = requests.post(f"{base}/api/projects/v2/projects", headers=headers, json={
 
 ### Git credentials
 
-List: public `GET /api/users/beta/credentials/{userId}` (both specs; needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); on 6.3 confirm it in your deployment's `/docs`). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
+List: public `GET /api/users/beta/credentials/{userId}` (6.3 and Cloud; needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); on 6.3 confirm it in your deployment's `/docs`). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
 
 ```python
 user_id = requests.get(f"{base}/api/users/v1/self", headers=headers).json()["user"]["id"]
@@ -162,7 +155,7 @@ requests.delete(f"{base}/api/projects/v1/projects/{project_id}/repositories/<rep
 
 ## python-domino
 
-Every method needs a client bound to one project: `Domino("owner/project")`; the `project` argument is required (host from `DOMINO_API_HOST`, auth from the proxy or a token). Methods that exist in `domino/domino.py`:
+Every method needs a client bound to one project: `Domino("owner/project")`; the `project` argument is required (host from `DOMINO_API_HOST`, auth from the proxy or a token). Methods:
 
 | Method | Does | Note |
 |--------|------|------|

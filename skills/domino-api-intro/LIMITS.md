@@ -8,11 +8,11 @@ https://docs.domino.ai/cloud/reference/api/domino-api-authentication. Error hand
 
 Do not use these in new examples or agent steps:
 
-| Pattern | Status (source) |
-|---------|-----------------|
-| `X-Domino-Api-Key` header, `DOMINO_USER_API_KEY`, `api_key=` in python-domino | Deprecated: the auth page ("Authenticate with an API key [LEGACY]") says they still work but are "scheduled for deprecation in future versions"; the glossary says `DOMINO_USER_API_KEY` "is sunsetting" |
-| `DOMINO_TOKEN_FILE` / JWT file propagation | "No longer exists as an environment variable" (default-variables glossary). On Domino 6.3 the `EnableLegacyJwtTooling` feature flag can re-enable it; do not build on it. |
-| Deriving the deployment URL from the JWT `iss` claim | Not supported by any Domino doc; read `DOMINO_API_HOST` or the value an API response returns |
+| Pattern | Status |
+|---------|--------|
+| `X-Domino-Api-Key` header, `DOMINO_USER_API_KEY`, `api_key=` in python-domino | Deprecated; never use, not even as a fallback |
+| `DOMINO_TOKEN_FILE` / JWT file propagation | Not set in executions; on Domino 6.3 the `EnableLegacyJwtTooling` feature flag can re-enable it; do not build on it |
+| Deriving the deployment URL from the JWT `iss` claim | Unsupported; read `DOMINO_API_HOST` or the value an API response returns |
 
 Legacy API key section (migration only):
 https://docs.domino.ai/cloud/reference/api/domino-api-authentication#authenticate-with-an-api-key-legacy

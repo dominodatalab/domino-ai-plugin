@@ -1,8 +1,8 @@
 # Model retirement
 
-Model owner archives the bundle, detaches policies, writes a final audit entry, marks the registered model retired or archived.
+Model owner archives the bundle (`PATCH /bundles/{bundleId}` with `"state": "Archived"`) and retires the registered model in the model registry.
 
-HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## Core calls
 
@@ -16,4 +16,3 @@ Registered model retirement is a model-registry call (e.g. `/api/registeredmodel
 
 - Archiving a bundle blocks new evidence submissions (state guard).
 - Detaching policies does not delete the policy.
-- Registered model retirement is a model-registry call, not governance.

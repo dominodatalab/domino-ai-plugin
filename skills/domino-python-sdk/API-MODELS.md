@@ -1,8 +1,8 @@
 # Domino Models API
 
 Model APIs (hosted prediction endpoints), Model Deployments, the Registered Models
-registry, and how to invoke an endpoint. Routes and fields are from both published specs
-unless marked **Cloud**. Lifecycle guidance and the v1/v2 registry split:
+registry, and how to invoke an endpoint. Routes marked **Cloud** exist only on Domino
+Cloud. Lifecycle guidance and the v1/v2 registry split:
 [API-MODEL-SERVING.md](./API-MODEL-SERVING.md) and
 [domino-model-serving](../domino-model-serving/SKILL.md); deployment workflow and
 monitoring: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
@@ -37,7 +37,7 @@ items = requests.get(f"{base_url}/api/modelServing/v1/modelApis", headers=header
 ### Create
 
 ```
-POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 201; Domino 6.4 returns 200)
+POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 201; Domino returns 200)
 ```
 
 Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`,
@@ -71,14 +71,10 @@ model_api = requests.post(f"{base_url}/api/modelServing/v1/modelApis", headers=h
 model_api_id = model_api["id"]
 ```
 
-A smaller body than the one above also works: the required fields, `replicas: 1`,
-`source.excludeFiles: []`, and **no** `hardwareTierId`, `shouldDeploy` or version
-`description`. With `hardwareTierId` omitted, the record comes back with
-`hardwareTierId: "small-k8s"` (the project default, not the deployment's
-`isDefaultForModelApi` tier); an access token is created automatically (id only, no value);
-`activeVersion` has no `deployment` key until the build finishes, and after about 2.5
-minutes `activeVersion.deployment` is `{"status": "Running", "isPending": false}`. The
-optional fields in the example above come from the spec.
+Omitting `hardwareTierId` uses the project default tier (not the deployment's
+`isDefaultForModelApi` tier). An access token is created automatically (id only, no value).
+`activeVersion.deployment` is absent until the build finishes; poll until it is
+`{"status": "Running", "isPending": false}`.
 
 ```python
 import time
@@ -112,8 +108,8 @@ deletion `GET` returns 404 and the list no longer includes the record.
 **Cloud only:** `PUT /api/modelServing/beta/modelApis/{modelApiId}/access` saves
 `visibility` (`Public`/`Discoverable`/`Private`) and the **complete** collaborator list
 (`collaborators[]` with `id`, `isOrganization`, `role` `Owner`/`Editor`/`Operator`/`Viewer`)
-in one request: per the spec, "anyone omitted loses the assigned role, including the
-caller", and the last Owner cannot be omitted, so load the current list from
+in one request: anyone omitted loses the assigned role, including the caller, and the
+last Owner cannot be omitted, so load the current list from
 `GET .../collaborators` and send it back with your change. `POST .../collaborators`
 adds one principal (fails if the id is already assigned; only Owners can add);
 `PUT .../collaborators/{collaboratorId}` changes a role; `GET/PUT .../visibility`
@@ -124,7 +120,7 @@ flag); `GET .../consumer/access` reports the caller's access.
 
 ```
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions
-POST /api/modelServing/v1/modelApis/{modelApiId}/versions        -> the version record (spec says 201; live returned 200)
+POST /api/modelServing/v1/modelApis/{modelApiId}/versions        -> the version record (spec says 201; Domino returns 200)
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs
 GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/exportLogs
@@ -165,13 +161,12 @@ shape follows the target type's `effectiveModelDeploymentSchema`. The record's
 
 List and register use v2; per-model reads use v1 keyed by **model name**. Version
 creation goes through `POST /api/registeredmodels/v2` as well: the v1 route
-`POST /api/registeredmodels/v1/{modelName}/versions` is marked deprecated in both specs
-("deprecated as of version 6.2.1. Please migrate to POST /api/registeredmodels/v2").
+`POST /api/registeredmodels/v1/{modelName}/versions` is deprecated.
 
 ```
 GET  /api/registeredmodels/v2            params: projectId, searchPattern, modelCategory (genai|ml), pageToken, maxResults (default 25), orderBy
 POST /api/registeredmodels/v2            register a model or add a version
-GET  /api/registeredmodels/v1            ML models only (spec: "Returns only ML models"); v2 returns all categories by default
+GET  /api/registeredmodels/v1            ML models only; v2 returns all categories by default
 GET  /api/registeredmodels/v1/{modelName};  PATCH /api/registeredmodels/v1/{modelName}
 GET  /api/registeredmodels/v1/{modelName}/versions;  GET .../versions/{version};  GET .../versions/{version}/modelapis
 GET  /api/registeredmodels/v2/{modelName}/versions[/{version}]
@@ -190,9 +185,8 @@ the run). Response: `{"registeredModel": {...}, "modelVersion": {...}}`.
 **Use `loggedModelId` for models logged with MLflow 3.** MLflow 3 clients store
 `log_model` output as a LoggedModel (`m-<id>`) rather than as a run artifact, so a
 version registered with `artifactPath: "model"` points at a path that does not exist and
-`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. With an MLflow 3.3.2
-client both bodies return 200 and only the `loggedModelId` version loads. Get the id from the run (`mlflow.last_logged_model()`, or
-the `model_id` on the logged model info).
+`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. Get the id from the run
+(`mlflow.last_logged_model()`, or the `model_id` on the logged model info).
 
 ```python
 result = requests.post(f"{base_url}/api/registeredmodels/v2", headers=headers, json={

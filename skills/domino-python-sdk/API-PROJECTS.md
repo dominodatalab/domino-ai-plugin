@@ -1,7 +1,7 @@
 # Domino Projects API
 
 Create and manage projects, collaborators, git repositories, goals and shared datasets.
-All routes and bodies below are in both published specs unless marked **Cloud**.
+Routes marked **Cloud** exist only on Domino Cloud.
 Product docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/projects.
 
 ## Authentication
@@ -22,10 +22,10 @@ filter client-side, or resolve one project by name with the Domino Internal API
 `environmentName`, `requestingUserRole`, ...; 404 when there is none). It is what
 python-domino's `project_id` property calls; non-public route; may change in a future Domino version; on Domino 6.3 confirm it in your deployment's `/docs`. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
 Each project has `id`, `name`, `description`, `visibility`, `ownerId`, `ownerUsername`,
-`collaborators`, `isRestricted`, optional `billingTag` and `mainRepository`. The spec
-enum for `visibility` is lowercase (`public`, `searchable`, `private`); live (Domino
-Cloud 6.4.0) the server accepts either case on create and returns `Private`, so compare
-case-insensitively. An unknown value fails with a 500 naming the accepted set.
+`collaborators`, `isRestricted`, optional `billingTag` and `mainRepository`. The
+`visibility` enum is lowercase (`public`, `searchable`, `private`); Domino accepts either
+case on create and returns `Private`, so compare case-insensitively. An unknown value
+fails with a 500 naming the accepted set.
 
 ```python
 projects = requests.get(f"{base_url}/api/projects/beta/projects", headers=headers,
@@ -199,9 +199,9 @@ PUT /v4/projects/{projectId}/settings   body: any of {"defaultEnvironmentId", "d
 ```
 
 `defaultEnvironmentRevisionSpec` is `ActiveRevision`, `LatestRevision`,
-`RestrictedRevision` or `{"revisionId": "..."}`. `PUT` returned 200 with an empty body; a
-body with only `defaultVolumeSizeGiB` changed that field and left the environment and
-tier as they were. Keep the volume size inside the `min`/`max` the `GET` reports.
+`RestrictedRevision` or `{"revisionId": "..."}`. `PUT` returns 200 with an empty body and
+is a partial update: omitted fields keep their values. Keep the volume size inside the
+`min`/`max` the `GET` reports.
 
 ```python
 requests.put(f"{base_url}/v4/projects/{project_id}/settings", headers=headers,

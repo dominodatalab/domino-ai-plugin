@@ -54,8 +54,7 @@ domino login --device https://<your-domino-url>
 
 Open the verification URL on any device, enter the code, sign in, review the requested access
 and choose **Grant Access**; the CLI, which polls in the background, prints `Login succeeded`.
-Codes expire after a short time; rerun the command to get a new one. This is the OAuth 2.0
-Device Authorization Grant (RFC 8628).
+Codes expire after a short time; rerun the command to get a new one.
 
 CLI versions older than **6.2.3** use a different authentication client and fail to log in after
 a Domino upgrade: download and reinstall the current CLI from **Download CLI**.

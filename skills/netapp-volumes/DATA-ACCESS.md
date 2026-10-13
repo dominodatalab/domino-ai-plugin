@@ -29,10 +29,8 @@ Paths mirror the Dataset scheme. Volumes are global, so there is no local/import
 | DFS | `/domino/netapp-volumes/<name>` | `/domino/netapp-volumes/snapshots/<name>/<number>` | `/domino/netapp-volumes/snapshot-tags/<name>/<tag>` |
 | Git-based | `/mnt/netapp-volumes/<name>` | `/mnt/netapp-volumes/snapshots/<name>/<number>` | `/mnt/netapp-volumes/snapshot-tags/<name>/<tag>` |
 
-The docs give `snapshots/<name>` for the snapshots directory and state that the paths
-mirror the Dataset scheme, in which each snapshot sits under its number; `<number>` is the
-snapshot's `version` from the API. Renaming a volume changes `<name>` and therefore every
-path; update scripts after a rename.
+`<number>` is the snapshot's `version` from the API. Renaming a volume changes `<name>` and
+therefore every path; update scripts after a rename.
 
 ### Permissions at mount time
 

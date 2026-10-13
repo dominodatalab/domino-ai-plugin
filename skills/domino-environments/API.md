@@ -1,12 +1,12 @@
 # Environments REST API
 
-Applies to Domino 6.3 and Domino Cloud. Routes are in both `https://docs.domino.ai/api-specs/6.3/public-api.json` and `https://docs.domino.ai/api-specs/cloud/public-api.json`. Authentication and hosts: [domino-api-intro](../domino-api-intro/SKILL.md); inside a run use `$DOMINO_API_PROXY` with no `Authorization` header.
+Authentication and hosts: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ## Which path applies
 
 Read `GET $DOMINO_API_HOST/version` (`{"version": "6.3.x"}` or a later version; Domino Cloud reports 6.4 or later). On `6.3.x` use only the "6.3" column; on 6.4 and later use the "6.4+" routes. When unsure, call the route: a `404` means it is absent on that deployment.
 
-| Route | 6.3 | 6.4+ (Domino Cloud today) |
+| Route | 6.3 | 6.4+ (including Domino Cloud) |
 |---|---|---|
 | `GET /api/environments/beta/environments` (list) | yes | yes |
 | `GET /api/environments/v1/environments/{environmentId}` | yes | yes |
@@ -43,7 +43,7 @@ env = requests.get(f"{base}/api/environments/v1/environments/{env_id}").json()["
 
 ## Create an environment
 
-### 6.4+ (Domino Cloud today): `POST /api/environments/v2/environments`
+### 6.4+ (including Domino Cloud): `POST /api/environments/v2/environments`
 
 ```python
 body = {

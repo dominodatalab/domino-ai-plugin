@@ -1,14 +1,14 @@
 # Coding assistants through LLM Gateway 2.0
 
-Applies to Domino 6.3 and Domino Cloud where an administrator has installed the LLM Gateway 2.0 extension (early access). Routing a coding assistant through the gateway puts its model calls under the same grants, budgets, guardrails and usage tracking as any other call.
+Routing a coding assistant through the gateway puts its model calls under the same grants, budgets, guardrails and usage tracking as any other call.
 
-**Offer it, never impose it.** Where the extension is installed, ask the user whether they want the assistant routed through the gateway or kept on the vendor sign-in the Domino Standard Environment supports (the `domino-workspaces` skill covers that sign-in). Do not switch to the gateway unless they choose it. The public docs (https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/reuse-credentials#use-with-domino-llm-gateway-2-0) say the routing is possible and send users to their Domino field representative for the recommended setup; what follows is the generic configuration in the assistant's own documented settings, for Claude Code and Codex.
+**Offer it, never impose it.** Where the extension is installed, ask the user whether they want the assistant routed through the gateway or kept on the vendor sign-in the Domino Standard Environment supports (the `domino-workspaces` skill covers that sign-in). Do not switch to the gateway unless they choose it. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/reuse-credentials#use-with-domino-llm-gateway-2-0. Below: the configuration in the assistant's own settings, for Claude Code and Codex.
 
 Shared facts:
 
-- The extension injects nothing: no `ANTHROPIC_*` or `OPENAI_*` variable appears in a Workspace. `<base>` is the gateway App's URL (from `LLM_GATEWAY_URL` if the user created it, else asked for); `<alias>` is an alias from `GET <base>/v1/models`, possibly prefixed such as `domino/<name>`.
+- `<base>` is the gateway App's URL and `<alias>` an alias from `GET <base>/v1/models`, possibly prefixed such as `domino/<name>` ([SKILL.md](./SKILL.md#find-and-detect-the-gateway)); nothing is injected into a Workspace.
 - Inside a Workspace the bearer is the access token from `$DOMINO_API_PROXY/access-token` (`http://localhost:8899/access-token`). It is short-lived, so the assistant needs a credential helper that re-fetches it, not a pasted value.
-- On a laptop the bearer is a Domino bearer the user stored, for example a Personal Access Token; a `dgw_` gateway token may not pass the App login redirect, so if the assistant is answered with a login page or 401, use a Domino bearer.
+- On a laptop the bearer is a Domino bearer the user stored, for example a Personal Access Token ([SKILL.md](./SKILL.md#authentication)).
 - Assistants make many small requests per turn, so a tight per-user budget refuses them mid-session; plan budgets accordingly.
 
 ## Claude Code
@@ -39,7 +39,7 @@ How the helper behaves (Claude Code settings reference): the output is cached fo
 
 Credential precedence matters. Claude Code's documented order is `ANTHROPIC_AUTH_TOKEN`, then `ANTHROPIC_API_KEY`, then `apiKeyHelper`, then `CLAUDE_CODE_OAUTH_TOKEN`: a set `ANTHROPIC_AUTH_TOKEN` is used instead of the helper, and a set `ANTHROPIC_API_KEY` outranks the helper too and is sent only as `x-api-key`, which the App proxy treats as no credential (a 302 to the login page, not a clear error). Before starting a gateway session, unset both in the shell and check that no Domino user, Project or environment variable sets them (`CLAUDE_CODE_OAUTH_TOKEN` ranks below the helper and is not a problem). Run `/status` in Claude Code to confirm the `Anthropic base URL` line shows the gateway and the credential line names the `apiKeyHelper`.
 
-For a whole team, an administrator can set `ANTHROPIC_BASE_URL` as a Domino environment variable (in the UI or with the routes in [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)) and write the project-local settings file from the Compute Environment's pre-run script (the mechanism the reuse-credentials page describes), writing it only when absent or merging with `jq` so a user's existing project settings survive, and only for users who opted in. Optional attribution: `ANTHROPIC_CUSTOM_HEADERS="X-LLM-Tag-projectname: $DOMINO_PROJECT_NAME"` tags every request with the Project.
+For a whole team, an administrator can set `ANTHROPIC_BASE_URL` as a Domino environment variable (in the UI or with the routes in [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)) and write the project-local settings file from the Compute Environment's pre-run script, writing it only when absent or merging with `jq` so a user's existing project settings survive, and only for users who opted in. Optional attribution: `ANTHROPIC_CUSTOM_HEADERS="X-LLM-Tag-projectname: $DOMINO_PROJECT_NAME"` tags every request with the Project.
 
 ### From a laptop
 

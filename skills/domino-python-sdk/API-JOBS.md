@@ -1,9 +1,7 @@
 # Domino Jobs API
 
-Start, list, inspect and poll Jobs with the Public API. Every route and field below is in
-both published specs (https://docs.domino.ai/api-specs/6.3/public-api.json and
-https://docs.domino.ai/api-specs/cloud/public-api.json) unless marked otherwise. Product
-docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs.
+Start, list, inspect and poll Jobs with the Public API. Product docs:
+https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs.
 
 ## Authentication
 
@@ -27,8 +25,8 @@ Request body (`projectId` and `runCommand` are the only required fields):
 | `hardwareTier` | string | Hardware tier **id** (for example `small-k8s`); project default when omitted. List ids with `GET /api/hardwaretiers/v1/hardwaretiers` (needs the ViewHardwareTiers permission) or python-domino `hardware_tiers_list()` (tiers usable by the project) |
 | `environmentId` | string | Environment id; project default when omitted |
 | `environmentRevisionSpec` | string | `ActiveRevision`, `LatestRevision` or `SomeRevision(<revisionId>)` |
-| `commitId` | string | DFS commit to run against; defaults to the project's head. The Cloud spec adds that it applies only to the project's internal DFS history and cannot pin a commit on a Git-based project's main repository (use `mainRepoGitRef` with `commitId` for that) |
-| `mainRepoGitRef` | object | `{"refType": "head" | "branches" | "tags" | "commitId", "value": "..."}` (`refType` required; `value` for all but `head`). These are the spec's values for jobs; the project-repository `defaultRef` uses a different set. `branches` runs on the branch; `branch` is accepted with 200 and the job then fails with `Unknown reference type` |
+| `commitId` | string | DFS commit to run against; defaults to the project's head. It applies only to the project's internal DFS history and cannot pin a commit on a Git-based project's main repository (use `mainRepoGitRef` with `commitId` for that) |
+| `mainRepoGitRef` | object | `{"refType": "head" | "branches" | "tags" | "commitId", "value": "..."}` (`refType` required; `value` for all but `head`). The project-repository `defaultRef` uses a different set. `branches` runs on the branch; `branch` is accepted with 200 and the job then fails with `Unknown reference type` |
 | `externalVolumeMountIds` | string[] | External data volume ids |
 | `netAppVolumeIds` | string[] | NetApp volume ids; see [netapp-volumes](../netapp-volumes/API-NETAPP-VOLUMES.md) |
 | `snapshotDatasetsOnCompletion`, `snapshotNetAppVolumesOnCompletion` | boolean | Snapshot mounted datasets / volumes when the job ends. The NetApp flag depends on deployment configuration: where the feature flag `EnableDominoNetAppSnapshotsOnExecutionCompletion` is off the job is rejected with 400 |
@@ -153,8 +151,8 @@ failure in automation.
 The Public API has no stop route. Options:
 
 - python-domino `domino.job_stop(job_id, commit_results=True)`; it calls
-  `POST /v4/jobs/stop` with `{"jobId", "commitResults"}` (non-public route; may change in a future Domino version); the job reports `Stopped` with `isCompleted: true` within
-  seconds. See [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#jobs).
+  `POST /v4/jobs/stop` with `{"jobId", "commitResults"}` (non-public route; may change in a future Domino version); the job reports `Stopped` with `isCompleted: true`.
+  See [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#jobs).
 - The Jobs page in the Domino UI.
 
 ## Job tags
@@ -184,21 +182,17 @@ DELETE /api/jobs/v1/goals/{goalId}?jobId=<jobId>
 POST /api/jobs/v1/projects/{projectId}/job-defaults
 ```
 
-Present in the Cloud spec only (6.4.0 and later). Send the fields you intend to post to
+Domino Cloud (6.4.0 and later) only. Send the fields you intend to post to
 `POST /api/jobs/v1/jobs` (all optional) and receive `jobDefaults` with the resolved
 hardware tier, environment, commit, dataset and NetApp snapshot pins. On Domino 6.3 there
 is no public equivalent; the UI resolves defaults.
 
 ## Scheduled jobs
 
-Neither published spec has a scheduled-jobs route and python-domino has no scheduled-job
-method. The route the UI uses, `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version), creates one; it takes `command`, not `runCommand`,
-plus `schedule.cronString`, `timezoneId`, `isPaused`, `allowConcurrentExecution`,
-`hardwareTierIdentifier`, `environmentRevisionSpec`, `scheduledByUserId` and
-`notifyOnCompleteEmailAddresses`, all required. GET, PUT (edit or pause) and DELETE use
-`.../scheduledjobs/{scheduledJobKey}`. Recipe and bodies:
-[SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md); UI steps:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job.
+The Public API has no scheduled-jobs route and python-domino has no scheduled-job method.
+The UI's route, `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version), takes `command`, not `runCommand`.
+Routes, bodies and the pause recipe: [SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md);
+UI steps: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job.
 
 ## python-domino
 

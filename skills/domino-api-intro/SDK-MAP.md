@@ -1,6 +1,6 @@
 # SDK and skill map
 
-Where to go after [SKILL.md](./SKILL.md). Product doc links use https://docs.domino.ai/...
+Where to go after [SKILL.md](./SKILL.md).
 
 ## API surface to skill
 
@@ -40,7 +40,7 @@ it signs in through the browser or a device code. The R package wraps its file a
 |------|-------|
 | LLM Gateway 2.0, the first choice where an administrator has deployed it (calling models through the gateway, coding assistants, admin setup) | [domino-llm-gateway](../domino-llm-gateway/SKILL.md) |
 | Call an LLM from code without a gateway: a Domino-hosted model endpoint, an external provider with a key in a Domino environment variable, or the legacy AI Gateway on 6.3 | [domino-llm-access](../domino-llm-access/SKILL.md) |
-| Host an LLM endpoint and manage it over `/api/gen-ai/beta/endpoints` (both specs) | [domino-llm-access/HOST-AN-LLM-API.md](../domino-llm-access/HOST-AN-LLM-API.md) |
+| Host an LLM endpoint and manage it over `/api/gen-ai/beta/endpoints` (6.3 and Cloud) | [domino-llm-access/HOST-AN-LLM-API.md](../domino-llm-access/HOST-AN-LLM-API.md) |
 
 The legacy AI Gateway routes (`/api/aigateway/v1/*`) exist only in the 6.3 spec; Domino
 Cloud has removed them, so nothing under `/api/aigateway` is callable there.

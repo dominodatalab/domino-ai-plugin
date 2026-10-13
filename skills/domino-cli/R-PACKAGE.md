@@ -1,9 +1,7 @@
 # The Domino R package
 
-Sources: https://docs.domino.ai/cloud/reference/r-package/domino-r-package (6.3 page identical)
-and the CRAN package source `domino_0.3.1.tar.gz` (published 2017-11-22, `NAMESPACE` and `R/`).
-The product page itself says the information may be outdated and suggests writing your own R
-wrapper around the platform API for anything more.
+Docs: https://docs.domino.ai/cloud/reference/r-package/domino-r-package (6.3 page identical).
+CRAN package: `domino` 0.3.1.
 
 ## What it is
 
@@ -31,10 +29,9 @@ work.
 `domino.login(usernameOrEmail, password, approvalForSendingErrorReports = FALSE, host)` pipes
 `username`, `password` and a `Y`/`N` into `domino login <host>`'s legacy interactive prompt
 (password prompted in RStudio or the console when omitted). The current CLI signs in through a
-browser or device code, and no product page documents the username and password prompt any
-more, so `domino.login()` may fail against the current CLI. Prefer the terminal login.
+browser or device code, so `domino.login()` may fail against it; prefer the terminal login.
 
-## Functions (all exported by `NAMESPACE`)
+## Functions
 
 | Function | CLI command | Note |
 |---|---|---|
@@ -53,12 +50,11 @@ more, so `domino.login()` may fail against the current CLI. Prefer the terminal 
 | `domino.snapshot(commitMessage)` | `upload -m ...` after saving `snapshot_command_history.txt`, `snapshot_workspace.RData` and the current plot | one-call capture of the R session into the project |
 | `domino.runCommand(commandAndArgs, successCallback, failureMessage, stdInput)` | any | run any CLI command string |
 
-`diff`, `status`, `reset` and `dump` are not on the current CLI reference page; they come from the
-2017 package and may no longer exist in the CLI. If one errors, use `domino help` to see what the
-installed CLI offers.
+`diff`, `status`, `reset` and `dump` are not in the current CLI reference; if one errors,
+`domino help` lists what exists.
 
-The product page: "In general, these Domino commands only work if your working directory is set
-to be inside your project folder." `domino.get()` and `domino.create()` move you there.
+These commands work only inside the project folder; `domino.get()` and `domino.create()` move you
+there.
 
 ## Typical session
 
@@ -104,4 +100,3 @@ stop_for_status(r); fromJSON(content(r, as = "text"))$job$id
 ```
 
 Routes: [domino-jobs](../domino-jobs/SKILL.md) and [domino-api-intro](../domino-api-intro/SKILL.md).
-Never send `X-Domino-Api-Key`; legacy user API keys are deprecated.

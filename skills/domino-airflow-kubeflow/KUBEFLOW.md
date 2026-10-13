@@ -4,11 +4,10 @@ Use this when an existing Kubeflow Pipelines deployment owns the pipeline. Other
 inside Domino: [domino-flows](../domino-flows/SKILL.md) for multi-step pipelines, a scheduled Job
 ([domino-jobs](../domino-jobs/SKILL.md)) for one recurring script.
 
-Sources: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Kubeflow tab),
-KFP v2 component documentation on kubeflow.org, the `kfp-kubernetes` README. Domino ships no
-Kubeflow-specific package; the integration is "install a client in the component and call the
-Domino API", which is what the product page describes (it names `dominodatalab`; `requests`
-alone is enough for the Public API and is what the examples below use).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Kubeflow tab).
+Domino ships no Kubeflow-specific package: install a client in the component and call the
+Domino API (the product page names `dominodatalab`; `requests` alone is enough for the Public
+API and is what the examples below use).
 
 ## Architecture
 
@@ -21,7 +20,7 @@ needs. The real work is the Domino Job, versioned in the Domino project.
 
 Create a Kubernetes Secret in the namespace where the pipeline's pods run (in multi-user KFP
 that is the user's profile namespace, not `kubeflow`) holding a Personal Access Token or a
-service-account token, not a legacy API key (the product page still mentions one). The token is
+service-account token. The token is
 created in Domino; the Secret is the pipeline's own copy, because its pods cannot read Domino
 Project or user environment variables:
 
@@ -42,8 +41,7 @@ kubernetes.use_secret_as_env(task, secret_name="domino-token", secret_key_to_env
 
 ## Components on the Public API
 
-The component image `python:3.12` matches the Domino Standard Environment's Python 3.12
-(`ubuntu24-py3.12-r4.5-domino6.3` on 6.3, the same line on Cloud).
+The component image `python:3.12` matches the Domino Standard Environment's Python 3.12.
 
 ```python
 from kfp import dsl, kubernetes
@@ -102,7 +100,7 @@ def pipeline(domino_url: str, project_id: str):
 
 `train.output` is the output commit id; passing it to the next component makes the dependency
 explicit and gives the second step a pinned view of the first step's results. The Domino routes
-are Public API in both published specs:
+(Public API):
 
 ```text
 POST /api/jobs/v1/jobs

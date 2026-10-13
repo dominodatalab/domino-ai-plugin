@@ -4,7 +4,7 @@ Step 8 (make asset and API URLs survive the Domino proxy prefix) and Step 9 (the
 
 ## Step 8 — Make URLs proxy-aware (assets AND API calls)
 
-When this app runs inside Domino it's served under a proxy prefix (e.g. `https://<host>/preview/<appId>/`). Root-absolute URLs bypass the proxy and 404 — both asset tags emitted as `/assets/index-*.js` and user-written `fetch('/api/…')` calls. This is invisible in local dev (where `pathname` is `/` and root-absolute happens to work) and only surfaces after deployment.
+When this app runs inside Domino it's served under a proxy prefix (e.g. `https://<host>/preview/<appId>/`). Root-absolute URLs bypass the proxy and 404 — both asset tags emitted as `/assets/index-*.js` and user-written `fetch('/api/…')` calls.
 
 Two things to get right:
 
@@ -51,7 +51,7 @@ For a fresh scaffold, replace Vite's default `App.tsx` with something that exerc
 
 ### Replace `src/index.css` (fresh scaffolds only)
 
-Vite's default `src/index.css` ships ~80 lines of template chrome: a fixed-width centered `#root`, custom color tokens, `h1`/`h2`/`p`/`code` overrides, dark-mode rules, and decorative styles for the Vite hero. All of it overrides or conflicts with `DominoThemeProviderDecorator`'s tokens. On a fresh scaffold this isn't "the user's app CSS" — it's template noise.
+Vite's template `src/index.css` conflicts with `DominoThemeProviderDecorator`'s tokens; on a fresh scaffold replace it:
 
 - Overwrite `src/index.css` with a minimal reset:
 
@@ -62,11 +62,11 @@ Vite's default `src/index.css` ships ~80 lines of template chrome: a fixed-width
 
 - Delete `src/App.css` if `App.tsx` no longer imports it.
 
-This overrides the "don't remove existing CSS imports" line in Step 7 for the fresh-scaffold case. Step 7's guidance is about preserving real user CSS in a real codebase; it doesn't apply to Vite-template chrome on an empty scaffold. On retrofits, the Step 7 rule stands — leave existing CSS alone.
+On retrofits leave existing CSS alone (Step 7).
 
 ### Components safe to use without an MCP query
 
-These are the components and prop shapes confirmed to work against the published `@dominodatalab/extensions-tools`. Use them for the starter screen without needing to consult the MCP. For anything beyond this set, query the Storybook MCP first (see the instructions-file workflow in Step 10) — don't guess.
+Components and prop shapes safe to use without an MCP query. For anything beyond this set, query the Storybook MCP first (see the instructions-file workflow in Step 10) — don't guess.
 
 | Component | Safe usage |
 |---|---|
@@ -78,6 +78,4 @@ These are the components and prop shapes confirmed to work against the published
 | `Typography.Text` | Optional `type='BodyDefault' \| 'BodyDefaultStrong' \| 'BodySmall' \| 'BodySmallStrong' \| 'BodyCode'`. |
 | `SpinnerWrapper` | Loading wrapper. |
 
-### Watch out: `node_modules` README uses the Storybook alias
-
-`node_modules/@dominodatalab/extensions-tools/README.md` (and any code snippets it embeds) imports from `@domino/base-components` — that's the Storybook-internal alias, not the published package name. Even though `node_modules` reads as authoritative, **every import in this project must use `@dominodatalab/extensions-tools`**. The instructions file written in Step 10 reminds future sessions of this, but the starter screen is the first place it can go wrong.
+`node_modules/@dominodatalab/extensions-tools/README.md` also imports from the Storybook alias `@domino/base-components`; every import in this project uses `@dominodatalab/extensions-tools` ([SKILL.md](./SKILL.md#why-this-exists)).

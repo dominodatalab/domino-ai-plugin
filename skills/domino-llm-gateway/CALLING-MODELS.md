@@ -1,9 +1,9 @@
 # Calling models through LLM Gateway 2.0
 
-Applies to Domino 6.3 and Domino Cloud where an administrator has installed the LLM Gateway 2.0 extension (early access). The recipes below run from a Domino Workspace. All examples use:
+The recipes below assume a Domino Workspace. All examples use:
 
-- `GATEWAY`: the gateway App's URL without a trailing slash, from `LLM_GATEWAY_URL` if the user created that Project or user environment variable, else asked for. Nothing is injected.
-- `token()`: the bearer. Inside a Domino execution it is the access token from `$DOMINO_API_PROXY/access-token` (the same value as `http://localhost:8899/access-token`), re-read before every request because it is short-lived; outside Domino a Domino bearer the user stored, for example a Personal Access Token in `LLM_GATEWAY_TOKEN` (a Domino access token works from a laptop; if a PAT or a `dgw_` gateway token is answered with a login page or 401, use a Domino access token). Never a legacy user API key.
+- `GATEWAY`: the gateway App's URL without a trailing slash ([SKILL.md](./SKILL.md#find-and-detect-the-gateway)).
+- `token()`: the bearer. Inside a Domino execution it is the access token from `$DOMINO_API_PROXY/access-token` (the same value as `http://localhost:8899/access-token`), re-read before every request because it is short-lived; outside Domino a Domino bearer the user stored, for example a Personal Access Token in `LLM_GATEWAY_TOKEN` ([SKILL.md](./SKILL.md#authentication)).
 - `model`: an alias from `GET {GATEWAY}/v1/models`. Aliases are administrator-defined and may carry a prefix such as `domino/`; `domino/example-alias` below is a placeholder.
 - The SDKs are **not** in the Domino Standard Environment. To try: `pip install openai anthropic "pydantic-ai-slim[openai]" langchain-openai`; for repeat use add the ones you need to the Compute Environment's Dockerfile instructions.
 

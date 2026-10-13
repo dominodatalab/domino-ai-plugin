@@ -115,9 +115,8 @@ users should pick the input file or date in a web form
 | Notify emails | who gets the completion mail |
 | Update Domino endpoint | republish an endpoint after the Job; for retraining, not scoring |
 
-There is no Public API route for scheduled Jobs (stated on
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job). Create and
-edit schedules in the UI. There is no pause: edit the schedule to a far-future start time.
+Scheduled Jobs have no Public API route; the non-public route with its create, update, pause and
+delete bodies is in [SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md).
 
 If Apache Airflow or Kubeflow Pipelines already owns the nightly schedule, keep it there: a task
 starts this Job over the same `POST /api/jobs/v1/jobs`, waits for it and collects the result file

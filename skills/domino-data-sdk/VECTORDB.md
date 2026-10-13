@@ -6,7 +6,7 @@ key never reaches your code. Everything after initialisation is the standard Pin
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/connect-to-pinecone
 and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/vector-databases.
-Source: `domino_data/vectordb.py` (26 lines).
+Source: `domino_data/vectordb.py`.
 
 Qdrant has a Data Source connector too (`connect-to-qdrant` on the same docs path) but no helper
 in this library; use the UI code snippet for it. The snippet is also served by
@@ -17,14 +17,12 @@ in this library; use the UI code snippet for it. The snippet is also served by
 1. A Pinecone Data Source (created with the Pinecone API key; environment name and project ID
    are needed only when the Data Source is used from `pinecone-client<3.0.0`), added to the
    Project.
-2. The Pinecone client at a version the Domino helpers support: **3.x through 8.x**. From
-   `pinecone` 9.0.0 (May 2026) `Pinecone.Index()` rejects every keyword except `pool_threads`
-   with `TypeError`, and `domino_pinecone3x_index_params` passes `host` and
-   `additional_headers`, so an unpinned install (10.0.0 today) breaks the recipe below. The PyPI
-   package is `pinecone`; `pinecone-client` (frozen at 6.0.0, which also works) is the deprecated
-   former name and must be uninstalled first because the two conflict; the Domino Standard
-   Environment ships `pinecone-client` 3.0.3, so a DSE-based environment needs that uninstall
-   before `pip install pinecone`. The docs page still shows `pinecone-client`.
+2. The Pinecone client at a version the Domino helpers support: pin `pinecone>=3,<9`. From
+   9.0 `Pinecone.Index()` rejects the `host` and `additional_headers` kwargs that
+   `domino_pinecone3x_index_params` passes (`TypeError`). The PyPI package is `pinecone`;
+   `pinecone-client` (frozen at 6.0.0, which also works) is its deprecated former name and the
+   two conflict. The Domino Standard Environment ships `pinecone-client` 3.0.3, so uninstall it
+   before `pip install pinecone`.
 
 ```dockerfile
 USER root

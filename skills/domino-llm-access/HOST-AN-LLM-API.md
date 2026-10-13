@@ -1,23 +1,10 @@
 # Host an LLM: REST API reference
 
-Applies to Domino 6.3 and Domino Cloud. Every route below is present, with the same bodies, in both public specs (6.3.1 and 6.4.0) under the `/api/gen-ai/beta` prefix: 14 paths, 17 operations. The prefix is `beta`; re-check the deployment's own reference (`https://<domino-domain>/docs`; `$DOMINO_API_HOST/assets/public-api.json` is an incomplete subset that does include these routes) before generating client code. For the write operations below (create, patch, start, stop, delete), confirm the first call's response before building on it.
+All routes are under `/api/gen-ai/beta` in both the 6.3 and Cloud specs. The prefix is `beta`; re-check the deployment's own reference (`https://<domino-domain>/docs`) before generating client code.
 
 ## Authentication and base URL
 
-```python
-import os
-import requests
-
-if os.environ.get("DOMINO_API_PROXY"):                       # in-run, JWT credential propagation
-    base_url, headers = os.environ["DOMINO_API_PROXY"].rstrip("/"), {}
-else:                                                        # in-run, access-token sidecar
-    base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
-    token = requests.get("http://localhost:8899/access-token").text.strip()
-    headers = {"Authorization": f"Bearer {token}"}
-# Outside a run: base_url = the deployment's HTTPS URL, headers = Bearer <Personal Access Token>
-```
-
-In a run without `DOMINO_API_PROXY`, `DOMINO_API_HOST` may point at a legacy sidecar that lacks some `/api/*` routes (see HOSTS.md in the `domino-api-intro` skill). A 404 from it is not proof the route is absent: retry against the deployment's public HTTPS URL with a Personal Access Token before concluding anything. Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) are deprecated; do not use them.
+`base_url` and `headers` in the examples come from the Python setup block in [domino-api-intro](../domino-api-intro/SKILL.md#authentication). A 404 from the in-run base is not proof the route is absent: [HOSTS.md](../domino-api-intro/HOSTS.md#404-on-the-in-run-base).
 
 ## Routes
 
@@ -81,7 +68,7 @@ endpoint = requests.post(f"{base_url}/api/gen-ai/beta/endpoints", headers=header
 endpoint_id = endpoint["id"]
 ```
 
-Field notes, from the spec:
+Field notes:
 
 - `configuration.servedModelName` is the name callers use as `model` in OpenAI-style requests. `maxNumberOfSequences` is the number of requests processed in parallel; `tensorParallelism` is the number of GPUs the model is split across; `vllmArguments` is the string passed to the vLLM binary (tool calling with agent frameworks needs `--enable-auto-tool-choice --tool-call-parser hermes` for some models).
 - `modelSource.huggingFace` requires `path`, `commit` and `modelType` (`LLM`, `Embedding`, `OtherGenAI`); `registeredModel` requires `modelName` and `modelVersion` (integer).
@@ -153,9 +140,3 @@ requests.get(f"{base}/vllm-latency-metrics", headers=headers, params=params).jso
 requests.get(f"{base}/pod-resource-metrics", headers=headers, params=params).json()
 requests.get(f"{base}/realTimeLogs", headers=headers, params={"logType": "stderr", "limit": 200}).json()
 ```
-
-## Response notes (Domino Cloud)
-
-- `GET /api/gen-ai/beta/default-endpoint-environment` may return `{id, name}` with no `revisionId`.
-- `GET /api/gen-ai/beta/endpoints` returns `{"items": [...]}` with the documented keys: `generalAccess` is `Viewer` or `Consumer`, `currentVersion.configuration` carries `vllmArguments`, `maxNumberOfSequences` and `tensorParallelism`, and `url` is on the apps host.
-- `GET /api/aigateway/v1/endpoints` returns 404: the legacy gateway is absent on Cloud.
