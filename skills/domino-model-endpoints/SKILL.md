@@ -16,26 +16,28 @@ A Domino endpoint (**Model API** in the API) wraps a function from your project 
 |------|-------|
 | UI publish, predict function, calling, instances, health, logs | this skill |
 | REST lifecycle: create, version, list, delete, logs, registered models | `domino-model-serving` |
-| Drift, model quality, prediction capture, scheduled checks | `domino-model-monitoring` |
-| Score a file, table or Dataset with a Job instead of an endpoint; export the model out of Domino (the endpoint image to your own registry or Kubernetes, NVIDIA Fleet Command, a Snowflake UDF, SageMaker) | [domino-model-delivery](../domino-model-delivery/SKILL.md) |
+| Drift, model quality, prediction capture | `domino-model-monitoring` |
+| Batch scoring with a Job; export the model out of Domino (image to your registry or Kubernetes, NVIDIA Fleet Command, Snowflake UDF, SageMaker) | [domino-model-delivery](../domino-model-delivery/SKILL.md) |
 
 ## Reference files
 
 | File | Use when |
 |------|----------|
-| [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md) | Predict function, sync before publish, health check, calling sync and async, versions, access |
-| [SCALING.md](./SCALING.md) | Instance count, endpoint hardware tiers, routing modes, parallelism |
-| [MONITORING.md](./MONITORING.md) | CPU, memory, status codes, health checks, timeouts, logs, Grafana |
+| [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md) | Predict function, sync before publish, API and registry publish, health check, calling, versions, access |
+| [SCALING.md](./SCALING.md) | Instance count, endpoint tiers, routing modes, parallelism |
+| [MONITORING.md](./MONITORING.md) | CPU, memory, status codes, health checks, timeouts, logs |
 
 ## Packaging rules (what breaks publishes)
 
-- The environment is chosen per endpoint in the publish form (`environmentId` is required by the API). Python endpoints need `uwsgi`, `flask`, `six` and `prometheus-client` in that environment; async endpoints also need `seldon-core`. Domino Standard Environments ship them (the minimal image lacks `seldon-core` and `mlflow`).
+- The environment is chosen per endpoint (`environmentId` is required by the API). Python endpoints need `uwsgi`, `flask`, `six` and `prometheus-client`; async ones also `seldon-core`. Domino Standard Environments ship them (the minimal image lacks `seldon-core` and `mlflow`).
 - Endpoint hosts do **not** read `requirements.txt` or run environment setup scripts; put packages in the environment's Dockerfile instructions. Exception: a registry model's MLflow-inferred `requirements.txt` is installed at build.
-- Project environment variables are not inherited; set endpoint variables under its **Settings** and restart running versions after changes.
-- The image is built from the Project's **committed** files, never the Workspace disk: DFS Project, **File Changes** > **Sync to Domino** first; Git-based, commit and push the code and sync the artifacts. Include every file the function loads (`.py`, model artifacts, lookups) and pin that commit (`version.commitId`): the head lags an upload by seconds, and a missing file crash-loops the container at start with `FileNotFoundError` ("Sync or commit first" in DEPLOY-ENDPOINT.md). Files mount at `/mnt/<username>/<project_name>` (use `DOMINO_WORKING_DIR`); `.modelignore` excludes files; images over 500 MB fail, so exclude large artifacts. New files need a new version.
+- Project environment variables are not inherited; set endpoint variables under **Settings** and restart running versions.
+- The image is built from the Project's **committed** files, never the Workspace disk: DFS, **File Changes** > **Sync to Domino** first; Git-based, commit and push the code and sync artifacts. Include every file the function loads and pin that commit (`version.commitId`): the head lags an upload by seconds, and a missing file crash-loops the container with `FileNotFoundError` ("Sync or commit first", DEPLOY-ENDPOINT.md). Files mount at `/mnt/<username>/<project_name>` (`DOMINO_WORKING_DIR`); `.modelignore` excludes files; images over 500 MB fail. New files need a new version.
 - The endpoint runs as uid/gid 12574; the image build runs as the Dockerfile's last `USER`.
 
 ## Quick start
+
+Sources: a project-file prediction function (pickle path below) or a **Model Registry** version.
 
 ```python
 # model.py (project root)
@@ -47,44 +49,46 @@ def predict(sepal_length, sepal_width, petal_length, petal_width):
     return {"variety": str(pred[0])}            # JSON-serializable: no NumPy types
 ```
 
-1. Sync or commit `model.py` and `model.pkl` (packaging rules above), then in the project go to **Deployments** > **Endpoints** > **Create Domino Endpoint**.
-2. Enter a name and description, the file (`model.py`) and the function (`predict`).
+Registry path: `mlflow.sklearn.log_model(model, "model", signature=sig, input_example=X[:5], registered_model_name="iris-rf")` in a run (or **Register model from run** in Experiments), then pick that model and version in **Create Domino Endpoint**; by API `version.source = {"type": "Registry", "registeredModelName": "iris-rf", "registeredModelVersion": 1}`. Domino installs the MLflow-inferred `requirements.txt` (DEPLOY-ENDPOINT.md; `domino-experiment-tracking` MODEL-REGISTRY.md).
+
+1. Sync or commit `model.py` and `model.pkl` (packaging rules), then go to **Deployments** > **Endpoints** > **Create Domino Endpoint**.
+2. Name, description, the file (`model.py`) and function (`predict`), or the registered model and version.
 3. Pick the compute environment, instance count and endpoint hardware tier (SCALING.md).
-4. Under **Request Type** choose **Sync** (real-time) or **Async** (long-running; payloads passed by reference).
-5. Publish, wait for **Running**, then confirm health: a successful **Tester** request, or the model container's log line `WSGI app 0 (mountpoint='') ready` (a crash-looping container also reports `Running`). The **Overview** tab shows the URL, model ID and code samples.
+4. **Request Type**: **Sync** (real-time) or **Async** (long-running; payloads by reference).
+5. Publish, wait for **Running**, then confirm health: a **Tester** request succeeds, or the model container logs `WSGI app 0 (mountpoint='') ready` (a crash loop also reports `Running`). The **Overview** tab shows the URL, model ID and code samples.
 
 ## Calling an endpoint
 
-Restricted endpoints need an access token from **Settings** > **Invocation**. Sync and async endpoints authenticate differently:
+Restricted endpoints need an access token (**Settings** > **Invocation**); sync and async authenticate differently:
 
 ```bash
-# Synchronous: HTTP Basic, the token as both username and password
+# Sync: HTTP Basic, the token as username and password
 curl -s -u "$MODEL_ACCESS_TOKEN:$MODEL_ACCESS_TOKEN" -H "Content-Type: application/json" \
   -d '{"data": {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}}' \
   "$DOMINO_URL/models/$MODEL_ID/latest/model"
 
 ```
 
-Async endpoints take `Authorization: Bearer $MODEL_ACCESS_TOKEN` at `$DOMINO_URL/api/modelApis/async/v1/$MODEL_ID` and return an `asyncPredictionId` to poll (DEPLOY-ENDPOINT.md).
+Async endpoints use `Authorization: Bearer $MODEL_ACCESS_TOKEN` at `.../api/modelApis/async/v1/$MODEL_ID` and return an `asyncPredictionId` to poll.
 
-These values come from the user, not from an API. `DOMINO_URL` is the deployment's external URL and `MODEL_ID` its id (Overview tab, "Calling your endpoint"); the token is created and shown only in the UI (**Settings** > **Invocation**). `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...`, no run variable holds the external URL, the API lists token ids but never values, and your own Domino token gets 401 even on a Public endpoint (visibility and authorization are separate). Ask the user for the three values (as project or user environment variables), or for the **Tester** tab, or to set **Unrestricted**, after which only the URL is needed. Never put the token in browser code.
+These values come from the user, not an API: `DOMINO_URL` (the external deployment URL) and `MODEL_ID` are on the Overview tab; the token exists only in the UI (**Settings** > **Invocation**). In-run hosts do not route `/models/...`, no variable holds the external URL, the API lists token ids but never values, and your own Domino token gets 401 even on a Public endpoint. Ask the user for the three values (as project or user environment variables), or for the **Tester** tab, or to set **Unrestricted** (then only the URL is needed). Never put the token in browser code.
 
 ## Versions and routing
 
-Each publish creates a version. **Basic** routing (default) sends `/models/<modelId>/latest/model` to the newest successful version and stops the old one. **Advanced** routing adds a promoted version at `/models/<modelId>/labels/prod/model` so clients stay on production while you test `latest` (**Settings** > **Deployment**). To redeploy on fresh data, schedule a Job and select the endpoint under **Update Domino Endpoint**.
+Each publish creates a version. **Basic** routing (default) points `/models/<modelId>/latest/model` at the newest successful version and stops the old one; **Advanced** adds a promoted version at `/models/<modelId>/labels/prod/model` so clients stay on production while you test `latest` (**Settings** > **Deployment**). A scheduled Job can redeploy on fresh data via **Update Domino Endpoint**.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---------|-------|
-| Build fails on an import | The package must be in the environment Dockerfile, not `requirements.txt` |
-| `IOException ... HTTP response code: 500` in the build log | Image over 500 MB; add large files to `.modelignore` |
-| 401 on predictions | Sync needs Basic auth with the endpoint token; async needs Bearer; a user token or PAT never works |
+| Build fails on an import | Put the package in the environment Dockerfile, not `requirements.txt` |
+| `IOException ... 500` in the build log | Image over 500 MB; add large files to `.modelignore` |
+| 401 on predictions | Sync: Basic auth with the endpoint token; async: Bearer; user tokens and PATs never work |
 | `Running` but 503, or `Running` / `Starting` alternating | Crash loop; model-container logs (no `tail`, `maxResults=3000`) show `FileNotFoundError` ... `no app loaded`. Sync, pin the commit, republish |
-| 504 on slow requests | Request timeout (default 60 s) under **Settings** > **Advanced**; restart after changing |
-| Version not Running | Build, export and instance logs (**Logs** column); health-check settings |
+| 504 | Request timeout (default 60 s) under **Settings** > **Advanced**; restart after changing |
+| Not Running | Build, export, instance logs (**Logs** column); health-check settings |
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/index (and its sibling pages)
+- https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/index
 - Route discovery: [API-SPECS.md](../domino-api-intro/API-SPECS.md)

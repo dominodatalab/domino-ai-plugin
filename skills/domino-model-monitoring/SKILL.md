@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Model Monitoring API calls use the s
 
 Applies to Domino 6.3 and Domino Cloud.
 
-Operational serving metrics (CPU, latency, status codes) are in `domino-model-endpoints`; this skill is drift and quality. Reference files: [PREDICTION-CAPTURE.md](./PREDICTION-CAPTURE.md) (instrumenting endpoint code, captured data, remediation) and [MONITORING-API.md](./MONITORING-API.md) (REST routes, config JSON, custom metrics).
+Serving metrics (CPU, latency, status codes) are in `domino-model-endpoints`; this skill is drift and quality. Reference files: [PREDICTION-CAPTURE.md](./PREDICTION-CAPTURE.md) (endpoint instrumentation, captured data, remediation) and [MONITORING-API.md](./MONITORING-API.md) (routes, config JSON, custom metrics).
 
 ## Two workflows
 
@@ -17,7 +17,7 @@ Operational serving metrics (CPU, latency, status codes) are in `domino-model-en
 | Domino endpoint | Integrated endpoint monitoring | Domino captures predictions into a project Dataset; you register a TrainingSet and, optionally, ground truth |
 | App, Launcher, Job, or outside Domino | Model Monitor | You connect a data source (S3, generic S3, Azure Blob or Data Lake, GCS, HDFS, NFS, Snowflake) and register training, prediction and ground-truth files with a Monitoring Config JSON |
 
-Both show up in **Model Monitor** as one list. Endpoint monitoring is not supported for endpoints deployed to a remote data plane.
+Prefer deploying as a Domino endpoint: integrated monitoring captures predictions into the project Dataset automatically, with no external data source. The Model Monitor data-source path (S3, Snowflake and the others above) is the documented exception: models served as an App, Launcher or Job or outside Domino, and ground-truth files. Both show up in **Model Monitor** as one list. Endpoint monitoring is not supported for endpoints deployed to a remote data plane.
 
 ## Set up monitoring for a Domino endpoint
 
@@ -26,7 +26,7 @@ Both show up in **Model Monitor** as one list. Endpoint monitoring is not suppor
 3. **Register training data** for drift. The model must have been trained from a Domino TrainingSet in the same project (https://docs.domino.ai/cloud/reference/api/data_api/trainingsets_usecases/create_trainingset). On the endpoint open **Grafana Monitoring** > **Configure Monitoring** > **Data**, pick the Training Set and version, choose **Classification** (categorical target) or **Regression** (numerical target), save.
 4. **Validate**: **Configure Monitoring** > **Target Ranges** shows a populated tests-and-thresholds table once captured predictions have been processed.
 5. **Ground truth** (model quality): predictions need a row identifier (the `event_id` you capture); register a ground-truth file carrying the same identifiers with a config JSON (`variableType: ground_truth`, `forPredictionOutput`) under **Model Monitor** > model > **Model Quality** > **Register Ground Truth**, or by API. **Ingest History** shows `Done` when loaded.
-6. **Schedule and notify**: **Configure Monitoring** > **Schedule** (name, frequency, "new data since last check" or "data since last N days") and **Alert Recipients** (comma- or semicolon-separated emails). Email goes out when a threshold is breached.
+6. **Schedule and notify**: **Configure Monitoring** > **Schedule** (name, frequency, "new data since last check" or "data since last N days") and **Alert Recipients** (comma- or semicolon-separated emails) for breach emails.
 
 ## Set up Model Monitor for an external model
 
@@ -52,19 +52,17 @@ Hourly Parquet files in the `prediction_data` Dataset: `/mnt/data/prediction_dat
 1. From the alert, open the model's drift or quality page and the Cohort Analysis report to find the failing cohorts.
 2. On the endpoint click **Open in Workspace**: Domino opens a Workspace on a new branch at the published commit, with `prediction_data` available.
 3. Fix the code or retrain on recent predictions plus labels; publish a new endpoint version (`domino-model-endpoints`).
-4. To automate, a scheduled Job reads check results by API ([MONITORING-API.md](./MONITORING-API.md)) and starts retraining with `POST /api/jobs/v1/jobs` (`projectId`, `runCommand`; see `domino-jobs`).
+4. To automate, a scheduled Job reads check results by API ([MONITORING-API.md](./MONITORING-API.md)) and starts retraining with `POST /api/jobs/v1/jobs` (`domino-jobs`).
 
 ## Troubleshooting
 
 | Message or symptom | Cause |
 |--------------------|-------|
 | Monitoring is not enabled | No capture client in `predict()`, no training set registered, or the first scheduled check has not run yet |
-| Waiting for data | No processed predictions yet; **Target Ranges** > **Date Filter** > Today shows what has arrived |
+| Waiting for data | Nothing processed yet; **Target Ranges** > **Date Filter** > Today shows arrivals |
 | Selected training set version cannot be used | The TrainingSet version has no schema, is empty, or its target type does not match the chosen model type |
 | `no package called 'DominoDataCapture'` or an import error | The environment lacks the capture library; use a Domino Standard Environment or install it |
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/index (workflows, setup, config JSON, APIs, troubleshooting)
-- https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/8-json/index
-- https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/6-remediation/2-remediate-a-domino-endpoint
+- https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/index (workflows, setup, config JSON, APIs, remediation, troubleshooting)

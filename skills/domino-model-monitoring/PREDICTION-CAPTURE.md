@@ -2,6 +2,8 @@
 
 Applies to Domino 6.3 and Domino Cloud. Source: https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/3-set-up-domino-endpoints/1-set-up-prediction-capture.
 
+When you can choose how to serve a model, serve it as a Domino endpoint: integrated monitoring then captures predictions into the project Dataset `prediction_data` automatically, with no external data source to connect. The Model Monitor data-source path (S3, generic S3, Azure Blob or Data Lake, GCS, HDFS, NFS, Snowflake) is the documented exception, for models served as an App, Launcher or Job or outside Domino, and for ground-truth files.
+
 Integrated monitoring only works when the endpoint code records each prediction with Domino's data-capture library. Domino converts the records to Parquet in a project Dataset and the Model Monitor reads them from there; the Model Monitoring API cannot ingest endpoint predictions from any other source.
 
 ## Install
