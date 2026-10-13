@@ -21,8 +21,9 @@ in this library; use the UI code snippet for it.
    with `TypeError`, and `domino_pinecone3x_index_params` passes `host` and
    `additional_headers`, so an unpinned install (10.0.0 today) breaks the recipe below. The PyPI
    package is `pinecone`; `pinecone-client` (frozen at 6.0.0, which also works) is the deprecated
-   former name and must be uninstalled first because the two conflict. The docs page still shows
-   `pinecone-client`.
+   former name and must be uninstalled first because the two conflict; the Domino Standard
+   Environment ships `pinecone-client` 3.0.3, so a DSE-based environment needs that uninstall
+   before `pip install pinecone`. The docs page still shows `pinecone-client`.
 
 ```dockerfile
 USER root

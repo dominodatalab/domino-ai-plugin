@@ -41,14 +41,14 @@ Then **Supported Clusters** (cluster-node environments only), **Visibility** (Pr
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev graphviz \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir pandas==3.0.6 scikit-learn==1.9.1
+RUN pip install --no-cache-dir pandas==2.3.2 scikit-learn==1.7.2   # the DSE's own versions
 RUN R --no-save -e "install.packages(c('tidyverse','caret'), repos='https://cloud.r-project.org')" \
     && chown -R ubuntu:ubuntu /usr/local/lib/R/site-library
 ENV MODEL_PATH=/mnt/artifacts/model.pkl
 USER ubuntu
 ```
 
-One `pip install` per set of packages, pinned versions, `&&` to merge layers, `ARG NAME` + `ENV NAME=$NAME` to carry a variable into the build. Private Git packages: install at runtime via `requirements.txt` through Domino's Git integration (the credential lives under **Account** > **Account Settings** > **Git Credentials**), never with credentials in the Dockerfile or in `requirements.txt`.
+One `pip install` per set of packages, pinned versions, `&&` to merge layers, `ARG NAME` + `ENV NAME=$NAME` to carry a variable into the build. Private Git packages: install at runtime via `requirements.txt` through Domino's Git integration (credential under **Account Settings** > **Git Credentials**), never with credentials in the Dockerfile or in `requirements.txt`.
 
 **Pluggable Workspace Tools**: YAML defining the IDEs offered at launch; [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md).
 
@@ -66,7 +66,7 @@ One `pip install` per set of packages, pinned versions, `&&` to merge layers, `A
 | Package Persistence (Workspaces) | interactive installs kept across sessions | enable on the revision; custom images need `uv` and `renv` |
 | `!pip install --user ...` in a notebook | one-off | lost on restart |
 
-Keep images small; dependency-file packages cost startup time on every run.
+Keep images small; dependency-file packages cost startup time.
 
 ## Revisions
 
