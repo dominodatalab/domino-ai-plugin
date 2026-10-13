@@ -6,11 +6,10 @@ output, and read, upload and sync the files of a DFS (non-Git) project. The
 `domino-modeling-assistant` skill describes the workflow built on it.
 
 It runs on `uv` from this directory (`uv --directory <here> run domino_mcp_server.py`); the
-committed `uv.lock` pins the dependencies. Python 3.11 or later; the standalone
-[FastMCP](https://gofastmcp.com) framework on the official `mcp` SDK 2.x, which speaks MCP
-protocol 2026-07-28 and still answers handshake-era clients (2024-11-05 to 2025-11-25): the
-server negotiates whatever the host speaks and prints the client's name and protocol version on
-stderr at its first tool call.
+committed `uv.lock` pins the dependencies. Python 3.11 or later; the official `mcp` SDK 2.x
+server class (`MCPServer`), which speaks MCP protocol 2026-07-28 and still answers handshake-era
+clients (2024-11-05 to 2025-11-25): the server negotiates whatever the host speaks and prints
+the client's name and protocol version on stderr when the host first lists or calls its tools.
 
 ## Tools
 

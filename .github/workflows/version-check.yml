@@ -11,7 +11,7 @@ name: Version check
 
 on:
   pull_request:
-    branches: ["main", "develop", "release-*"]
+    branches: ["main", "develop", "release-*", "rc/**"]
 
 permissions:
   contents: read

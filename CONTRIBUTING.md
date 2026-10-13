@@ -326,7 +326,9 @@ OpenAI portal accepts nothing else, and all four manifests carry the same string
 | `N` | Skill release counter. Increases with every release on that line, is never reused, and is **not** reset by the year (`2026.603.14` is followed by `2027.603.15`). |
 
 Releases up to `2026.6-3.2` wrote the line as `X-Y`; `2026.603.3` is the same scheme in
-semver form, and `scripts/check-version.sh` still reads the old form on a base branch.
+semver form, and `scripts/check-version.sh` still reads the old form on a base branch. A release
+candidate adds the semver pre-release suffix `-rc.M` and lives only on an `rc/<YYYY.XYY.N>`
+branch; see [Release candidates](#release-candidates).
 
 The git tag `release-YYYY.XYY.N` is created automatically from the manifest on every push to
 `main` or a `release-*` branch (`.github/workflows/tag-release.yml`), so tag and manifest
@@ -361,6 +363,7 @@ syntax (Launcher `${param}` placeholders).
 | Release: promote `develop` to `main` | `main`, head `develop` | The one bump to the next `YYYY.XYY.N`; CI requires it; the tag follows on merge. |
 | Repo mechanics only (`.github/`, `scripts/`, CONTRIBUTING, README) | `main` | Unchanged; no content paths, so no bump and no tag. |
 | Backport onto a `release-X.Y` branch | that branch | Bump `N` on that line. |
+| Release candidate for internal testing | `rc/<YYYY.XYY.N>`, cut from `develop` | `YYYY.XYY.N-rc.M`; bump `M` on every change. CI rejects a plain version there and a suffix anywhere else. See [Release candidates](#release-candidates). |
 
 `develop` is the integration branch: it batches content changes so that `main` receives one
 release per promotion instead of one per PR. Nothing resolves `develop`: the Anthropic
@@ -372,9 +375,9 @@ Three things carry a version, and they are deliberately different:
 
 | Object | Form | Who reads it |
 |---|---|---|
-| Branch | `main`, `release-6.3`, `release-6.4` … | The Domino Standard Environment (DSE) update script, which resolves **by exact branch name**: `release-X.Y.Z`, then `release-X.Y`, then `main`, from the cluster's `DOMINO_VERSION`. Any other branch name is invisible to it. The script ships in the DSE image; Domino 6.3 runs it at Workspace launch when the `updateSkillsOnLaunch` setting is on. Domino Cloud doesn't run it at launch, so Cloud Workspaces keep the version their image installed, and a Workspace that persists `~/.claude` keeps its earlier copy. |
-| Tag | `release-YYYY.XYY.N` | Humans, and admins pinning a Workspace to one release through the script's override argument (`DOMINO_CLAUDE_SKILLS_BRANCH`), which accepts a branch, tag or commit. |
-| `plugin.json` `version` | `YYYY.XYY.N` | Claude Code, to decide whether an installed copy is stale; the OpenAI portal, to order uploads; Gemini CLI, which shows it for the installed extension. |
+| Branch | `main`, `release-6.3`, `release-6.4` … | The Domino Standard Environment (DSE) update script, which resolves **by exact branch name**: `release-X.Y.Z`, then `release-X.Y`, then `main`, from the cluster's `DOMINO_VERSION`. Any other branch name, `develop` and `rc/<version>` included, is invisible to it. The script ships in the DSE image; Domino 6.3 runs it at Workspace launch when the `updateSkillsOnLaunch` setting is on. Domino Cloud doesn't run it at launch, so Cloud Workspaces keep the version their image installed, and a Workspace that persists `~/.claude` keeps its earlier copy. |
+| Tag | `release-YYYY.XYY.N`, or `release-YYYY.XYY.N-rc.M` for a release candidate | Humans, and admins pinning a Workspace to one release through the script's override argument (`DOMINO_CLAUDE_SKILLS_BRANCH`), which accepts a branch, tag or commit. |
+| `plugin.json` `version` | `YYYY.XYY.N`; `YYYY.XYY.N-rc.M` on an `rc/` branch | Claude Code, to decide whether an installed copy is stale; the OpenAI portal, to order uploads; Gemini CLI, which shows it for the installed extension. |
 
 Rules:
 
@@ -432,6 +435,62 @@ How each channel receives a release:
   default branch). `tag-release.yml` publishes a Release on every push to `main` and marks only
   releases from `main` as latest, so a backport never moves default users; `gemini extensions
   update dominodatalab` picks up the next release. Nothing else to do.
+
+### Release candidates
+
+A release that should be tested internally before it goes public is cut as a candidate first.
+
+- **Version:** `YYYY.XYY.N-rc.M` with `M >= 1`, for example `2026.603.5-rc.1`. It is semver
+  pre-release syntax, so `2026.603.5-rc.1` < `2026.603.5-rc.2` < `2026.603.5`, and every
+  candidate changes the string, so installed copies update. `scripts/sync-manifests.py` copies
+  the suffixed string into all four manifests; `claude plugin validate`, `agy plugin validate`,
+  Gemini CLI's `extensions validate` and `scripts/build-openai.sh` all accept it.
+- **Branch:** `rc/<YYYY.XYY.N>`, for example `rc/2026.603.5`, cut from `develop` (the content
+  that will become that release). `main`, `develop` and `release-*` never carry the suffix:
+  `scripts/check-version.sh` (rule 7) and `tag-release.yml` both refuse it there, and an `rc/`
+  base refuses a plain version. The DSE updater never resolves `rc/` branches, so a candidate
+  reaches nobody who did not ask for it.
+- **Cut and bump:** `git switch -c rc/2026.603.5 origin/develop && git push -u origin rc/2026.603.5`,
+  then a PR to that branch that sets `version` to `2026.603.5-rc.1` in `.claude-plugin/plugin.json`
+  and runs `scripts/sync-manifests.py`. On merge, `tag-release.yml` creates
+  `release-2026.603.5-rc.1` and a GitHub Release marked **pre-release** and never **latest**, so
+  Gemini CLI's default install and update ignore it. Fixes land on `develop` as usual; merge
+  `develop` into the `rc/` branch (or cherry-pick) with the bump to `rc.2`, and so on. CI
+  (rule 8) checks that the plain part equals the branch's version and is newer than `main`'s,
+  and that `M` increases over the base and over every `release-<version>-rc.*` tag already
+  created. Maintainers add `rc/**` to the ruleset that requires the `Version check / version`
+  status, as for `main` and `release-*`.
+- **Ship:** promote `develop` to `main` with the plain `2026.603.5` exactly as without a
+  candidate. A candidate branch is never renamed into a release; delete it afterwards, the
+  tags stay.
+- **Install a candidate** (the branch name or the tag both work as the ref):
+  - Claude Code: `claude plugin marketplace remove domino-marketplace` if the GitHub marketplace
+    is already added, then `claude plugin marketplace add dominodatalab/domino-ai-plugin#rc/2026.603.5`
+    and `claude plugin install dominodatalab@domino-marketplace`. Back to the release: remove the
+    marketplace again and add it without `#ref`.
+  - Codex: `codex plugin marketplace add dominodatalab/domino-ai-plugin@rc/2026.603.5` (or
+    `--ref rc/2026.603.5`), then `codex plugin add dominodatalab@domino-marketplace`. Back:
+    `codex plugin marketplace remove domino-marketplace` and add it without the ref.
+  - Gemini CLI: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref rc/2026.603.5`
+    (or `--ref release-2026.603.5-rc.1`, or `--pre-release` for the newest candidate). Back:
+    `gemini extensions uninstall dominodatalab`, then install without the ref.
+  - Cursor: its docs don't document choosing a ref for a GitHub-imported marketplace (an
+    import tracks one branch). Use a local checkout instead:
+    `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/.cursor/plugins/local/dominodatalab`,
+    then Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
+  - Domino Workspaces: the DSE updater follows `release-X.Y` by name, so test by hand in the
+    image's clone, which Claude Code reads in place:
+    `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.5`
+    and `... checkout -B rc/2026.603.5 origin/rc/2026.603.5`, then start a new session. Back:
+    `... checkout -B main origin/main`.
+- **Dry run of the gate:** there are no automated tests for `scripts/`; before changing
+  `check-version.sh`, build a scratch origin (`git init --bare`, a clone with
+  `.claude-plugin/plugin.json` at the shipped version on `main`, `develop`, `release-6.3` and
+  `rc/<next>`), commit one PR head per rule and run `scripts/check-version.sh origin/<base>`
+  for each, expecting exit 1 for: a suffix on `develop`, `main` or `release-*`; a plain version,
+  another release's version, or a version not newer than `main` on `rc/`; a content change
+  without a bump; `rc.M` at or below an existing `release-<version>-rc.*` tag. Expect exit 0
+  for the frozen `develop` version, a plain bump on `main`, and `rc.1`, then `rc.2` on `rc/`.
 
 `scripts/verify-update-flow.sh` reproduces the DSE install layout in a throwaway Claude Code
 configuration and asserts that the clone is read in place. Run it when Claude Code changes its

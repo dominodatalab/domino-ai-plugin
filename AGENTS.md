@@ -161,13 +161,15 @@ trusting a change. When adding a skill, add a case whose prompt should trigger i
   `skills:` preload list resolves the frontmatter `name`; an unknown name is skipped silently.
 - `SKILL.md` stays at or under 8,000 bytes (lint-enforced): Codex truncates the rest when it
   loads the skill. Put detail in sibling reference files and link them from `SKILL.md`.
-- `mcp-servers/domino_mcp_server` runs on the standalone FastMCP 4.x (`fastmcp>=4.1,<5`,
-  `from fastmcp import FastMCP`) over the official `mcp` SDK 2.x; the SDK's own
-  `mcp.server.fastmcp` no longer exists in 2.x, so never import it. Register tools with the
-  server's `@_tool` decorator, not `@mcp.tool`: it passes the whole docstring as the tool
-  description, where FastMCP alone would keep only the summary line and the `Returns:` contract
-  (`commitId`, `run_id`, conflicts) would never reach clients. Check it starts with
-  `claude --plugin-dir . mcp list` (expect `✔ Connected`).
+- `mcp-servers/domino_mcp_server` runs on the official `mcp` SDK 2.x server class
+  (`mcp>=2.3,<3`, `from mcp.server import MCPServer`); the SDK's own `mcp.server.fastmcp` no
+  longer exists in 2.x and the standalone `fastmcp` package is deliberately not a dependency.
+  Register tools with the server's `@_tool` decorator: it passes the whole docstring, dedented,
+  as the tool description, so the `Args:` and `Returns:` sections the skills document
+  (`commitId`, `run_id`, conflicts) reach clients whatever the SDK's default becomes. Raise
+  `DominoError` (a `ToolError`) for failures the model should read: the SDK masks the text of
+  any other exception. Check it starts with `claude --plugin-dir . mcp list` (expect
+  `✔ Connected`).
 
 ## Domino API, SDK, and platform skills
 

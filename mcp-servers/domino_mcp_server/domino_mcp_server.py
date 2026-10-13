@@ -26,8 +26,9 @@ from pathlib import Path
 import anyio
 import requests
 from dotenv import load_dotenv
-from fastmcp import FastMCP
-from fastmcp.server.middleware import Middleware, MiddlewareContext
+from mcp.server import MCPServer
+from mcp.server.mcpserver import Context
+from mcp.server.mcpserver.exceptions import ToolError
 
 # ---------------------------------------------------------------------------------------------
 # Environment
@@ -130,8 +131,12 @@ def _load_environment() -> None:
 _load_environment()
 
 
-class DominoError(Exception):
-    """A tool-level failure with a message meant for the user and the model."""
+class DominoError(ToolError):
+    """A tool-level failure with a message meant for the user and the model.
+
+    It is a `ToolError` so that the SDK sends the message to the client; any other exception
+    class is reported to the client as a masked, text-less tool error.
+    """
 
 
 def _auth_help() -> str:
@@ -359,23 +364,18 @@ _CLIENT_PROTOCOL = ""
 
 
 def _client_identity(ctx: Any) -> tuple:
-    """(client name, protocol version) of the current request, best effort.
+    """(client name, protocol version) of the current request.
 
-    Handshake-era clients (protocol 2024-11-05 to 2025-11-25) identify themselves in
-    `initialize`, which the SDK keeps as the session's client params; 2026-07-28 clients send
-    `io.modelcontextprotocol/clientInfo` in every request's `_meta`.
+    The SDK's connection keeps `client_params` (an `InitializeRequestParams` with
+    `client_info`) and the negotiated `protocol_version`: taken from the `initialize` handshake
+    for 2025-11-25 and older clients, and synthesized from the per-request `_meta` envelope for
+    2026-07-28 clients. Both are reached through the tool's `Context` (or the SDK's request
+    context, which has the same `session` and `protocol_version` attributes).
     """
-    name, protocol = "", ""
-    rc = ctx.request_context
-    if rc is not None:
-        protocol = str(getattr(rc, "protocol_version", "") or "")
-        info = (rc.meta or {}).get("io.modelcontextprotocol/clientInfo") if rc.meta else None
-        if isinstance(info, dict):
-            name = str(info.get("name") or "")
-    if not name:
-        params = getattr(ctx.session, "client_params", None)
-        info = getattr(params, "client_info", None) or getattr(params, "clientInfo", None)
-        name = str(getattr(info, "name", "") or "")
+    params = ctx.session.client_params
+    info = params.client_info if params is not None else None
+    name = str(getattr(info, "name", "") or "")
+    protocol = str(ctx.protocol_version or "")
     return name, protocol
 
 
@@ -386,34 +386,12 @@ def _capture_client_name(ctx: Any) -> None:
         return
     try:
         name, protocol = _client_identity(ctx)
-    except Exception:
+    except Exception:   # no request context (a direct call_tool), or no client info supplied
         return
     if name or protocol:
         _CLIENT_NAME, _CLIENT_PROTOCOL = name.lower(), protocol
         print(f"domino_mcp_server: client {name or 'unknown'} speaks MCP {protocol or 'unknown'}",
               file=sys.stderr)
-
-
-class _IdentifyClient(Middleware):
-    """Captures the client's name and protocol version on its first request, and reports the
-    first tools/list on stderr, so a host's connection can be checked without a model call."""
-
-    _listed = False
-
-    async def on_request(self, context: MiddlewareContext, call_next: Callable[..., Any]) -> Any:
-        _capture_client_name(context.fastmcp_context)
-        return await call_next(context)
-
-    async def on_list_tools(self, context: MiddlewareContext, call_next: Callable[..., Any]) -> Any:
-        result = await call_next(context)
-        if not _IdentifyClient._listed:
-            _IdentifyClient._listed = True
-            try:
-                count = len(result)
-            except TypeError:
-                count = "?"
-            print(f"domino_mcp_server: tools/list answered with {count} tools", file=sys.stderr)
-        return result
 
 
 def _run_with_budget(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -426,10 +404,23 @@ def _run_with_budget(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
 
 def _threaded(fn: Callable[..., Any]) -> Callable[..., Any]:
     """Run a blocking tool implementation in a worker thread, under the per-call time budget,
-    so the stdio event loop stays free and no call outlives the host's tool timeout."""
+    so the stdio event loop stays free and no call outlives the host's tool timeout.
+
+    The wrapper's signature adds a keyword-only `ctx: Context`, which the SDK fills with the
+    request's Context (and leaves out of the tool's input schema); the wrapper reads the client
+    identity from it and does not pass it on to the tool body.
+    """
     @functools.wraps(fn)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        _capture_client_name(kwargs.pop("ctx", None))
         return await anyio.to_thread.run_sync(functools.partial(_run_with_budget, fn, *args, **kwargs))
+    import inspect
+    signature = inspect.signature(fn)
+    wrapper.__signature__ = signature.replace(parameters=[
+        *signature.parameters.values(),
+        inspect.Parameter("ctx", inspect.Parameter.KEYWORD_ONLY, default=None, annotation=Context),
+    ])
+    wrapper.__annotations__ = {**getattr(fn, "__annotations__", {}), "ctx": Context}
     return wrapper
 
 
@@ -459,20 +450,37 @@ def _plugin_instructions() -> str | None:
     return lead.encode("utf-8")[:900].decode("utf-8", "ignore") or None
 
 
-mcp = FastMCP("domino_server", instructions=_plugin_instructions(), middleware=[_IdentifyClient()])
+class _DominoServer(MCPServer):
+    """MCPServer plus one stderr line at the host's first tools/list, so that a host's
+    connection and negotiated protocol can be checked without a model call.
+
+    `_handle_list_tools` is a private SDK hook; the override only logs, tolerates any
+    signature, and falls through to the SDK, so an SDK rename or change cannot break tools/list.
+    """
+
+    async def _handle_list_tools(self, *args: Any, **kwargs: Any) -> Any:
+        try:
+            _capture_client_name(args[0] if args else kwargs.get("ctx"))
+        except Exception:
+            pass
+        return await super()._handle_list_tools(*args, **kwargs)
+
+
+mcp = _DominoServer("domino_server", instructions=_plugin_instructions())
 
 
 def _tool(fn: Callable[..., Any]) -> Callable[..., Any]:
-    """Register a tool with its whole docstring as the description.
+    """Register a tool with its whole docstring as the description and JSON text results.
 
-    FastMCP keeps only the docstring's summary as the description and moves the Args section
-    into the parameter schema; the Returns section, which tells the model what comes back and
-    what to do with it (commitId, run_id, conflicts), would be lost. The skills document these
-    docstrings, so they are sent in full, as the SDK 1.x server did.
+    `MCPServer.tool()` uses `fn.__doc__` unchanged as the description, so the Args and Returns
+    sections, which the skills document and the model relies on (commitId, run_id, conflicts),
+    reach the client; the docstring is passed explicitly, dedented, so that this does not depend
+    on the SDK default. Results are the JSON text of the returned dict, as they always were;
+    the SDK's structured output would wrap the dict under a "result" key and is turned off. The
+    decorator returns the function itself, so the module-level names stay plain callables.
     """
     import inspect
-    mcp.tool(fn, description=inspect.cleandoc(fn.__doc__ or ""))
-    return fn
+    return mcp.tool(description=inspect.cleandoc(fn.__doc__ or ""), structured_output=False)(fn)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1228,6 +1236,7 @@ def run_domino_job(user_name: str, project_name: str, run_command: str, title: s
 
 
 @_tool
+@_threaded
 def open_web_browser(url: str) -> bool:
     """Opens the specified URL in the default web browser on the machine running this server.
     Inside a Domino Workspace or Job there is no browser: the tool returns False without doing
@@ -1248,7 +1257,8 @@ def open_web_browser(url: str) -> bool:
 
 
 @_tool
-async def get_domino_environment_info() -> Dict[str, Any]:
+@_threaded
+def get_domino_environment_info() -> Dict[str, Any]:
     """
     Returns information about the current Domino environment. Call this at the start of a
     session to learn whether the server runs inside a Domino execution, the project owner and
@@ -1728,6 +1738,5 @@ def _smart_sync_locked(user_name: str, project_name: str, path: str, data: bytes
 
 
 if __name__ == "__main__":
-    # Run the server over stdio. FastMCP's startup banner would go to stderr, which some hosts
-    # show as an error; keep stderr for real diagnostics.
-    mcp.run(transport="stdio", show_banner=False)
+    # Run the server over stdio; stderr is kept for diagnostics only.
+    mcp.run(transport="stdio")
