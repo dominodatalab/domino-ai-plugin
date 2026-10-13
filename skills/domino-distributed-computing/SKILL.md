@@ -85,7 +85,7 @@ client.wait_for_workers(2)      # optional; client.close() when done, never clie
 
 **MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code to the workers; Datasets are already mounted there), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`). Write outputs to a Dataset, not the Project files.
 
-Datasets mounted on the execution are mounted on all cluster nodes at the same path, so a Dataset is the default for distributed reads and writes. Use S3 or another store only where the data already lives or an outside system reads the output: client libraries in both environments, propagated credentials (domino-data-connectivity).
+Datasets are mounted on every cluster node at the same path, so a Dataset, NetApp Volume or External Data Volume is the sensible default for output. Object storage (S3 and similar) is fine where it is enabled for the cluster: client libraries in both environments, propagated credentials (domino-data-connectivity).
 
 ## Web UI, autoscaling, lifecycle
 

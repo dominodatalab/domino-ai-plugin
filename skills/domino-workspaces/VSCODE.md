@@ -69,7 +69,7 @@ Cursor users import the Remote-SSH extension the same way. Custom TLS CAs must b
 
 ## Coding assistants
 
-The DSE pre-installs AI coding-assistant extensions and CLIs; sign in once in the extension panel (copy the login URL manually if the link does not open) and keep **Home Directory Persistence** on so the login survives restarts. Where LLM Gateway 2.0 is installed, route the assistant through it instead ([CODING-ASSISTANTS.md](../domino-llm-gateway/CODING-ASSISTANTS.md)). Details and troubleshooting: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+The DSE pre-installs AI coding-assistant extensions and CLIs; sign in once in the extension panel (copy the login URL manually if the link does not open) and keep **Home Directory Persistence** on so the login survives restarts. Where an administrator has installed the LLM Gateway 2.0 Extension (early access), ask the user which they want: route the assistant's model calls through the gateway ([CODING-ASSISTANTS.md](../domino-llm-gateway/CODING-ASSISTANTS.md)) so they fall under its grants and budgets, or keep the vendor sign-in above. Do not switch to the gateway unless they choose it. Details and troubleshooting: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
 
 ## Troubleshooting
 

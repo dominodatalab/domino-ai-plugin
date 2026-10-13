@@ -33,9 +33,9 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 | Imported repos / Projects | `/mnt/imported/...` | `/mnt/imported/...` |
 | Datasets | `/domino/datasets/local/<name>` | `/mnt/data/<name>` |
 
-- Stop/resume keeps files under `/mnt` (Git-based: `/mnt/code`, `/mnt/artifacts`, `/mnt/imported`, not loose files in `/mnt` itself). Anything outside `/mnt` is lost, including packages installed with pip or `install.packages`, unless persistence is on.
+- Stop/resume keeps files under `/mnt` (Git-based: `/mnt/code`, `/mnt/artifacts`, `/mnt/imported`, not loose files in `/mnt` itself). Anything outside `/mnt` is lost, including pip and `install.packages` packages, unless persistence is on.
 - Saving in the IDE does not sync. Use **File Changes**: **Sync to Domino** / **Sync All Changes** (DFS; only `/mnt` is synced) or **Sync to Git** and **Pull** (Git-based: fetch, rebase, push). A Workspace launched from a commit is in detached HEAD: `git checkout -b <branch>` before syncing.
-- Auto-shutdown of long-running Workspaces (admin period; shorten it under **Account Settings > Workspace Settings**) auto-commits saved files but does not push linked Git repositories.
+- Auto-shutdown of long-running Workspaces (admin period; shorten under **Account Settings > Workspace Settings**) auto-commits saved files but does not push linked Git repositories.
 - Every sync creates a checkpoint; **Workspaces > History > Open** recreates a Workspace from one on a new branch.
 
 ## Package and home-directory persistence
@@ -43,7 +43,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 - Environment owners tick **Enable Package Persistence** on a revision; the Workspace then offers the **Package Persistence** toggle at launch and restart. `pip install` and `install.packages()` persist, and `requirements.txt` skips packages already present. Custom images need `uv` (Python) and `renv` (R).
 - **Home Directory Persistence** keeps `$HOME` (`/home/ubuntu`): IDE settings, `.ssh`, coding-assistant logins. The environment must contain `rsync`.
 - On Domino 6.3 both also need the admin configuration records `com.cerebro.domino.workbench.workspace.persistence.packages.enabled` and `...persistence.directories.enabled`.
-- Permanent dependencies belong in the environment Dockerfile; `requirements.txt` in `DOMINO_WORKING_DIR` reinstalls on every start.
+- Permanent dependencies belong in the environment Dockerfile; `requirements.txt` reinstalls on every start.
 
 ## SSH from a local IDE
 
@@ -54,13 +54,13 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 
 ## Workspace sessions over the API
 
-- Resume a stopped Workspace: `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` with `{"externalVolumeMounts": [], "netAppVolumeMounts": []}` (both specs) -> `{"workspaceSession": {"id", "executionId"}, "metadata"}`. `workspaceId` comes from the Workspace URL or **Show Details**.
-- Creating, stopping, deleting and listing Workspaces are UI operations; the only routes are in the Domino Internal API (`POST /v4/workspace/project/{projectId}/workspace`, `.../workspace/{workspaceId}/stop`; internal API, may change between Domino versions); python-domino has no workspace methods.
+- Resume a stopped Workspace: `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` with `{"externalVolumeMounts": [], "netAppVolumeMounts": []}` (both specs) -> `{"workspaceSession": {"id", "executionId"}, "metadata"}`. `workspaceId` is in the Workspace URL or **Show Details**.
+- Creating, stopping, deleting and listing Workspaces are UI operations; the only routes are internal (`POST /v4/workspace/project/{projectId}/workspace`, `.../workspace/{workspaceId}/stop`; internal API, may change between Domino versions); python-domino has no workspace methods.
 - Authentication: [domino-api-intro](../domino-api-intro/SKILL.md).
 
 ### Which path applies
 
-Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.4 and later (Domino Cloud today) `GET /api/workspace/v1/workspace/{workspaceId}/writable-project-mounts` also returns `mainDfsMount`, `mainGitMount` and `importedGitMounts` (`404` = absent).
+Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.4 and later (Domino Cloud today) `GET /api/workspace/v1/workspace/{workspaceId}/writable-project-mounts` returns `mainDfsMount`, `mainGitMount`, `importedGitMounts` (`404` = absent).
 
 ## Manage Workspaces
 
@@ -68,15 +68,15 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.
 
 ## Coding assistants and extra apps
 
-- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login; where LLM Gateway 2.0 is installed, route them through it (`domino-llm-gateway`). Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
-- Only the IDE port (8888) is proxied; jupyter-server-proxy (in the DSE) exposes other ports at `https://<browser URL>/<owner>/<project>/notebookSession/$DOMINO_RUN_ID/proxy/<port>/`. The App Preview tab is the way to develop a Domino App.
+- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login. If the LLM Gateway 2.0 Extension is installed, ask whether to route the assistant through it (`domino-llm-gateway`) or sign in with the vendor as usual; never route by default. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+- Only the IDE port (8888) is proxied; jupyter-server-proxy (in the DSE) exposes other ports at `https://<browser URL>/<owner>/<project>/notebookSession/$DOMINO_RUN_ID/proxy/<port>/`. App Preview is the way to develop a Domino App.
 
 ## Troubleshooting
 
-- **Will not start / queued**: tier capacity or quota, failed environment build (revision build logs), volume too small, four-Workspace limit.
+- **Will not start / queued**: tier capacity or quota, failed environment build (build logs), volume too small, four-Workspace limit.
 - **Lost work**: only synced changes reach Domino; check `/mnt` after resume and the **History** checkpoints.
 - **Packages gone after restart**: install in the environment or enable Package Persistence.
-- **Slow start**: Project files are copied to the volume; move bulk data to a Dataset.
+- **Slow start**: Project files are copied to the volume; put bulk data in a Dataset.
 
 ## Reference files
 
