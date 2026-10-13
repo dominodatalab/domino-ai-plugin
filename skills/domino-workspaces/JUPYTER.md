@@ -12,7 +12,7 @@ Both ship in the Domino Standard Environment and run on port 8888 behind the Dom
 2. Select an environment that includes Jupyter tools (the DSE does), then **JupyterLab** or **Jupyter** as the IDE.
 3. Choose the hardware tier and data mounts, then **Launch**.
 
-A stopped Workspace is resumed with **Start** in the UI or `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (see SKILL.md). Creating a new Workspace is a UI action.
+A stopped Workspace is resumed with **Start** in the UI or `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (see SKILL.md). Creating one has no public route; the internal `POST /v4/workspace/project/{projectId}/workspace` does it (internal API, may change between Domino versions; [API.md](./API.md)).
 
 ## Where files live
 

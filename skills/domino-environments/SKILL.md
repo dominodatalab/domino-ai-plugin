@@ -1,6 +1,6 @@
 ---
 name: domino-environments
-description: Create and customize Domino Compute Environments - the Docker images that Workspaces, Jobs, Apps and endpoints run in. Covers Domino Standard, Core, Minimal, GPU and cluster environments, creating an environment from an existing one or a custom image, Dockerfile instructions, pre/post scripts, environment variables, Pluggable Workspace Tools, revisions and build propagation, requirements.txt versus preloaded packages, the environments REST API, and build troubleshooting. Use when installing dependencies, adding IDEs or tools, or fixing environment build failures.
+description: Create and customize Domino Compute Environments - the Docker images that Workspaces, Jobs, Apps and endpoints run in. Covers Domino Standard, Core, Minimal, GPU and cluster environments, creating environments, Dockerfile instructions, pre/post scripts, environment variables, Pluggable Workspace Tools, revisions and build propagation, requirements.txt versus preloaded packages, the environments REST API, and build troubleshooting. Use when installing dependencies, adding IDEs or tools, or fixing environment build failures.
 compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
 ---
 
@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-An Environment is a Docker image plus Domino metadata (workspace tools, scripts, variables, supported clusters). Each build creates a numbered **revision**; executions use the environment's **Active** revision unless they pin another. Containers run as the `ubuntu` user; files Domino tracks live under `/mnt`.
+An Environment is a Docker image plus Domino metadata (tools, scripts, variables, supported clusters). Each build creates a numbered **revision**; executions use the environment's **Active** revision unless they pin another. Containers run as the `ubuntu` user; files Domino tracks live under `/mnt`.
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments (same paths under `/6.3/`).
 
@@ -29,9 +29,9 @@ Exact tags and partner images: https://docs.domino.ai/cloud/platform-capabilitie
 **Govern > Environments > + Create Environment**: name, description, then the base:
 
 - **Start from an existing Environment** with **Active (auto-rebuilds)** (follows the base's active revision) or a pinned revision.
-- **Start from a custom base image**: an image URI; keep **Automatically make compatible with Domino** unless it is already a Domino image (the option disappears when a cluster type is selected).
+- **Start from a custom base image**: an image URI; keep **Automatically make compatible with Domino** unless it is already a Domino image (absent once a cluster type is selected).
 
-Then **Supported Clusters** (cluster-node environments only), **Visibility** (Private, an Organization, or Global for admins), the revision toggle, and **Create Environment** or **Customize before building**. Later: open the environment > **Edit Definition** > **Build**. Base image and supported clusters cannot be changed afterwards; duplicate instead. Archive from the environment menu (not while it is a Project default). Project default: Project **Settings > Hardware & Environment**.
+Then **Supported Clusters** (cluster-node environments only), **Visibility** (Private, an Organization, or Global for admins), the revision toggle, and **Create Environment** or **Customize before building**. Later: **Edit Definition** > **Build**; base image and supported clusters cannot change afterwards (duplicate instead). Archive from the environment menu (not while it is a Project default). Project default: **Settings > Hardware & Environment** or `PUT /v4/projects/{projectId}/settings` (internal API, may change between Domino versions; [API.md](./API.md#project-default-environment-and-tier)).
 
 ## Edit Definition
 
@@ -52,7 +52,7 @@ One `pip install` per set of packages, pinned versions, `&&` to merge layers, `A
 
 **Pluggable Workspace Tools**: YAML defining the IDEs offered at launch; [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md).
 
-**Scripts** (bash, run as root at execution time, never on cluster nodes), in order: pre-setup, `requirements.txt` install, post-setup and pre-run, your execution, post-run after it stops. Use the pre-run script for per-launch setup such as `code-server --install-extension ...` or RStudio preferences.
+**Scripts** (bash, run as root at execution time, never on cluster nodes), in order: pre-setup, `requirements.txt` install, post-setup and pre-run, your execution, post-run after it stops. Pre-run script: per-launch setup such as `code-server --install-extension ...` or RStudio preferences.
 
 **Environment variables**: visible in every execution; precedence environment < Project < user. Never use names starting with `DOMINO_` (reserved); no secrets in Dockerfile `ENV`. **Enable VPN Networking** and a revision note complete the form.
 
@@ -61,7 +61,7 @@ One `pip install` per set of packages, pinned versions, `&&` to merge layers, `A
 | Method | When | Cost |
 |---|---|---|
 | Dockerfile `RUN pip install ...` | anything used regularly | one build; fastest starts |
-| `requirements.txt` in the Project root (`/mnt` on DFS; Git-based: the docs name both `/mnt/code` and the artifacts folder, test which applies) | per-Project extras | reinstalled every start |
+| `requirements.txt` in the Project root (`/mnt` on DFS; Git-based: docs name both `/mnt/code` and the artifacts folder; test) | per-Project extras | reinstalled every start |
 | `install.R` + `source('install.R')` | R equivalents | per session |
 | Package Persistence (Workspaces) | interactive installs kept across sessions | enable on the revision; custom images need `uv` and `renv` |
 | `!pip install --user ...` in a notebook | one-off | lost on restart |
@@ -70,8 +70,8 @@ Keep images small; dependency-file packages cost startup time.
 
 ## Revisions
 
-- Each build is a revision with build logs (**Revisions** tab > three dots). **Auto-assign next new revision as Active** on uses the latest successful build; off pins the Active revision so you can test first.
-- Environments based on **Active (auto-rebuilds)** rebuild when the base's Active revision changes (build propagation, chained through the **Dependency Tree** tab). Archived environments are not rebuilt.
+- Each build is a revision with build logs (**Revisions** tab > three dots). **Auto-assign next new revision as Active** on uses the latest successful build; off pins the Active revision for testing.
+- Environments based on **Active (auto-rebuilds)** rebuild when the base's Active revision changes (build propagation; see the **Dependency Tree** tab). Archived environments are not rebuilt.
 - Workspaces and Jobs can pin a revision. API: `environmentRevisionSpec` = `ActiveRevision`, `LatestRevision` or `SomeRevision(<revisionId>)`.
 - On 6.4+ revisions may declare CPU architectures (`amd64`, `arm64`); a mismatched hardware tier is rejected.
 
@@ -86,11 +86,11 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` only the routes above exist. On 
 ## Troubleshooting builds
 
 - **Permission denied**: `USER root` before the command, `USER ubuntu` after; `chown -R ubuntu:ubuntu` directories the user must write.
-- **Package not found**: wrong name (`scikit-learn`, not `sklearn`), missing apt dependency, or no network from the builder (use an internal mirror).
+- **Package not found**: wrong name (`scikit-learn`, not `sklearn`), missing apt dependency, or no network from the builder.
 - **Build never finishes / killed**: too many layers or packages; split into base and derived environments; read the revision's build log.
 - **IDE missing at launch**: no Pluggable Workspace Tools entry or start script ([WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md)).
 
 ## Reference files
 
-- [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md): Pluggable Workspace Tools YAML, native tool start scripts, VS Code extensions, RStudio preferences, jupyter-server-proxy, SSH.
+- [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md): workspace tools YAML, native tool start scripts, VS Code extensions, RStudio preferences, jupyter-server-proxy, SSH.
 - [API.md](./API.md): environments REST routes, request bodies, version differences.

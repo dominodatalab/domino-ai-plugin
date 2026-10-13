@@ -1,6 +1,6 @@
 ---
 name: domino-workspaces
-description: Work with Domino Workspaces - interactive sessions running Jupyter, JupyterLab, VS Code or RStudio on a hardware tier with a compute environment. Covers launching and configuring a Workspace, what persists across stop and resume, file paths and syncing for DFS and Git-based Projects, package and home-directory persistence, SSH access from a local IDE, the workspace session REST route, and troubleshooting. Use when setting up or debugging an interactive development session in Domino.
+description: Work with Domino Workspaces - interactive sessions running Jupyter, JupyterLab, VS Code or RStudio on a hardware tier with a compute environment. Covers launching and configuring a Workspace, what persists across stop and resume, file paths and syncing for DFS and Git-based Projects, package and home-directory persistence, SSH access from a local IDE, the Workspace API routes, and troubleshooting. Use when setting up or debugging an interactive development session in Domino.
 compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
 ---
 
@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-A Workspace is a durable interactive session: a container on a hardware tier running an IDE from the selected compute environment, with a persistent volume for the Project files. The IDEs offered (Jupyter, JupyterLab, VS Code, RStudio, custom tools) come from the environment's Pluggable Workspace Tools ([domino-environments](../domino-environments/SKILL.md)). Use a Job ([domino-jobs](../domino-jobs/SKILL.md)) for batch work.
+A Workspace is a durable interactive session: a container on a hardware tier running an IDE from the selected compute environment, with a persistent volume for the Project files. IDEs (Jupyter, JupyterLab, VS Code, RStudio, custom tools) come from the environment's Pluggable Workspace Tools ([domino-environments](../domino-environments/SKILL.md)); batch work: a Job ([domino-jobs](../domino-jobs/SKILL.md)).
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces (same paths under `/6.3/`).
 
@@ -18,11 +18,11 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 2. **Compute Environment**; **Change** pins a revision (the owner's active revision is recommended; restricted Projects limit the choice).
 3. **IDE**: the list depends on the environment.
 4. **Volume Size** if provisioning recommendations are enabled (Git-based Projects use the Project setting on first launch).
-5. **Next**: **Hardware Tier** (grouped by data plane on Nexus; smallest that fits), then only the Datasets, NetApp Volumes and external volumes you need (per-asset snapshot pins).
+5. **Next**: **Hardware Tier** (by data plane on Nexus; smallest that fits), then only the Datasets, NetApp Volumes and external volumes you need (per-asset snapshot pins).
 6. **Next**: optional Spark, Ray, Dask or MPI cluster ([domino-distributed-computing](../domino-distributed-computing/SKILL.md)).
 7. Additional settings: **Enable SSH access**, **Package Persistence**, **Home Directory Persistence**; **Launch**. Default limit: four Workspaces per user per Project.
 
-**Settings > Edit Settings** changes tier or environment (**Save & Restart**).
+**Settings > Edit Settings** changes tier or environment (**Save & Restart**); by API, [API.md](./API.md).
 
 ## Paths and what persists
 
@@ -33,15 +33,15 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 | Imported repos / Projects | `/mnt/imported/...` | `/mnt/imported/...` |
 | Datasets | `/domino/datasets/local/<name>` | `/mnt/data/<name>` |
 
-- Stop/resume keeps files under `/mnt` (Git-based: `/mnt/code`, `/mnt/artifacts`, `/mnt/imported`, not loose files in `/mnt` itself). Anything outside `/mnt` is lost, including pip and `install.packages` packages, unless persistence is on.
-- Saving in the IDE does not sync. Use **File Changes**: **Sync to Domino** / **Sync All Changes** (DFS; only `/mnt` is synced) or **Sync to Git** and **Pull** (Git-based: fetch, rebase, push). A Workspace launched from a commit is in detached HEAD: `git checkout -b <branch>` before syncing.
+- Stop/resume keeps files under `/mnt` (Git-based: `/mnt/code`, `/mnt/artifacts`, `/mnt/imported`, not loose files in `/mnt` itself). Anything outside `/mnt`, including installed packages, is lost unless persistence is on.
+- Saving in the IDE does not sync. Use **File Changes**: **Sync to Domino** / **Sync All Changes** (DFS; only `/mnt` is synced) or **Sync to Git** and **Pull** (Git-based). A Workspace launched from a commit is in detached HEAD: `git checkout -b <branch>` before syncing.
 - Auto-shutdown of long-running Workspaces (admin period; shorten under **Account Settings > Workspace Settings**) auto-commits saved files but does not push linked Git repositories.
 - Every sync creates a checkpoint; **Workspaces > History > Open** recreates a Workspace from one on a new branch.
 
 ## Package and home-directory persistence
 
 - Environment owners tick **Enable Package Persistence** on a revision; the Workspace then offers the **Package Persistence** toggle at launch and restart. `pip install` and `install.packages()` persist, and `requirements.txt` skips packages already present. Custom images need `uv` (Python) and `renv` (R).
-- **Home Directory Persistence** keeps `$HOME` (`/home/ubuntu`): IDE settings, `.ssh`, coding-assistant logins. The environment must contain `rsync`.
+- **Home Directory Persistence** keeps `$HOME` (`/home/ubuntu`): IDE settings, `.ssh`, coding-assistant logins; needs `rsync` in the environment.
 - On Domino 6.3 both also need the admin configuration records `com.cerebro.domino.workbench.workspace.persistence.packages.enabled` and `...persistence.directories.enabled`.
 - Permanent dependencies belong in the environment Dockerfile; `requirements.txt` reinstalls on every start.
 
@@ -55,7 +55,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 ## Workspace sessions over the API
 
 - Resume a stopped Workspace: `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` with `{"externalVolumeMounts": [], "netAppVolumeMounts": []}` (both specs) -> `{"workspaceSession": {"id", "executionId"}, "metadata"}`. `workspaceId` is in the Workspace URL or **Show Details**.
-- Creating, stopping, deleting and listing Workspaces are UI operations; the only routes are internal (`POST /v4/workspace/project/{projectId}/workspace`, `.../workspace/{workspaceId}/stop`; internal API, may change between Domino versions); python-domino has no workspace methods.
+- Create, list, read, update, stop, delete: no public route; the Internal API covers them (`POST /v4/workspace/project/{projectId}/workspace` and the rest in [API.md](./API.md); internal API, may change between Domino versions); python-domino has none.
 - Authentication: [domino-api-intro](../domino-api-intro/SKILL.md).
 
 ### Which path applies
@@ -64,7 +64,7 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.
 
 ## Manage Workspaces
 
-**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (compute stops; storage persists and still bills), **Start** to resume (restricted Projects switch to the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (user docs: 10 days stopped, then a 30-day grace period). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
+**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (storage persists and still bills), **Start** to resume (restricted Projects use the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (docs: 10 days stopped, then a 30-day grace period). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
 
 ## Coding assistants and extra apps
 
@@ -82,3 +82,4 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.
 
 - [JUPYTER.md](./JUPYTER.md): Jupyter and JupyterLab specifics, data paths in notebooks, notebooks as Jobs.
 - [VSCODE.md](./VSCODE.md): VS Code in the browser, extensions, settings persistence, Remote-SSH.
+- [API.md](./API.md): Workspaces over the API (create, update, stop, resume, delete, clusters).

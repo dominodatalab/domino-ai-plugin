@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. The cluster belongs to that one execution, is reachable only from it, and its nodes run a separate **cluster environment**. Slurm HPC is a different feature and is not covered here.
+Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. The cluster belongs to that one execution, is reachable only from it, and its nodes run a separate **cluster environment**. Slurm HPC is not covered here.
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-clusters-hpc (same paths under `/6.3/`).
 
@@ -25,8 +25,8 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-cluste
 
 Each cluster type needs two environments with the **same Python version**:
 
-1. **Cluster environment** (head/master/scheduler and workers): create it from the Domino image in the Compute Environment Catalog (`quay.io/domino/spark-cluster-environment`, `ray-cluster-environment`, `ray-cluster-gpu-environment`, `dask-cluster-environment`, `mpi-cluster-environment`; tags change per release), tick the framework under **Supported Clusters**, leave Pluggable Workspace Tools empty. A DSE cannot be a worker environment. Pre/post setup and run scripts never run on cluster nodes.
-2. **Execution environment** for the Workspace or Job (driver/client): the matching `domino-spark-environment`, `domino-ray-environment`, `domino-dask-environment` or `domino-mpi-environment` image with workspace tools. MPI needs the same Open MPI version in both.
+1. **Cluster environment** (head/master/scheduler and workers): create it from the catalog image (`quay.io/domino/{spark,ray,dask,mpi}-cluster-environment`, plus `ray-cluster-gpu-environment`; tags change per release), tick the framework under **Supported Clusters**, leave Pluggable Workspace Tools empty. A DSE cannot be a worker environment. Pre/post setup and run scripts never run on cluster nodes.
+2. **Execution environment** for the Workspace or Job (driver/client): the matching `domino-{spark,ray,dask,mpi}-environment` image with workspace tools. MPI needs the same Open MPI version in both.
 
 Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2.14.1`); see [domino-environments](../domino-environments/SKILL.md).
 
@@ -34,7 +34,7 @@ Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2
 
 **UI**: **Workspaces > + Create New Workspace** or **Jobs > Run**, then the **Compute Cluster** step. Settings: **Min / Max workers** (Spark: executors), **Auto-scale workers**, **Worker hardware tier**, **Head / Master / Scheduler hardware tier** (none for MPI), **Cluster compute environment**, **Dedicated local storage per executor** (mounted at `/tmp`, discarded at shutdown). Cluster size is capped by the per-user execution limit (master and execution each take a slot). Scheduled Jobs take the same settings in their wizard ([domino-jobs](../domino-jobs/SKILL.md)).
 
-**REST**: `computeCluster` on `POST /api/jobs/v1/jobs` (both specs). Workspaces with clusters are created in the UI.
+**REST**: `computeCluster` on `POST /api/jobs/v1/jobs` (both specs). Clustered Workspaces: the UI, or `computeClusterConfig` on the internal create route ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); internal API, may change between Domino versions).
 
 ```python
 body = {
@@ -54,7 +54,7 @@ body = {
 requests.post(f"{os.environ['DOMINO_API_PROXY']}/api/jobs/v1/jobs", json=body).raise_for_status()
 ```
 
-Required in `computeCluster`: `clusterType`, `computeEnvironmentId`, `workerCount`, `workerHardwareTier`. The same object is returned on `GET /api/jobs/beta/jobs/{jobId}`. python-domino: `job_start(command, compute_cluster_properties={...})` with `workerHardwareTierId` keys; see [domino-python-sdk](../domino-python-sdk/SKILL.md).
+Required in `computeCluster`: `clusterType`, `computeEnvironmentId`, `workerCount`, `workerHardwareTier`. python-domino: `job_start(command, compute_cluster_properties={...})` with `workerHardwareTierId` keys; see [domino-python-sdk](../domino-python-sdk/SKILL.md).
 
 ## Connect from your code
 
@@ -65,7 +65,7 @@ Domino injects connection details; never hard-code hosts.
 from pyspark.sql import SparkSession
 spark = SparkSession.builder.appName("my-app").config("spark.sql.shuffle.partitions", "200").getOrCreate()
 ```
-`spark-submit` works in a Job if wrapped in a shell script (`spark-submit "$@"`). Project-wide extra config: **Settings > Integrations > Domino managed on-demand cluster**.
+`spark-submit` works in a Job if wrapped in a shell script (`spark-submit "$@"`). Project-wide extra config: **Settings > Integrations > Domino managed on-demand cluster**, or `PATCH /v4/projects/{projectId}/sparkConfig` (internal API, may change between Domino versions; [FRAMEWORK-EXAMPLES.md](./FRAMEWORK-EXAMPLES.md#project-wide-spark-settings)).
 
 **Ray**:
 ```python
@@ -81,7 +81,7 @@ from dask.distributed import Client
 client = Client(f"{os.environ['DASK_SCHEDULER_SERVICE_HOST']}:{os.environ['DASK_SCHEDULER_SERVICE_PORT']}")
 client.wait_for_workers(2)      # optional; client.close() when done, never client.shutdown()
 ```
-`Client()` with no address starts a local cluster in your container, not the Domino cluster. `client.dashboard_link` does not route through Domino; use the Dask tab.
+`Client()` with no address starts a local cluster, not the Domino one. `client.dashboard_link` does not route through Domino; use the Dask tab.
 
 **MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code to the workers; Datasets are already mounted there), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`). Write outputs to a Dataset, not the Project files.
 
@@ -95,8 +95,8 @@ Datasets are mounted on every cluster node at the same path, so a Dataset, NetAp
 
 ## Troubleshooting
 
-- **Cluster never ready**: the cluster environment lacks the Supported Clusters flag, Python versions differ, the tier has no capacity or is restricted to another cluster type, or the per-user execution limit is hit.
-- **`KeyError` on `RAY_HEAD_SERVICE_HOST` / `DASK_SCHEDULER_SERVICE_HOST`**: no cluster was attached to this execution (a bare `ray.init()` or `Client()` starts a local cluster instead).
+- **Cluster never ready**: the cluster environment lacks the Supported Clusters flag, Python versions differ, tier capacity or cluster-type restriction, or the per-user execution limit.
+- **`KeyError` on `RAY_HEAD_SERVICE_HOST` / `DASK_SCHEDULER_SERVICE_HOST`**: no cluster was attached to this execution.
 - **Worker OOM**: bigger worker tier, more workers, fewer shuffles; Spark adds 10% (min 384 MB) overhead per worker on top of the tier memory.
 - **MPI changes not seen on workers**: sync files again; do not run `mpirun` while a sync is in progress.
 
