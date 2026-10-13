@@ -60,4 +60,4 @@ Authentication reference: https://docs.domino.ai/cloud/reference/api/domino-api-
 - [API-APPS.md](./API-APPS.md): v1 vs beta routes, publish chain, logs
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): symptoms, causes and fixes
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps (same under `/6.3/`). Specs: https://docs.domino.ai/api-specs/cloud/public-api.json and https://docs.domino.ai/api-specs/6.3/public-api.json . Related skills: `domino-app-init` (scaffold), `domino-debug-proxy` (diagnose), `domino-api-intro` (auth, hosts), `domino-ui-bootstrap` (design system SPA), `domino-ui-design` (FastAPI + Ant Design), `domino-extensions` (mount an App in the Domino UI).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps (same under `/6.3/`). Specs: https://docs.domino.ai/api-specs/cloud/public-api.json and https://docs.domino.ai/api-specs/6.3/public-api.json . Related skills: `domino-app-init` (scaffold), `domino-debug-proxy` (diagnose), `domino-api-intro` (auth, hosts), `domino-ui-bootstrap` (design system SPA), `domino-extensions` (mount an App in the Domino UI).
