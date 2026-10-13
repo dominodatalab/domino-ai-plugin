@@ -1,6 +1,6 @@
 ---
 name: domino-jobs
-description: Create, run, and manage Domino Jobs - batch executions for scripts, training, and data processing. Covers starting a Job from the UI, CLI or REST API, hardware tiers and environments, scheduled Jobs with Quartz cron, checking status and logs through the Jobs API, stopping Jobs, results and notifications. Use when running batch workloads, scheduling recurring tasks, or automating training pipelines. For the CLI itself use domino-cli; for multi-step pipelines domino-flows; for an existing Airflow or Kubeflow domino-airflow-kubeflow; for batch scoring with a model use domino-model-delivery.
+description: Create, run, and manage Domino Jobs - batch executions for scripts, training, and data processing. Covers starting a Job from the UI, CLI or REST API, hardware tiers and environments, scheduled Jobs (Quartz cron, UI or API), status and logs via the Jobs API, stopping Jobs, results and notifications. Use when running batch workloads, scheduling recurring tasks, or automating training pipelines. For the CLI itself use domino-cli; for multi-step pipelines domino-flows; for an existing Airflow or Kubeflow domino-airflow-kubeflow; for batch scoring with a model use domino-model-delivery.
 compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
 ---
 
@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-A Job runs one command to completion in its own container on a hardware tier, recording the Project files, environment revision, data mounts and inputs. Interactive work: [domino-workspaces](../domino-workspaces/SKILL.md); web forms that start Jobs: [domino-launchers](../domino-launchers/SKILL.md); batch scoring with a trained model: [domino-model-delivery](../domino-model-delivery/SKILL.md).
+A Job runs one command to completion in its own container on a hardware tier, recording the Project files, environment revision, data mounts and inputs. Interactive work: [domino-workspaces](../domino-workspaces/SKILL.md); web forms that start Jobs: [domino-launchers](../domino-launchers/SKILL.md); batch scoring with a model: [domino-model-delivery](../domino-model-delivery/SKILL.md).
 
 Authentication ([domino-api-intro](../domino-api-intro/SKILL.md)): in a run `$DOMINO_API_PROXY` with no `Authorization` header; outside, `$DOMINO_API_HOST` with a PAT or service-account bearer token.
 
@@ -55,25 +55,25 @@ Both specs (beta).
 - List: `GET /api/jobs/beta/jobs?projectId=...&statusFilter=all|queued|running|completed|archived|active&limit=&offset=` -> `{"jobs": [...], "metadata": {..., "totalCount"}}`.
 - Details: `GET /api/jobs/beta/jobs/{jobId}` -> `job.status.executionStatus` (`Queued` ... `Running`, `Succeeded`, `Stopped`, `Failed`, `Error`; see job-states), `status.isCompleted`, `stageTimes.{submissionTime,startTime,completedTime}`, `commitDetails.{inputCommitId,outputCommitId}`, `usage`, `computeCluster`, `runLauncherId`.
 - Logs: `GET /api/jobs/beta/jobs/{jobId}/logs?logType=stdOut|stdErr|prepareOutput|complete&limit=1000&latestTimeNano=...` -> `logs.logContent[].{timestamp,logType,log}`, `logs.isComplete`, `metadata.pagination.latestTimeNano` (next page). Code: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#logs).
-- Verify what a Job ran on: the Job object omits tier and environment; use the **Details** tab or `GET /v4/jobs/{jobId}/runtimeExecutionDetails` -> `hardwareTier.id`, `environment.environmentId` (internal API, may change between Domino versions; python-domino `job_runtime_execution_details(job_id)` wraps it).
+- Verify what a Job ran on: the Job object omits them; use the **Details** tab or `GET /v4/jobs/{jobId}/runtimeExecutionDetails` -> `hardwareTier.id`, `environment.environmentId` (internal API, may change between Domino versions; python-domino `job_runtime_execution_details(job_id)` wraps it).
 
 ## Stop, re-run, archive
 
-- Stop: **Jobs > Active**, select, **Stop**. No public stop route; the Internal API has `POST /v4/jobs/stop` with `{"projectId", "jobId", "commitResults"}` (internal API, may change between Domino versions; python-domino `job_stop(job_id, commit_results=True)`, [domino-python-sdk](../domino-python-sdk/SKILL.md)).
+- Stop: **Jobs > Active**, select, **Stop**. No public stop route; internal `POST /v4/jobs/stop` with `{"projectId", "jobId", "commitResults"}` (internal API, may change between Domino versions; python-domino `job_stop(job_id, commit_results=True)`, [domino-python-sdk](../domino-python-sdk/SKILL.md)).
 - Re-run: select a Job > **Re-Run with Original Version** or **Re-Run with Current Version** (Git refs refresh only if the original ran from a branch).
 - Archive hides Jobs (`showArchived=true` lists them).
 
 ## Scheduled Jobs
 
-Configured only in the UI: **Jobs > Schedules > Schedule a Job**. The Public API has no scheduled-Job routes; `/v4/projects/{projectId}/scheduledjobs` exists (internal API, may change between Domino versions). Fields: the Job fields plus a schedule, **Run sequentially** (no overlapping runs), **Notify emails**, **Update Domino endpoint**. No pause: set a far-future start to suspend.
+UI: **Jobs > Schedules > Schedule a Job**. API: `POST /v4/projects/{projectId}/scheduledjobs` (internal API, may change between Domino versions; no Public API route or python-domino method), then GET, PUT (edit, or pause via `isPaused`) and DELETE on `.../{scheduledJobKey}`. Body, firings and live-verified examples: [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md).
 
-**Schedule** is a repeat interval or a **Quartz CronTrigger** expression, not crontab: six fields plus an optional year, seconds first, `?` in exactly one day field (`0 0 0 * * ?` daily at 00:00, `0 0 9 ? * MON` Mondays at 09:00). Field layout and special characters: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#quartz-cron-expressions).
+**Schedule** is a repeat interval or a **Quartz CronTrigger** expression, not crontab: six fields plus an optional year, seconds first, `?` in exactly one day field, in `timezoneId` (`0 0 0 * * ?` daily at 00:00, `0 0 9 ? * MON` Mondays at 09:00). Field layout and special characters: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#quartz-cron-expressions).
 
-Multi-step pipelines: [domino-flows](../domino-flows/SKILL.md); an existing Airflow or Kubeflow: [domino-airflow-kubeflow](../domino-airflow-kubeflow/SKILL.md).
+Pipelines: [domino-flows](../domino-flows/SKILL.md); Airflow or Kubeflow: [domino-airflow-kubeflow](../domino-airflow-kubeflow/SKILL.md).
 
 ## Results and notifications
 
-Files changed under the Project files during the run are results. Write `dominostats.json` at the Project root for dashboard columns, `email.html` for a custom success email, `.dominoresults` to choose what is shown and attached; `.dominoignore` drops files from the revision. Success emails: Project **Settings > Access and Sharing**.
+Files changed under the Project files during the run are results. Write `dominostats.json` at the Project root for dashboard columns, `email.html` for a custom success email, `.dominoresults` to choose what is shown and attached; `.dominoignore` drops files from the revision. Success emails: **Settings > Access and Sharing**.
 
 ## Troubleshooting
 
@@ -83,5 +83,5 @@ Files changed under the Project files during the run are results. Write `dominos
 
 ## Reference files and docs
 
-- [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md): commands, env vars, outputs, logs, Quartz cron, troubleshooting.
+- [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md): commands, env vars, outputs, logs, Quartz cron, troubleshooting. [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md): schedules over the API.
 - https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/create-and-run-jobs, `.../schedule-a-job`, `.../monitor-jobs`, `.../job-states` (same paths under `/6.3/`).
