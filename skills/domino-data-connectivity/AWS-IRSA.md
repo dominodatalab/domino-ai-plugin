@@ -40,7 +40,11 @@ Follow the docs page end to end; its key steps are:
 7. In **Admin > Platform Settings > Configuration Records** set
    `com.cerebro.domino.auth.aws.sts.enabled=true`, `com.cerebro.domino.auth.aws.sts.region`
    (for example `us-west-2`) and `com.cerebro.domino.auth.aws.sts.defaultSessionDuration`
-   (for example `1h`), then restart services. Users log out and in again.
+   (for example `1h`), then restart services. Users log out and in again. The same records can
+   be written with `POST /v4/admin/centralConfigSettings` body `{"namespace", "key", "value"}`
+   (Internal API, may change between Domino versions; needs the `EditCentralConfig` permission,
+   which on Domino Cloud only Domino holds; not exercised). Routes and listing:
+   [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md) in the domino-python-sdk skill.
 
 What the user sees: `AWS_SHARED_CREDENTIALS_FILE` points at
 `/var/lib/domino/home/.aws/credentials`, one profile per role. boto3, the AWS CLI and the

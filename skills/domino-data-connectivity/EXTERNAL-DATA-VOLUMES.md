@@ -43,7 +43,9 @@ layer only: a read-only PVC access mode or filesystem permission wins regardless
    execution does not start. Each EDV also adds startup latency, so select only the volumes
    the task needs.
 
-Remove it from **Data > External data volumes** with the three-dot menu.
+Remove it from **Data > External data volumes** with the three-dot menu. The same add, list and
+remove operations exist as `POST`, `GET` and `DELETE /v4/datamount/projects/{projectId}`
+(Internal API, may change between Domino versions; see "Internal API routes" below).
 
 ## Register an EDV (admin)
 
@@ -121,6 +123,29 @@ feature flag; on Cloud ask Domino Support.
 
 Edit, unregister, and add or remove Data Planes from the same page (three-dot menu > **Edit**;
 a PVC with the same name in another Data Plane shows up as an addition).
+
+## Internal API routes
+
+The Public API has no EDV routes. The Domino Internal API has the full set; every route here is
+**Internal API, may change between Domino versions**, verified against the 6.4.0 internal
+reference (`/docs`, `openapi-internal.json`) and not live-tested, because no EDV existed on the
+test deployment and registering one needs a labelled PVC. Registration, update and unregistration
+are admin operations: document them, never run them from a user context.
+
+| Call (Internal API, may change between Domino versions) | Notes |
+|---|---|
+| `GET /v4/datamount/all` | Every registered EDV (`DataMountDto`: `id`, `name`, `volumeType`, `pvcName`, `mountPath`, `readOnly`, `isPublic`, `users`, `projects`, `status`, `dataPlanes`). Returned `[]` on the test deployment |
+| `GET /v4/datamount/pvcs/available?volumeType=Nfs` (`Smb`, `Efs`, `Generic`) | Labelled PVCs not yet registered |
+| `GET /v4/datamount/isMountPathValid?mountPath=<name>` | Whether a Relative Mount Path is unique and free of reserved words |
+| `POST /v4/datamount` (admin) | Register. Body `{"name", "volumeType": "Nfs" / "Smb" / "Efs" / "Generic", "pvcName", "mountPath", "users": [<user ids>], "readOnly", "isPublic", "dataPlaneIds": [], "description", "pvId"}`; `name`, `volumeType`, `pvcName`, `mountPath`, `users`, `readOnly`, `isPublic`, `dataPlaneIds` required. `isPublic: true` is **Everyone**; otherwise list the users |
+| `POST /v4/datamount/{datamountId}` (admin) | Update: same fields plus `id`, `projects`, `isRegistered`, `status` |
+| `DELETE /v4/datamount/{datamountId}` (admin) | Unregister |
+| `GET /v4/datamount/projects/{projectId}` | EDVs added to a Project (what **Data > External data volumes** shows) |
+| `POST /v4/datamount/projects/{projectId}?datamountIds=<id>&datamountIds=<id>` | Add EDVs to a Project (the **Add External Volume** button); needs Volume Access to each |
+| `DELETE /v4/datamount/projects/{projectId}?datamountId=<id>` | Remove an EDV from a Project |
+| `GET /v4/datamount/projects/inaccessible/{projectId}` | EDVs on the Project the caller cannot access |
+
+Mount path in executions stays `/domino/edv/<mountPath>` whichever way the EDV was added.
 
 ## Troubleshooting
 

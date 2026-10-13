@@ -20,7 +20,7 @@ Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 |---|---|---|
 | Inside a Domino execution (Workspace, Job, App, Launcher) and `DOMINO_API_PROXY` is set | `$DOMINO_API_PROXY` | None. Send **no** `Authorization` header; the proxy adds the starting user's token. |
 | Inside a Domino execution, `DOMINO_API_PROXY` not set | `$DOMINO_API_HOST` | `Authorization: Bearer` with the short-lived token from `http://localhost:8899/access-token` |
-| Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you) or a **service account token** (unattended automation) |
+| Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you; **Account Settings** or `POST /api/pat/v1/tokens`, value returned once: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#personal-access-tokens)) or a **service account token** (unattended automation) |
 
 Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`, `api_key=`) are
 deprecated: the auth page says they still work but are "scheduled for deprecation in
@@ -28,13 +28,44 @@ future versions", and the environment-variable glossary marks `DOMINO_USER_API_K
 sunsetting. Never recommend them, not even as a fallback. `DOMINO_TOKEN_FILE` no longer
 exists as an environment variable.
 
+### Environment variables as the secret store
+
 Other secrets a Domino execution needs (provider API keys, tokens for other systems) are
 Domino environment variables, nothing else: a **user** variable (**Account > Account
 Settings > User environment variables**) for a personal credential, injected into every
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
-share. User overrides Project, which overrides the Compute Environment. Neither reaches a
-Model API: set those under the endpoint's own **Settings**. Code reads them by name
+share. Set them in the UI or with the Domino Internal API below (no Public API or
+python-domino route; may change between Domino versions; verified on an internal Domino
+test cluster (6.4.0); on 6.3 confirm the routes in your deployment's `/docs`). When an
+agent stores a secret for the user it writes it with these routes and confirms by
+**name only**: the `GET`s return values, so never echo them into a reply or a log. Never
+call the wipe-all `DELETE /v4/users/environmentVariables` unless the user explicitly asks
+to remove every user variable; to remove one, delete it by name.
+
+```
+GET    /v4/projects/{projectId}/environmentVariables           -> [{"name", "value"}]
+POST   /v4/projects/{projectId}/environmentVariables           body {"name", "value"}: creates or overwrites that variable
+DELETE /v4/projects/{projectId}/environmentVariables/{name}
+GET    /v4/users/environmentVariables                          -> {"vars": [{"name", "value"}]} (your own)
+PUT    /v4/users/environmentVariables                          body {"NAME": "value", ...}: merged into your variables
+DELETE /v4/users/environmentVariables                          DESTRUCTIVE: removes ALL your user variables; to remove one, use the accounts DELETE below
+POST   /v4/accounts/idpid/{idpId}/environmentvariables         body {"name", "value"}: one user variable (idpId: GET /api/users/v1/self)
+DELETE /v4/accounts/idpid/{idpId}/environmentvariables/{name}
+```
+
+```python
+requests.post(f"{base_url}/v4/projects/{project_id}/environmentVariables", headers=headers,
+              json={"name": "OPENAI_API_KEY", "value": secret})            # never print secret
+names = [v["name"] for v in requests.get(f"{base_url}/v4/projects/{project_id}/environmentVariables",
+                                         headers=headers).json()]
+```
+
+A Job started afterwards listed the Project and user variables by name. User overrides
+Project, which overrides the Compute Environment. Neither reaches a
+Model API: pass `environmentVariables` (`[{"key", "value"}]`) on
+`POST /api/modelServing/v1/modelApis` when you create it, or set them later under the
+endpoint's own **Settings** (the update route has no variables field). Code reads them by name
 (`os.environ["NAME"]`) and never prints them. Outside Domino (CI, Airflow, a laptop) these
 variables are not readable; the external system holds its own copy of a token created in
 Domino. Docs: https://docs.domino.ai/cloud/admin/security-and-compliance/protecting-tokens-api-keys
@@ -95,6 +126,5 @@ files from the mount path or python-domino. Discovery: [API-SPECS.md](./API-SPEC
 
 ## Next steps
 
-Use the domain skills under `skills/` (domino-python-sdk, domino-jobs, domino-apps,
-domino-governance, domino-datasets, netapp-volumes, tags-and-properties and others).
-They assume the auth and host rules above.
+Use the domain skills (domino-python-sdk, domino-jobs, domino-apps, domino-governance,
+domino-datasets, netapp-volumes, tags-and-properties, others); they assume the rules above.

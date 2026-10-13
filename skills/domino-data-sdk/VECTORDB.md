@@ -9,7 +9,9 @@ and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-s
 Source: `domino_data/vectordb.py` (26 lines).
 
 Qdrant has a Data Source connector too (`connect-to-qdrant` on the same docs path) but no helper
-in this library; use the UI code snippet for it.
+in this library; use the UI code snippet for it. The snippet is also served by
+`GET /v4/datasource/{dataSourceId}/connection/string/all?dataSourceName=<name>` (Internal API,
+may change between Domino versions), which returns `snippetsByLanguages` for Python, R and SAS.
 
 ## Prerequisites
 

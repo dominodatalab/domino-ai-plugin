@@ -46,7 +46,7 @@ Details and patterns: https://docs.domino.ai/cloud/platform-capabilities/core-co
 
 ## Run a Launcher
 
-Consumers open **Deployments > Launchers**, click the launcher, fill in the form and run it. Collaborators with the **Contributor** or **Launcher User** role can run launchers; **Results Consumers** can only view results. Manage roles under Project **Settings > Access and Sharing**.
+Consumers open **Deployments > Launchers**, click the launcher, fill in the form and run it. Collaborators with the **Contributor** or **Launcher User** role can run launchers; **Results Consumers** can only view results. Grant the role under Project **Settings > Access and Sharing** or with the Public API, `POST /api/projects/v1/projects/{projectId}/collaborators` `{"id": "<user id>", "role": "launcherUser"}` (both specs; `GET /api/users/v1/self` and the user routes give ids; details in [domino-projects](../domino-projects/SKILL.md)).
 
 ## Copy a Launcher between Projects
 

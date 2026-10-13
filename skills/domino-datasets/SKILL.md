@@ -105,10 +105,11 @@ paths. Reads without a mount (Apps, endpoints): `DatasetClient` in the domino-da
 
 ## Delete
 
-Owners mark a Dataset or snapshot for deletion in the UI (**More Actions > Delete Dataset**);
-an admin deletes it permanently. `DELETE /api/datasetrw/v1/datasets/{datasetId}` is the same
-soft delete (verified: `DeletionInProgress`, hidden from lists, cancellable) and affects every
-Project that mounts it; confirm with the user first.
+Owners mark for deletion; an admin purges. Dataset: UI **More Actions > Delete Dataset** or
+`DELETE /api/datasetrw/v1/datasets/{datasetId}` (soft, cancellable, affects every Project
+that mounts it; confirm first). Snapshot: UI, or
+`DELETE /v4/datasetrw/snapshot/{snapshotId}` (internal API, may change between Domino
+versions); restore with `PUT` `{"status": "Active"}`. Details: [API.md](./API.md).
 
 ## Troubleshooting
 
