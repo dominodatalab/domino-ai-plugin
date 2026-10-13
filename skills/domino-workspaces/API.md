@@ -65,7 +65,7 @@ requests.post(f"{w}/stop").raise_for_status()               # Stop; wait until s
 requests.post(f"{base}/api/projects/v1/projects/{project_id}/workspaces/{ws_id}/sessions",
               json={"externalVolumeMounts": [], "netAppVolumeMounts": []}).raise_for_status()   # Start (Public API); runs on medium-k8s now
 requests.post(f"{w}/stop").raise_for_status()
-requests.delete(w).raise_for_status()                       # Delete; 200 with "deleted": true once the volume is detached (retry a few seconds later if not)
+requests.delete(w).raise_for_status()                       # Delete; 200 with "deleted": true once the volume is detached (retry after a short wait if not)
 ```
 
 Poll `GET {w}` between steps: stop is accepted once `isStoppable` is true, delete once the session reports `isCompleted`. Deleting discards the persistent volume, so sync first ([SKILL.md](./SKILL.md#paths-and-what-persists)).
@@ -76,17 +76,17 @@ Add `computeClusterConfig` to the create or update body; the cluster environment
 
 ```python
 body["computeClusterConfig"] = {
-    "clusterType": "Ray",                                  # Spark | Ray | Dask | MPI
+    "clusterType": "Ray",                                  # Spark | Ray | Dask | MPI | Slurm
     "computeEnvironmentId": "<cluster environment id>",
     "computeEnvironmentRevisionSpec": "ActiveRevision",
     "workerCount": 1,                                      # "maxWorkerCount": 4 enables autoscaling
     "workerHardwareTierId": {"value": "small-k8s"},
-    "masterHardwareTierId": {"value": "small-k8s"},       # omit for MPI
+    "masterHardwareTierId": {"value": "small-k8s"},       # omit for MPI and Slurm
     # "workerStorage": {"value": 10, "unit": "GiB"},
 }
 ```
 
-The response's `configTemplate.computeClusterResponseProps` echoes the cluster; `GET .../{clusterType}/defaultComputeClusterSettings` returns the defaults the UI would use.
+The response's `configTemplate.computeClusterResponseProps` echoes the cluster; `GET .../{clusterType}/defaultComputeClusterSettings` returns the defaults the UI would use. For `Slurm` the cluster environment is the Slurm worker environment, `maxWorkerCount` is the partition ceiling and the Workspace itself runs the Slurm client environment on a tier of the Slurm-enabled data plane ([domino-hpc-slurm](../domino-hpc-slurm/SKILL.md)).
 
 ## Not in any API
 

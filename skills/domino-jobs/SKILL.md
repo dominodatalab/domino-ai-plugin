@@ -85,3 +85,4 @@ Files changed under the Project files are results. Write `dominostats.json` at t
 
 - [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md): commands, env vars, outputs, logs, cron, troubleshooting. [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md): schedules over the API.
 - https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/create-and-run-jobs, `.../schedule-a-job`, `.../monitor-jobs`, `.../job-states` (same paths under `/6.3/`).
+- Slurm HPC Jobs (the **HPC** tab, `/api/hpc/v1/jobs`): [domino-hpc-slurm](../domino-hpc-slurm/SKILL.md).
