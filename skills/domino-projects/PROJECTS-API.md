@@ -6,8 +6,8 @@ Routes marked (Cloud) are Domino Cloud only. The python-sdk catalog for the same
 
 ```python
 import os, requests
-base, headers = os.environ["DOMINO_API_PROXY"], {}   # inside a run; without the proxy or outside Domino:
-# the Python setup block in domino-api-intro/SKILL.md#authentication (base = base_url)
+# base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
+base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run with the proxy
 ```
 
 ## Read

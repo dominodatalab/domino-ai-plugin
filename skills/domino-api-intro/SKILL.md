@@ -92,6 +92,7 @@ elif os.environ.get("DOMINO_RUN_ID"):           # inside a run, proxy not inject
 else:                                           # outside Domino: PAT or service account token
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
     headers = {"Authorization": f"Bearer {os.environ['DOMINO_API_TOKEN']}"}
+base = base_url                                 # examples in other skills use either name
 ```
 
 `DOMINO_RUN_ID`, `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME`

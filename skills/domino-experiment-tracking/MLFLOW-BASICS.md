@@ -4,7 +4,47 @@ This guide covers the fundamentals of using MLflow for experiment tracking in Do
 
 ## Setting Up an Experiment
 
-Experiment names are unique across the whole deployment, not per project, so suffix them with project and user: `mlflow.set_experiment(f"churn-{os.environ['DOMINO_PROJECT_NAME']}-{os.environ['DOMINO_STARTING_USERNAME']}")`. Domino context tags and the variables worth tagging: [SKILL.md](./SKILL.md#quick-start); a generated helper module: the domino-experiment-setup skill.
+### Unique Experiment Names
+
+Experiment names are unique across the whole deployment, not per project, so suffix them with project and user.
+
+```python
+import mlflow
+import os
+
+def setup_experiment(base_name: str = "experiment"):
+    """
+    Set up a Domino-compatible MLflow experiment.
+
+    Automatically appends username to ensure uniqueness.
+    """
+    username = os.environ.get('DOMINO_STARTING_USERNAME', 'unknown')
+    project = os.environ.get('DOMINO_PROJECT_NAME', 'unknown')
+
+    # Unique name format
+    experiment_name = f"{base_name}-{project}-{username}"
+
+    mlflow.set_experiment(experiment_name)
+    print(f"Experiment set: {experiment_name}")
+
+    return experiment_name
+```
+
+### Adding Domino Context as Tags
+
+```python
+def log_domino_context():
+    """Log Domino environment information as tags."""
+    mlflow.set_tags({
+        "domino.user": os.environ.get('DOMINO_STARTING_USERNAME', 'unknown'),
+        "domino.project": os.environ.get('DOMINO_PROJECT_NAME', 'unknown'),
+        "domino.run_id": os.environ.get('DOMINO_RUN_ID', 'unknown'),
+        "domino.run_number": os.environ.get('DOMINO_RUN_NUMBER', 'unknown'),
+        "domino.hardware_tier": os.environ.get('DOMINO_HARDWARE_TIER_ID', 'unknown'),
+    })
+```
+
+Domino injects `DOMINO_HARDWARE_TIER_ID` (the tier id); there is no `DOMINO_HARDWARE_TIER_NAME` variable. Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables
 
 ## Auto-Logging
 
