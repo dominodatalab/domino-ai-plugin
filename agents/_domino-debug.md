@@ -60,7 +60,7 @@ legacy API keys.
 | App | The App's details page, logs per version and per instance ([docs](https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning)) | `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`, then `.../instances/{instanceId}/logs` |
 | Model API | The Model API version's build and instance logs | `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` and `.../instanceLogs` |
 | Workspace | Workspaces, select the Workspace, **Logs** ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/view-workspace-details)) | No Public API route; non-public route, may change in a future Domino version: `GET /v4/workspace/project/{projectId}/workspace/{workspaceId}/sessions` for the session id, then `GET /v4/workspace/{projectId}/{sessionId}/logs` (or `.../realTimeLogs`) |
-| Environment build | Environments, the environment's **Revisions** tab, the revision's build log | no route in the Public or the Internal API; use the UI |
+| Environment build | Environments, the environment's **Revisions** tab, the revision's build log | No Public or Internal API route; web UI routes (non-public route; may change in a future Domino version; [route types](../skills/domino-api-intro/SKILL.md#route-types)): `GET /environments/{environmentId}/json/paged/0/20` gives `buildLogsUrl` per revision, then `GET .../fetchBuildLogsSince?podName=all&containerName=all&tail=true` returns HTML log rows; parsing snippet in [domino-environments API.md](../skills/domino-environments/API.md#build-logs) |
 
 ## How to work
 

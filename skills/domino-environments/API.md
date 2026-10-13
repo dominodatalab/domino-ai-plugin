@@ -112,6 +112,38 @@ r = requests.put(f"{base}/v4/projects/{project_id}/settings", json={
 r.raise_for_status()                                        # 200 with an empty body; read it back with GET
 ```
 
+## Build logs
+
+The Public and Internal APIs have no build-log route; the Environments web UI routes do (non-public route; may change in a future Domino version; [route types](../domino-api-intro/SKILL.md#route-types)). Call them on `$DOMINO_API_HOST` with a bearer token.
+
+1. `GET /environments/{environmentId}/json/paged/{page}/{pageSize}` (pages start at 0) returns `paginatedResults.listing[]` (`id`, `number`, `buildStatus`, `dockerImageName`, `createdDate`), `activeRevisionId`, and `buildLogsUrl`, a map from revision id to `/environments/{environmentId}/revisions/{revisionId}/build/{buildId}/logs`. This map is the only source of the build id.
+2. Replace the trailing `/logs` with `/fetchBuildLogsSince?podName=all&containerName=all&tail=true` and `GET` it. The body is HTML whatever `Accept` says: one `<tr class="log-hit log" data-timeNano="...">` per line with the text in `<td class="line">`, at most 1000 rows per call. For the next page pass the last row's `data-timeNano` as `sinceTimeNano`; a 204 with no rows means the log is complete.
+
+```python
+import html, os, re, requests
+
+base = os.environ["DOMINO_API_HOST"]
+page = requests.get(f"{base}/environments/{env_id}/json/paged/0/20", headers=headers).json()
+rev_id = revision_id or page["activeRevisionId"]
+url = base + page["buildLogsUrl"][rev_id].replace("/logs", "/fetchBuildLogsSince")
+lines, since = [], None
+while True:
+    params = {"podName": "all", "containerName": "all", "tail": "true"}
+    if since:
+        params["sinceTimeNano"] = since
+    r = requests.get(url, params=params, headers=headers)
+    rows = re.findall(r'<tr[^>]*data-timeNano="(\d+)"[^>]*>(.*?)</tr>', r.text, re.S)
+    if r.status_code == 204 or not rows:
+        break
+    for _, body in rows:
+        cell = re.search(r'<td class="line">(.*?)</td>', body, re.S)
+        lines.append(html.unescape(re.sub(r"<[^>]+>", "", cell.group(1) if cell else body)).strip())
+    since = rows[-1][0]
+print("\n".join(lines[-50:]))          # the tail is where a failed build says why
+```
+
+The same paged response carries `killRevisionBuildUrl` and `revertToRevisionUrl` maps (web UI routes for the Revisions tab's actions); the Internal API equivalents are below.
+
 ## Not in the Public API
 
-Build logs have no route anywhere (environment **Revisions** tab only). The rest of the revision lifecycle is Internal API (non-public route; may change in a future Domino version): set the Active revision with `POST /v4/environments/{environmentId}/setactive?revisionId=<revision id>` or `PATCH /v4/environments/{environmentId}` with `{"assignLatestRevisionAsActive": true|false}`; cancel a running build with `POST /v4/environments/{environmentId}/environmentRevision/{revisionId}/cancel`; set the deployment-wide default (admin) with `POST /v4/environments/setDefaultEnvironment` `{"environmentId": "<id>"}` and read it with `GET /v4/environments/defaultEnvironment`. python-domino offers `environments_list`, `get_environment`, `create_environment`, `create_environment_revision`, `archive_environment` and `restrict_environment_revision` over the public and internal routes; see [domino-python-sdk](../domino-python-sdk/SKILL.md).
+Build logs: web UI routes only, above. The rest of the revision lifecycle is Internal API (non-public route; may change in a future Domino version): set the Active revision with `POST /v4/environments/{environmentId}/setactive?revisionId=<revision id>` or `PATCH /v4/environments/{environmentId}` with `{"assignLatestRevisionAsActive": true|false}`; cancel a running build with `POST /v4/environments/{environmentId}/environmentRevision/{revisionId}/cancel`; set the deployment-wide default (admin) with `POST /v4/environments/setDefaultEnvironment` `{"environmentId": "<id>"}` and read it with `GET /v4/environments/defaultEnvironment`. python-domino offers `environments_list`, `get_environment`, `create_environment`, `create_environment_revision`, `archive_environment` and `restrict_environment_revision` over the public and internal routes; see [domino-python-sdk](../domino-python-sdk/SKILL.md).

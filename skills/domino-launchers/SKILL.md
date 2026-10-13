@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-A Launcher is a web form built in the Domino UI. When a consumer submits it, Domino starts a **Job** with the form values substituted into a command line, so every run is tracked, reproducible and auditable like any other Job. Results reach the consumer by email and through the Jobs dashboard. Launchers are defined only in the UI: there is no YAML or file-based launcher definition, and the Public API has no launcher routes (see "API" below).
+A Launcher is a web form built in the Domino UI. When a consumer submits it, Domino starts a **Job** with the form values substituted into a command line, so every run is tracked, reproducible and auditable like any other Job. Results reach the consumer by email and through the Jobs dashboard. Launchers are defined in the UI wizard or through the Launchers web UI routes ("API" below); there is no YAML or file-based launcher definition and no Public API route.
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/features/launchers (same path under `/6.3/`).
 
@@ -54,13 +54,14 @@ Open the launcher, click the gear icon > **Edit** > **Switch to JSON Edit Mode**
 
 ## API
 
-The Public API has no launcher routes, so launchers cannot be created or run through it. What you can do:
+The Public API has no launcher routes. Launchers are managed through non-public routes, labelled per [route types](../domino-api-intro/SKILL.md#route-types); call them on `$DOMINO_API_HOST` with a bearer token ([domino-api-intro](../domino-api-intro/SKILL.md)).
 
-- Find launcher runs: `GET /api/jobs/beta/jobs?projectId=...` returns each run as a Job whose `runLauncherId` field is set; `GET /api/jobs/beta/jobs/{jobId}` and `.../logs` give status and logs (see [domino-jobs](../domino-jobs/SKILL.md)).
-- Fetch a result file: take `job.commitDetails.outputCommitId` from the Job and call `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` (path URL-encoded, response is the raw file).
-- Starting a launcher programmatically exists only in the Domino Internal API (`POST /v4/projects/{projectId}/launcherJob/{launcherId}`; non-public route; may change in a future Domino version, documented per deployment at `https://<domino-domain>/docs`). Prefer `POST /api/jobs/v1/jobs` with the same command and explicit arguments when automation is the goal.
+- Create, read, update, delete: `POST /u/{owner}/{project}/runLaunchers`, then `GET` / `PUT` / `DELETE /u/{owner}/{project}/runLaunchers/{launcherId}` (non-public route; may change in a future Domino version). Create takes the full launcher JSON and returns it with its `id` as a draft (default `command`); `PUT` the object back with your `command` to store it, which also lists it on the Launchers page. Every parameter needs all its fields (`shouldQuoteValue` included); a missing one is an HTTP 500 `JsResultException` naming it. Bodies and listing: [EXAMPLES.md](./EXAMPLES.md#manage-launchers-from-code).
+- List: no JSON list route; the Launchers page `GET /u/{owner}/{project}/endpoints/launchers` embeds it in its `LaunchersPage` mount props ([EXAMPLES.md](./EXAMPLES.md#manage-launchers-from-code)), or keep the ids you create.
+- Start: `POST /v4/projects/{projectId}/launcherJob/{launcherId}` (non-public route; may change in a future Domino version) with `{"project": "<projectId>", "postParameters": [{"key": "<parameter>", "value": ["<value>"]}], "uploadedFiles": [], "notifyOnCompleteEmailAddresses": []}`; the response is the Job id and the Job's `runCommand` carries the substituted values.
+- Find runs and results: `GET /api/jobs/beta/jobs?projectId=...` returns each run as a Job with `runLauncherId` set; `GET /api/jobs/beta/jobs/{jobId}` and `.../logs` give status and logs; fetch a result file with `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` using `commitDetails.outputCommitId` ([domino-jobs](../domino-jobs/SKILL.md)).
 
-Authentication for these calls: [domino-api-intro](../domino-api-intro/SKILL.md).
+For a one-off run without a form, `POST /api/jobs/v1/jobs` with explicit arguments is simpler.
 
 ## Best practices
 

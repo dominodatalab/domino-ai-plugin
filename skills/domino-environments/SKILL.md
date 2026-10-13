@@ -70,7 +70,7 @@ Keep images small; dependency-file packages cost startup time.
 
 ## Revisions
 
-- Each build is a revision with build logs (**Revisions** tab > three dots). **Auto-assign next new revision as Active** on uses the latest successful build; off pins the Active revision for testing.
+- Each build is a revision with build logs (**Revisions** tab > three dots, or by API: [API.md](./API.md#build-logs)). **Auto-assign next new revision as Active** on uses the latest successful build; off pins the Active revision for testing.
 - Environments based on **Active (auto-rebuilds)** rebuild when the base's Active revision changes (build propagation; see the **Dependency Tree** tab). Archived environments are not rebuilt.
 - Workspaces and Jobs can pin a revision. API: `environmentRevisionSpec` = `ActiveRevision`, `LatestRevision` or `SomeRevision(<revisionId>)`.
 - On 6.4+ revisions may declare CPU architectures (`amd64`, `arm64`); a mismatched hardware tier is rejected.
@@ -87,7 +87,7 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` only the routes above exist. On 
 
 - **Permission denied**: `USER root` before the command, `USER ubuntu` after; `chown -R ubuntu:ubuntu` directories the user must write.
 - **Package not found**: wrong name (`scikit-learn`, not `sklearn`), missing apt dependency, or no network from the builder.
-- **Build never finishes / killed**: too many layers or packages; split into base and derived environments; read the revision's build log.
+- **Build never finishes / killed**: too many layers or packages; split into base and derived environments; read the build log ([API.md](./API.md#build-logs)).
 - **IDE missing at launch**: no Pluggable Workspace Tools entry or start script ([WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS.md)).
 
 ## Reference files
