@@ -7,7 +7,7 @@ Auth and `$BASE`: [SKILL.md Configuration](./SKILL.md#configuration). Curl examp
 ## Key Concepts
 
 ### Policy (Template)
-A **policy** is a reusable governance template that defines the stages, evidence requirements, and approval gates a model must pass through. Examples: SR 11-7, NIST AI RMF, internal model risk frameworks. Policies are created by administrators in the Domino UI.
+A **policy** is a reusable governance template that defines the stages, evidence requirements, and approval gates a model must pass through. Examples: SR 11-7, NIST AI RMF, internal model risk frameworks. Policies are usually authored by administrators (Policy Builder or YAML in the UI), and the same lifecycle is public API: `POST /policies`, `POST /policies/{id}/versions`, `PUT /policies/{id}/definition`, `PUT /policies/{id}/status`, `POST /rpc/publish-policy-version`; see [POLICY-LIFECYCLE.md](./POLICY-LIFECYCLE.md).
 
 ### Bundle (Living Document)
 A **bundle** is the compliance document for a *specific model* in a *specific project*. It follows a policy and accumulates evidence as the model progresses through development, validation, and approval. One project can have multiple bundles (e.g., one per model version).

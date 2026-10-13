@@ -125,10 +125,13 @@ If the policy enforces gating and required questions are unanswered, advance ste
 
 ## Approval Gating
 
-Each stage has designated approver organizations. Approval typically requires a member of the organization to sign off in the Domino UI. The `stageApprovals` section of the bundle response shows:
-- Which organizations need to approve each stage
-- Current approval status
-- Approver IDs (useful for creating findings)
+Each stage has designated approvers (organizations, or users when the policy allows). Approval requires one of them to sign off, in the UI or through the public API (both specs; spec-verified, with the list route read live):
+
+- `GET /bundles/{bundleId}/approvals` lists every approval with its `id` (the `approvalId`), `stageApprovalId`, `approvers[]` and `status`: `PendingSubmission`, `PendingReview`, `Approved`, `ConditionallyApproved`, `PendingExpiration`, `Expired`.
+- `POST /rpc/publish-approval-event` with `{"bundleId", "policyId", "projectId", "approvalId", "eventType"}` transitions it; `eventType` is one of `RequestSubmitted`, `RequestCancelled`, `RequestApproved`, `RequestConditionalApproved`, `RequestRejected`, `FindingsApproved`, `PolicyReactivated`, `RevalidationRequired`, `RevalidationExpired`, `PolicyVersionUpgraded`. The caller must be one of the approval's approvers.
+- `POST /rpc/update-approval` with `{"approvalId", "policyId", "approvers": [{"id", "name"}]}` changes who must approve.
+
+Full automation, including re-fetching the bundle to confirm the stage moved: [APPROVAL-GATE.md](./APPROVAL-GATE.md). The `stageApprovals` section of the bundle response also shows which organizations approve each stage, the current approval status, and approver IDs (useful for creating findings).
 
 ## Checking Bundle Status
 
