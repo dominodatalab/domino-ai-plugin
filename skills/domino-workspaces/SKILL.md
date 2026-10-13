@@ -19,7 +19,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 3. **IDE**: the list depends on the environment.
 4. **Volume Size** if provisioning recommendations are enabled (Git-based Projects use the Project setting on first launch).
 5. **Next**: **Hardware Tier** (by data plane on Nexus; smallest that fits), then only the Datasets, NetApp Volumes and external volumes you need (per-asset snapshot pins).
-6. **Next**: optional Spark, Ray, Dask or MPI cluster ([domino-distributed-computing](../domino-distributed-computing/SKILL.md)).
+6. **Next**: optional Spark, Ray, Dask, MPI ([domino-distributed-computing](../domino-distributed-computing/SKILL.md)) or Slurm ([domino-hpc-slurm](../domino-hpc-slurm/SKILL.md)) cluster.
 7. Additional settings: **Enable SSH access**, **Package Persistence**, **Home Directory Persistence**; **Launch**. Default limit: four Workspaces per user per Project.
 
 **Settings > Edit Settings** changes tier or environment (**Save & Restart**); by API, [API.md](./API.md).
@@ -49,12 +49,12 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 
 1. The environment needs `openssh-server` (the DSE has it; custom image: `USER root` / `apt-get install -y openssh-server` / `mkdir -p /var/run/sshd` / `USER ubuntu`).
 2. Launch with **Enable SSH access**. Missing checkbox: on 6.3 the admin sets `com.cerebro.domino.workbench.workspace.ssh.enabled`; on Cloud contact Domino support.
-3. In the running Workspace open **Settings** > **SSH connection** and install the **Dom CLI** from the link (distinct from the Domino CLI, [domino-cli](../domino-cli/SKILL.md)). Note the **Workspace ID** (also in the URL).
-4. Locally: `dom connect <workspace_id> --domino-api-host=https://<URL you open Domino at in the browser> -l ubuntu` (add `--port 2223` for PyCharm). Add `Include ~/.domino/ssh/config` to `~/.ssh/config`, then connect from VS Code **Remote Explorer > SSH** or PyCharm **Remote Development > SSH** (host = workspace id, user `ubuntu`).
+3. In the running Workspace open **Settings** > **SSH connection** and install the **Dom CLI** from the link (not the Domino CLI, [domino-cli](../domino-cli/SKILL.md)). Note the **Workspace ID** (also in the URL).
+4. Locally: `dom connect <workspace_id> --domino-api-host=https://<browser URL> -l ubuntu` (add `--port 2223` for PyCharm). Add `Include ~/.domino/ssh/config` to `~/.ssh/config`, then connect from VS Code **Remote Explorer > SSH** or PyCharm **Remote Development > SSH** (host = workspace id, user `ubuntu`).
 
 ## Workspace sessions over the API
 
-- Resume a stopped Workspace: `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` with `{"externalVolumeMounts": [], "netAppVolumeMounts": []}` (both specs) -> `{"workspaceSession": {"id", "executionId"}, "metadata"}`. `workspaceId` is in the Workspace URL or **Show Details**.
+- Resume a stopped Workspace: `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` with `{"externalVolumeMounts": [], "netAppVolumeMounts": []}` -> `{"workspaceSession": {"id", "executionId"}, "metadata"}`. `workspaceId` is in the Workspace URL or **Show Details**.
 - Create, list, read, update, stop, delete: no public route; the Internal API covers them (`POST /v4/workspace/project/{projectId}/workspace` and the rest in [API.md](./API.md); non-public route; may change in a future Domino version); python-domino has none.
 - Authentication: [domino-api-intro](../domino-api-intro/SKILL.md).
 
@@ -64,7 +64,7 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.
 
 ## Manage Workspaces
 
-**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (storage persists and still bills), **Start** to resume (restricted Projects use the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (10 days stopped, then 30 days of grace). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
+**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (storage persists and still bills), **Start** to resume (restricted Projects use the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, follows admin-configurable periods (10 days stopped, 30 days of grace). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
 
 ## Coding assistants and extra apps
 

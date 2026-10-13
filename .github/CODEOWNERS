@@ -62,6 +62,7 @@
 /skills/domino-environments/                   @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
 /skills/domino-jobs/                           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
 /skills/domino-distributed-computing/          @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
+/skills/domino-hpc-slurm/                      @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
 /skills/domino-airflow-kubeflow/        @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-s-rodriguez
 
 # Data  (docs: core-concepts/data, admin/data-administration)

@@ -11,7 +11,7 @@ model call billed to your account; results land in `results/` (git-ignored).
 |---|---|---|
 | `trigger` | one or more per skill | The skill fires on a natural request (`tool_used: Skill`) and the answer is correct |
 | `negative` | 5 | No Domino skill fires on a non-Domino request, including the word "domino" in a board game |
-| `disambiguation` | 10 | For overlapping skills, the right one fires and the neighbour does not (`min: 0`, `max: 0`, `arm: both`) |
+| `disambiguation` | 11 | For overlapping skills, the right one fires and the neighbour does not (`min: 0`, `max: 0`, `arm: both`) |
 | `compat` | 1 | The answer is gated on the Domino version named in the prompt |
 
 Every case also carries its skill name as a tag (`domino-jobs`, `netapp-volumes`, ...), so
@@ -21,8 +21,8 @@ A `max: 0` ban is used only where the neighbour's own description clearly exclud
 `domino-model-serving` on an endpoint-monitoring question, `domino-app-init` and `domino-debug-proxy`
 on deployment and CI/CD requests, `domino-debug-proxy` on a scaffold, `domino-experiment-setup` on
 run comparison, `netapp-volumes` / `domino-data-sdk` on a Dataset path question, `domino-datasets` /
-`domino-data-sdk` on a NetApp question, `netapp-volumes` on a Data API download, and the endpoint
-skills on nightly batch scoring. Where a neighbour's description also claims the request
+`domino-data-sdk` on a NetApp question, `netapp-volumes` on a Data API download, the endpoint
+skills on nightly batch scoring, and `domino-distributed-computing` on existing Slurm scripts. Where a neighbour's description also claims the request
 (`domino-apps` on a 404, `domino-trace-setup` on evaluators, `domino-experiment-tracking` on setup,
 `domino-python-sdk` on an auth question) the case keeps only the positive `skill-fired` check;
 sharpening those descriptions is the fix, not a ban.
@@ -70,7 +70,7 @@ claude plugin eval . --case start-job-via-rest-and-schedule --runs 1 --ablation 
 claude plugin eval . --tag domino-datasets --runs 1 --ablation none --no-publish --scaffold --allow-tools Write Edit
 claude plugin eval . --tag negative --runs 1 --ablation none --no-publish
 
-# full suite, default three runs plus the no-plugin baseline (52 cases x 6 runs; roughly $20-100
+# full suite, default three runs plus the no-plugin baseline (55 cases x 6 runs; roughly $20-100
 # with the judge, so set the ceiling you can afford; hitting it exits 2 with a partial results.json)
 claude plugin eval . --scaffold --allow-tools Write Edit --no-publish -j 3 --max-cost-usd 60 --json results.json
 ```

@@ -1,6 +1,6 @@
 ---
 name: domino-distributed-computing
-description: Work with Domino on-demand compute clusters - Apache Spark, Ray, Dask and Open MPI - attached to a Workspace or Job. Covers choosing a framework, the cluster and execution environments, attaching a cluster from the UI or the Jobs API (computeCluster), connecting from code, autoscaling, cluster web UIs and lifecycle, and troubleshooting. Use when processing large datasets, running distributed or multi-GPU training, or scaling Python workloads.
+description: Work with Domino on-demand compute clusters - Apache Spark, Ray, Dask and Open MPI - attached to a Workspace or Job. Covers choosing a framework, the cluster and execution environments, attaching a cluster from the UI or the Jobs API (computeCluster), connecting from code, autoscaling, cluster web UIs and lifecycle, and troubleshooting. Use when processing large datasets, running distributed or multi-GPU training, or scaling Python workloads. Slurm is domino-hpc-slurm.
 compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
 ---
 
@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 Applies to Domino 6.3 and Domino Cloud.
 
-Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. The cluster belongs to that one execution, is reachable only from it, and its nodes run a separate **cluster environment**. Slurm HPC is not covered here.
+Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. It belongs to that execution alone and its nodes run a separate **cluster environment**. Slurm: [domino-hpc-slurm](../domino-hpc-slurm/SKILL.md).
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-clusters-hpc (same paths under `/6.3/`).
 
@@ -20,6 +20,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-cluste
 | Ray | Ray Train, Ray Tune, RLlib, parallel Python | serving (clusters are ephemeral; use a Domino endpoint) |
 | Dask | pandas/NumPy/scikit-learn at scale, custom task graphs | |
 | Open MPI | multi-node, multi-GPU `mpirun` training (Horovod, PyTorch, TF) | Apps, Launchers, endpoints (not supported) |
+| Slurm | existing `sbatch` scripts: [domino-hpc-slurm](../domino-hpc-slurm/SKILL.md) | Jobs (Workspace only) |
 
 ## Environments
 
@@ -28,13 +29,13 @@ Each cluster type needs two environments with the **same Python version**:
 1. **Cluster environment** (head/master/scheduler and workers): create it from the catalog image (`quay.io/domino/{spark,ray,dask,mpi}-cluster-environment`, plus `ray-cluster-gpu-environment`; tags change per release), tick the framework under **Supported Clusters**, leave Pluggable Workspace Tools empty. A DSE cannot be a worker environment. Pre/post setup and run scripts never run on cluster nodes.
 2. **Execution environment** for the Workspace or Job (driver/client): the matching `domino-{spark,ray,dask,mpi}-environment` image with workspace tools. MPI needs the same Open MPI version in both.
 
-Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2.14.1`); see [domino-environments](../domino-environments/SKILL.md).
+Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2.14.1`; [domino-environments](../domino-environments/SKILL.md)).
 
 ## Attach a cluster
 
-**UI**: **Workspaces > + Create New Workspace** or **Jobs > Run**, then the **Compute Cluster** step. Settings: **Min / Max workers** (Spark: executors), **Auto-scale workers**, **Worker hardware tier**, **Head / Master / Scheduler hardware tier** (none for MPI), **Cluster compute environment**, **Dedicated local storage per executor** (mounted at `/tmp`, discarded at shutdown). Cluster size is capped by the per-user execution limit (master and execution each take a slot). Scheduled Jobs take the same settings in their wizard ([domino-jobs](../domino-jobs/SKILL.md)).
+**UI**: **Workspaces > + Create New Workspace** or **Jobs > Run**, then the **Compute Cluster** step. Settings: **Min / Max workers** (Spark: executors), **Auto-scale workers**, **Worker hardware tier**, **Head / Master / Scheduler hardware tier** (none for MPI), **Cluster compute environment**, **Dedicated local storage per executor** (`/tmp`, discarded at shutdown). Cluster size is capped by the per-user execution limit (master and execution each take a slot). Scheduled Jobs take the same settings ([domino-jobs](../domino-jobs/SKILL.md)).
 
-**REST**: `computeCluster` on `POST /api/jobs/v1/jobs` (both specs). Clustered Workspaces: the UI, or `computeClusterConfig` on the internal create route ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)).
+**REST**: `computeCluster` on `POST /api/jobs/v1/jobs`. Clustered Workspaces: the UI, or `computeClusterConfig` on the internal create route ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)).
 
 ```python
 body = {
@@ -54,7 +55,7 @@ body = {
 requests.post(f"{os.environ['DOMINO_API_PROXY']}/api/jobs/v1/jobs", json=body).raise_for_status()
 ```
 
-Required in `computeCluster`: `clusterType`, `computeEnvironmentId`, `workerCount`, `workerHardwareTier`. python-domino: `job_start(command, compute_cluster_properties={...})` with `workerHardwareTierId` keys; see [domino-python-sdk](../domino-python-sdk/SKILL.md).
+Required in `computeCluster`: `clusterType`, `computeEnvironmentId`, `workerCount`, `workerHardwareTier`. python-domino: `job_start(command, compute_cluster_properties={...})` (`workerHardwareTierId` keys; [domino-python-sdk](../domino-python-sdk/SKILL.md)).
 
 ## Connect from your code
 
@@ -83,15 +84,15 @@ client.wait_for_workers(2)      # optional; client.close() when done, never clie
 ```
 `Client()` with no address starts a local cluster, not the Domino one. `client.dashboard_link` does not route through Domino; use the Dask tab.
 
-**MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code to the workers; Datasets are already mounted there), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`). Write outputs to a Dataset, not the Project files.
+**MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code; Datasets are already on the workers), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`).
 
-Datasets are mounted on every cluster node at the same path, so a Dataset, NetApp Volume or External Data Volume is the default for output. Object storage (S3 and similar) is fine where it is enabled for the cluster: client libraries in both environments, propagated credentials (domino-data-connectivity).
+Datasets are mounted on every cluster node at the same path, so a Dataset, NetApp Volume or External Data Volume is the default for output. Object storage (S3 and similar) is fine where enabled for the cluster: client libraries in both environments, propagated credentials (domino-data-connectivity).
 
 ## Web UI, autoscaling, lifecycle
 
 - Spark, Ray and Dask web UIs: a dedicated tab in the Workspace, or the Job **Details** tab (needs a data plane enabled for Workspaces on Nexus).
-- Autoscaling scales up when average CPU reaches 80% and down after about 5 minutes of low use (tunable); scale-down can discard workers holding intermediate results.
-- The cluster, its `/tmp` and anything not written to a Dataset, the Project files or external storage die with the execution.
+- Autoscaling adds workers at 80% average CPU and removes them after 5 minutes of low use (tunable); scale-down can discard workers holding intermediate results.
+- The cluster, its `/tmp` and anything not written to a Dataset, Project files or external storage die with the execution.
 
 ## Troubleshooting
 
