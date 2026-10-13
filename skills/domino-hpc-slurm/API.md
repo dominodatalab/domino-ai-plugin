@@ -5,13 +5,8 @@ Applies to Domino 6.3 and Domino Cloud. Authentication and hosts: [domino-api-in
 All snippets assume:
 
 ```python
+# base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
 import os, time, requests
-
-base = os.environ.get("DOMINO_API_PROXY")                      # inside a run: no auth header
-headers = {}
-if not base:                                                   # laptop, CI: Personal Access Token or service account
-    base = os.environ["DOMINO_API_HOST"]
-    headers = {"Authorization": f"Bearer {os.environ['DOMINO_TOKEN']}"}
 project_id = os.environ["DOMINO_PROJECT_ID"]
 ```
 
@@ -70,7 +65,7 @@ body = {
     "config": {                                   # all optional; Slurm-native units
         "cpu": 4,                                 # number of cores (number)
         "gpu": 0,                                 # integer
-        "memory": "<amount, for example in GiB>", # string
+        "memory": "8Gi",                          # string
         "nodes": 1,                               # default 1
         "ntasks": 1,                              # default 1
         "walltime": "02:00:00",                   # HH:MM:SS

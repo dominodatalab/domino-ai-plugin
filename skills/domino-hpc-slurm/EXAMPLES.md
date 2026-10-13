@@ -105,7 +105,7 @@ nvidia-smi > /domino/datasets/local/<dataset>/gpu-train.log 2>&1
 python3 /domino/datasets/local/<dataset>/code/train.py >> /domino/datasets/local/<dataset>/gpu-train.log 2>&1
 ```
 
-Through the API the same request is `"config": {"gpu": 1, "cpu": 4, "memory": "32G", "walltime": "04:00:00"}` on `POST /api/hpc/v1/jobs`.
+Through the API the same request is `"config": {"gpu": 1, "cpu": 4, "memory": "32Gi", "walltime": "04:00:00"}` on `POST /api/hpc/v1/jobs`.
 
 ## Dependent jobs
 
