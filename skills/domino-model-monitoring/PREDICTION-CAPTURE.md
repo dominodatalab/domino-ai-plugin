@@ -74,7 +74,7 @@ Constructor:
 | `prediction_probability` | list of float, optional | Class probabilities; required for AUC-ROC, log loss and Gini |
 | `sample_weight` | list of float, optional | Weights used by the normalized Gini metric |
 
-Keep the capture call inside the function so one row is written per request. Capture is sized for 8 GB per endpoint per 24 hours; bursts up to about five times that were tested, beyond which the endpoint log shows errors or warnings.
+Keep the capture call inside the function so one row is written per request. Capture is sized for 8 GB per endpoint per 24 hours; bursts up to about five times that work; beyond that the endpoint log shows errors or warnings.
 
 ## Test before publishing
 

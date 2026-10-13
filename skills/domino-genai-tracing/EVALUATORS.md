@@ -30,7 +30,7 @@ Rules:
 - If an evaluator raises, the SDK logs `Inline evaluation failed for evaluator, <name>` and records nothing for that trace. Let failures raise; do not return invented default scores such as 0.5, which would silently pollute the aggregates.
 - Evaluators run only in development. In a deployed agent (`DOMINO_AGENT_IS_PROD=true`) they are skipped; see "Production evaluation" below.
 - Both evaluators may be given; their results are merged (span results win on name clashes).
-- Results are tags on the **trace**, never on an individual span. When decorated functions nest, every evaluator in the call tree writes to the same trace; inner evaluators run first (when their span ends) and the outermost last, so a metric name shared between them keeps only the last value (verified: an inner `impact_score=7.0` was replaced by the outer `0.7`). Prefix metric names per function.
+- Results are tags on the **trace**, never on an individual span. When decorated functions nest, every evaluator in the call tree writes to the same trace; inner evaluators run first (when their span ends) and the outermost last, so a metric name shared between them keeps only the last value (an inner `impact_score=7.0` is replaced by the outer `0.7`). Prefix metric names per function.
 - Omit a metric when the field it needs is absent from `span.outputs`; a default such as `0.0` would be aggregated as a real score.
 
 Helpers used in the examples below:

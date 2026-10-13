@@ -1,8 +1,8 @@
 # Domino REST API reference
 
-Route index for the Domino Public API, verified against
+Route index for the Domino Public API as published at
 https://docs.domino.ai/api-specs/6.3/public-api.json and
-https://docs.domino.ai/api-specs/cloud/public-api.json (October 2026). Request bodies with
+https://docs.domino.ai/api-specs/cloud/public-api.json. Request bodies with
 their required fields live in the per-area files; this file is the map.
 
 ## Authentication and base URL

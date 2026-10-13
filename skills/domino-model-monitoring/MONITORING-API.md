@@ -4,7 +4,7 @@ Applies to Domino 6.3 and Domino Cloud. Every route below is in both public API 
 
 ## Authentication
 
-Use the same bearer authentication as the rest of the Domino API: in a run `$DOMINO_API_PROXY` with no header, or `$DOMINO_API_HOST` with `Authorization: Bearer $(curl -s http://localhost:8899/access-token)`; outside Domino the deployment URL with a Personal Access Token or service-account token. Verified with a bearer token on Domino Cloud 6.4 (`GET /model-monitor/v2/api/models` returned 200). The docs' "API token" page still describes the `X-Domino-Api-Key` header and old DMM keys; both are deprecated and not recommended.
+Use the same bearer authentication as the rest of the Domino API: in a run `$DOMINO_API_PROXY` with no header, or `$DOMINO_API_HOST` with `Authorization: Bearer $(curl -s http://localhost:8899/access-token)`; outside Domino the deployment URL with a Personal Access Token or service-account token. The docs' "API token" page still describes the `X-Domino-Api-Key` header and old DMM keys; both are deprecated and not recommended.
 
 ```bash
 TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: PAT or service-account token
@@ -136,4 +136,4 @@ if latest and latest["columnsDrifted"] > 0:
     print("retraining job", job.json()["job"]["id"], "started; drifted columns:", latest["columnsDrifted"])
 ```
 
-`POST /api/jobs/v1/jobs` requires only `projectId` and `runCommand` (spec, and verified live on Domino Cloud 6.4 on 2026-10-12: a job started with just those two fields and succeeded); optional `hardwareTier`, `environmentId`, `title` and others are documented in `domino-jobs`. Run this script as a scheduled Job after the daily check. Where the Model Monitor and the retraining project differ, give the service account access to both.
+`POST /api/jobs/v1/jobs` requires only `projectId` and `runCommand` (a job starts with just those two fields); optional `hardwareTier`, `environmentId`, `title` and others are documented in `domino-jobs`. Run this script as a scheduled Job after the daily check. Where the Model Monitor and the retraining project differ, give the service account access to both.

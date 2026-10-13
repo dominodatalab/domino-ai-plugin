@@ -6,7 +6,7 @@ agent can be traced with @add_tracing, scored by evaluators, and grouped into an
 evaluation run with DominoAgentContext (or DominoRun).
 
 Requirements: in the Domino Standard Environment, nothing (dominodatalab 2.2.0 ships the agents
-code; verified there with MLflow 3.3.2; do not install the `agents` extra, it downgrades MLflow's
+code and MLflow 3.3.2; do not install the `agents` extra, it downgrades MLflow's
 sub-packages to 3.2.0). In an environment not based on the DSE, at or below the DSE's versions:
     dominodatalab[data]==2.2.0
     mlflow==3.3.2

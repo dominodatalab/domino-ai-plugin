@@ -206,7 +206,7 @@ An incident-triage pipeline with four agents, evaluated under `DominoAgentContex
 3. **Resource**: matches responders by skills
 4. **Response**: drafts stakeholder communications
 
-**Where evaluator scores go.** The SDK writes every evaluator result as a tag on the **trace**, not on the span whose evaluator produced it. In a call tree of decorated functions the inner evaluators run first (when their spans end) and the outer one runs last, so a metric name used by two evaluators keeps only the last value (verified with 2.2.0: an inner `impact_score=7.0` was silently replaced by the outer `0.7`). Prefix each agent's metrics with the agent's name, as below, and keep the pipeline-level names distinct.
+**Where evaluator scores go.** The SDK writes every evaluator result as a tag on the **trace**, not on the span whose evaluator produced it. In a call tree of decorated functions the inner evaluators run first (when their spans end) and the outer one runs last, so a metric name used by two evaluators keeps only the last value (an inner `impact_score=7.0` is silently replaced by the outer `0.7`). Prefix each agent's metrics with the agent's name, as below, and keep the pipeline-level names distinct.
 
 ### Project structure
 

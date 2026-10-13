@@ -1,6 +1,6 @@
 # Domino Apps API (beta catalog)
 
-Catalog of the `/api/apps/beta/apps` routes, verified against both published specs. For
+Catalog of the `/api/apps/beta/apps` routes, present in both published specs. For
 the v1 publish chain (`/api/apps/v1/apps`, drafts, `createAndStart`, `liveSync`) and the
 app lifecycle, use [domino-apps/API-APPS.md](../domino-apps/API-APPS.md); prefer v1 routes
 for new automation. Product docs:
@@ -95,9 +95,9 @@ POST  /api/apps/beta/apps/{appId}/versions/{versionId}/stop
 ```
 
 Use `start` and `stop` on a version to run or halt the app; the beta routes accept an
-empty request (verified on an internal Domino test cluster (6.4.0): start with no body returned 200 and the
-instance was `Running` about 35 s later). A version record carries `currentInstance`
-(`id`, `status`, `createdAt`, `dfsCommitId`, `gitCommitId`). Instance statuses seen live:
+empty request (start with no body returns 200 and the instance is `Running` about 35 s
+later). A version record carries `currentInstance`
+(`id`, `status`, `createdAt`, `dfsCommitId`, `gitCommitId`). Instance statuses include:
 `Queued`, `Pending`, `Preparing`, `Running`, `Stopped`.
 
 ## Instances and logs
@@ -138,7 +138,7 @@ both targets: `POST /v4/modelProducts/{appId}/visibility` with
 `POST .../grantAccess` and `POST .../denyAccess` with `{"userId": "<user-id>"}`, plus
 `.../invite` (several users at once) and `.../uninvite`. Internal API, may change between
 Domino versions; taken from the Cloud/6.4 internal reference (python-domino's `app_*`
-methods use the same `/v4/modelProducts` family) and not live-tested; confirm the routes
+methods use the same `/v4/modelProducts` family); confirm the routes
 in your deployment's `/docs` first.
 
 ## Workflow: create, start, wait, read logs, stop

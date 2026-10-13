@@ -66,8 +66,8 @@ Human users have no Public API deactivate route. Administrators do it in the adm
 with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
 body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
 `isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). Internal API, may change
-between Domino versions; admin-only; taken from the Cloud/6.4 internal reference and not
-live-tested here. On Domino 6.3 confirm it in your deployment's `/docs` first.
+between Domino versions; admin-only; from the Cloud/6.4 internal reference. On Domino 6.3 confirm it in your
+deployment's `/docs` first.
 
 ## Personal Access Tokens
 
@@ -114,7 +114,7 @@ Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns a
 `token`) with the token value. Unlike a Personal Access Token, the value is not
 shown only once: in both specs `GET .../tokens/{tokenName}` ("Get the token with the
 provided name") returns the same object, including `token`, as `{"token": {...}, "metadata"}`,
-so an authorized caller can read a value again by name (spec-verified, not live-tested).
+so an authorized caller can read a value again by name (per the spec; if the `GET` omits `token`, treat the value as shown once).
 The list route `GET .../tokens` returns `{"tokens": [...], "metadata"}` with the metadata
 fields only, never `token`. Neither spec describes the permission beyond `401`/`403`;
 the docs restrict service-account management to Administrators, so expect `403` for

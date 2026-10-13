@@ -1,6 +1,6 @@
 # Legacy AI Gateway (Domino 6.3, only where enabled)
 
-Applies to Domino 6.3 **only where an administrator has explicitly enabled the AI Gateway**. It is not enabled by default in 6.3 and has been **removed from Domino Cloud**: on Cloud the Gateway LLMs UI, the `/api/aigateway/*` routes and the gateway audit trail do not exist (a live Cloud deployment returned 404 for `GET /api/aigateway/v1/endpoints` on 2026-10-12, and the Cloud public spec has no `/api/aigateway` path). Before using anything on this page, confirm the deployment is 6.3 (`GET $DOMINO_API_HOST/version`, with the bearer) and that the gateway is enabled: **Develop** > **Gateway LLMs** in the UI, or ask the administrator. The routes below are in the 6.3 spec whether or not the gateway is on, and how a disabled gateway answers them has not been observed (it may be 404, an error, or an empty list); a 404 from an in-run host can also mean the sidecar lacks the route (`domino-api-intro`, HOSTS.md), so retry the public deployment URL with a PAT before reading it as "off". If the deployment is not 6.3 or the gateway is not enabled, use SKILL.md Option A or B instead; do not try to enable the gateway.
+Applies to Domino 6.3 **only where an administrator has explicitly enabled the AI Gateway**. It is not enabled by default in 6.3 and has been **removed from Domino Cloud**: on Cloud the Gateway LLMs UI, the `/api/aigateway/*` routes and the gateway audit trail do not exist (Cloud returns 404 for `GET /api/aigateway/v1/endpoints`, and the Cloud public spec has no `/api/aigateway` path). Before using anything on this page, confirm the deployment is 6.3 (`GET $DOMINO_API_HOST/version`, with the bearer) and that the gateway is enabled: **Develop** > **Gateway LLMs** in the UI, or ask the administrator. The routes below are in the 6.3 spec whether or not the gateway is on, and a disabled gateway may answer them with 404, an error, or an empty list; a 404 from an in-run host can also mean the sidecar lacks the route (`domino-api-intro`, HOSTS.md), so retry the public deployment URL with a PAT before reading it as "off". If the deployment is not 6.3 or the gateway is not enabled, use SKILL.md Option A or B instead; do not try to enable the gateway.
 
 ## What it is
 
@@ -32,7 +32,7 @@ There is **no OpenAI-compatible base URL** for the legacy gateway and no `/api/a
 
 Endpoints are addressed by **name**, which must be unique on the deployment.
 
-Create body (required: `endpointName`, `endpointType`, `endpointPermissions`, `modelProvider`, `modelName`, `modelConfig`), taken from the 6.3 spec and not exercised against a live 6.3 deployment:
+Create body (required: `endpointName`, `endpointType`, `endpointPermissions`, `modelProvider`, `modelName`, `modelConfig`), from the 6.3 spec; if the call answers 400, confirm the body in your deployment's `/docs`:
 
 ```python
 import os

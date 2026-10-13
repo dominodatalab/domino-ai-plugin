@@ -125,7 +125,7 @@ If the policy enforces gating and required questions are unanswered, advance ste
 
 ## Approval Gating
 
-Each stage has designated approvers (organizations, or users when the policy allows). Approval requires one of them to sign off, in the UI or through the public API (both specs; spec-verified, with the list route read live):
+Each stage has designated approvers (organizations, or users when the policy allows). Approval requires one of them to sign off, in the UI or through the public API (both specs):
 
 - `GET /bundles/{bundleId}/approvals` lists every approval with its `id` (the `approvalId`), `stageApprovalId`, `approvers[]` and `status`: `PendingSubmission`, `PendingReview`, `Approved`, `ConditionallyApproved`, `PendingExpiration`, `Expired`.
 - `POST /rpc/publish-approval-event` with `{"bundleId", "policyId", "projectId", "approvalId", "eventType"}` transitions it; `eventType` is one of `RequestSubmitted`, `RequestCancelled`, `RequestApproved`, `RequestConditionalApproved`, `RequestRejected`, `FindingsApproved`, `PolicyReactivated`, `RevalidationRequired`, `RevalidationExpired`, `PolicyVersionUpgraded`. The caller must be one of the approval's approvers.

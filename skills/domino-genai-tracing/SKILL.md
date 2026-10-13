@@ -1,7 +1,7 @@
 ---
 name: domino-genai-tracing
 description: Trace and evaluate GenAI applications (LLM calls, agents, RAG pipelines, multi-step AI systems) in Domino with the Domino agents SDK, using the @add_tracing decorator, span and trace evaluators, DominoAgentContext / DominoRun evaluation runs with aggregated metrics, manual MLflow spans, and post-hoc or production scoring with search_traces, search_agent_traces and log_evaluation. Captures inputs, outputs, token usage, latency, tool calls and errors per span. Use when building or debugging agents and LLM apps on Domino, adding evaluators or LLM-as-judge scoring, comparing agent versions in Experiment Manager, or scoring the production traces of a deployed agent.
-compatibility: Domino 6.3 and Domino Cloud (agents SDK needs Domino 6.2+ and MLflow 3.2+; verified on the DSE as shipped with MLflow 3.3.2). Runs inside Domino executions, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set.
+compatibility: Domino 6.3 and Domino Cloud (agents SDK needs Domino 6.2+ and MLflow 3.2+; the DSE ships MLflow 3.3.2). Runs inside Domino executions, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set.
 ---
 
 # Domino GenAI Tracing

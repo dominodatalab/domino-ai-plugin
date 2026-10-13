@@ -45,8 +45,7 @@ for your data plane; ask your Domino administrator
 - Inside a run, volume, filesystem and snapshot operations work only on
   `DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT` with the `localhost:8899` access token as a
   bearer: `$DOMINO_API_PROXY` and the in-run `$DOMINO_API_HOST` return 404 for
-  `/remotefs/v1/*`, and the hostport without the header returns 401 (verified on an
-  internal Domino test cluster, 6.4.0). Outside Domino use the deployment URL with a PAT or service account
+  `/remotefs/v1/*`, and the hostport without the header returns 401. Outside Domino use the deployment URL with a PAT or service account
   token. File operations need the `/webvfs` prefix outside Domino or the
   `data-webvfs-service.domino-compute:80` host inside a run
   ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#files)).

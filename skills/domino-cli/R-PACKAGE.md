@@ -32,7 +32,7 @@ work.
 `username`, `password` and a `Y`/`N` into `domino login <host>`'s legacy interactive prompt
 (password prompted in RStudio or the console when omitted). The current CLI signs in through a
 browser or device code, and no product page documents the username and password prompt any
-more, so whether `domino.login()` still succeeds is unverified. Prefer the terminal login.
+more, so `domino.login()` may fail against the current CLI. Prefer the terminal login.
 
 ## Functions (all exported by `NAMESPACE`)
 

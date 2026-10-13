@@ -8,7 +8,7 @@ compatibility: Domino 6.3 and Domino Cloud. API calls need DOMINO_API_HOST; in a
 
 Applies to Domino 6.3 and Domino Cloud.
 
-A project holds the code, data links, artifacts and people for one piece of work; Apps, endpoints, Launchers and scheduled Jobs publish from it. REST and SDK details with verified bodies: [PROJECTS-API.md](./PROJECTS-API.md); the python-sdk catalog: [API-PROJECTS.md](../domino-python-sdk/API-PROJECTS.md).
+A project holds the code, data links, artifacts and people for one piece of work; Apps, endpoints, Launchers and scheduled Jobs publish from it. REST and SDK details with request bodies: [PROJECTS-API.md](./PROJECTS-API.md); the python-sdk catalog: [API-PROJECTS.md](../domino-python-sdk/API-PROJECTS.md).
 
 ## Project types
 

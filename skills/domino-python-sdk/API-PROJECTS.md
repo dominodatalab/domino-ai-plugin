@@ -21,8 +21,7 @@ filter client-side, or resolve one project by name with the Domino Internal API
 (returns the project with `id`, `name`, `owner`, `visibility`, `hardwareTierId`,
 `environmentName`, `requestingUserRole`, ...; 404 when there is none). It is what
 python-domino's `project_id` property calls; internal API, may change between Domino
-versions; verified on an internal Domino test cluster (6.4.0), so on Domino 6.3 confirm it
-in your deployment's `/docs`. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
+versions; on Domino 6.3 confirm it in your deployment's `/docs`. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
 Each project has `id`, `name`, `description`, `visibility`, `ownerId`, `ownerUsername`,
 `collaborators`, `isRestricted`, optional `billingTag` and `mainRepository`. The spec
 enum for `visibility` is lowercase (`public`, `searchable`, `private`); live (Domino
@@ -58,7 +57,7 @@ project_id = project["id"]
 
 Response: `{"project": {...}, "metadata": {...}}` with HTTP 200. A `mainRepository`
 of `{"uri": "https://github.com/org/repo", "serviceProvider": "github", "defaultRef": {"refType": "head"}}`
-creates a Git-based project (verified live; the server echoes `Head` and `Github`).
+creates a Git-based project (the server echoes `Head` and `Github`).
 
 ## Get a project
 
@@ -183,8 +182,8 @@ PUT /api/projects/beta/projects/{projectId}/results-settings      body: {"branch
 ```
 
 Response: `{"resultsSettings": {"branch"}, "metadata"}`. These settings concern Git-based
-projects. On a DFS project (internal Domino test cluster, 6.4.0) `GET` returned
-`400 an implementation is missing` while `PUT` returned 200, so expect `GET` to work only
+projects. On a DFS project `GET` returns `400 an implementation is missing` while `PUT`
+returns 200, so expect `GET` to work only
 on Git-based projects.
 
 ## Project settings and defaults
@@ -193,7 +192,7 @@ The Public API has no route for project settings (default hardware tier, environ
 On Domino Cloud, `POST /api/jobs/v1/projects/{projectId}/job-defaults` resolves the
 defaults a job would use ([API-JOBS.md](./API-JOBS.md#job-defaults-domino-cloud-only)).
 The Domino Internal API reads and writes them (internal API, may change between Domino
-versions; verified on an internal Domino test cluster (6.4.0); on Domino 6.3 confirm both
+versions; on Domino 6.3 confirm both
 routes in your deployment's `/docs` first):
 
 ```

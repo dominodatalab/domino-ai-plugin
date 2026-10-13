@@ -6,7 +6,7 @@ mode per [SKILL.md](./SKILL.md#authentication) before retrying.
 
 ## Error bodies
 
-The specs declare several error shapes and live deployments do not always use the
+The specs declare several error shapes and deployments do not always use the
 declared one, so read whichever of `errors`, `error` and `message` is present:
 
 | Shape | Where the spec declares it | Seen live |

@@ -127,9 +127,9 @@ a PVC with the same name in another Data Plane shows up as an addition).
 ## Internal API routes
 
 The Public API has no EDV routes. The Domino Internal API has the full set; every route here is
-**Internal API, may change between Domino versions**, verified against the 6.4.0 internal
-reference (`/docs`, `openapi-internal.json`) and not live-tested, because no EDV existed on the
-test deployment and registering one needs a labelled PVC. Registration, update and unregistration
+**Internal API, may change between Domino versions**, as documented in the 6.4.0 internal
+reference (`/docs`, `openapi-internal.json`); if a call answers 404 or 400, confirm the route and
+body in your deployment's `/docs`. Registration, update and unregistration
 are admin operations: document them, never run them from a user context.
 
 | Call (Internal API, may change between Domino versions) | Notes |

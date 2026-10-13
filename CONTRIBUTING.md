@@ -353,6 +353,18 @@ settings and every key of a trusted workspace's `.env`. Put such examples in a s
 list the file in `scripts/gemini-substitution.allow` with a reason when the braces are product
 syntax (Launcher `${param}` placeholders).
 
+### 12. State facts and instructions only, no provenance
+
+Skill content states facts and instructions only: no provenance (how, when or where something
+was verified, audits, reviews, test clusters). Put verification evidence in the PR description.
+A skill says what is true and what to do ("Starting a stopped Model API version returns 400;
+restart it in the UI"), never how that was learned ("our live test showed", "verified on an
+internal cluster", "the audit found"). Where real uncertainty changes what the agent should do,
+state it as reader guidance ("if this returns 404, confirm the route in your deployment's
+`/docs`"), not as a test log. Version facts stay as facts ("on Domino 6.4 the response is X"),
+and the labels "internal API, may change between Domino versions" and "on 6.3, confirm in your
+deployment's `/docs`" stay.
+
 ## Release branches, tags and backports
 
 ### Where PRs go

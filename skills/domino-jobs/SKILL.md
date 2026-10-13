@@ -65,7 +65,7 @@ Both specs (beta).
 
 ## Scheduled Jobs
 
-UI: **Jobs > Schedules > Schedule a Job**. API: `POST /v4/projects/{projectId}/scheduledjobs` (internal API, may change between Domino versions; no public route or SDK method), then GET, PUT (edit or pause via `isPaused`) and DELETE on `.../{scheduledJobKey}`. Body, firings and live-verified examples: [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md).
+UI: **Jobs > Schedules > Schedule a Job**. API: `POST /v4/projects/{projectId}/scheduledjobs` (internal API, may change between Domino versions; no public route or SDK method), then GET, PUT (edit or pause via `isPaused`) and DELETE on `.../{scheduledJobKey}`. Body, firings and examples: [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md).
 
 **Schedule** is a repeat interval or a **Quartz CronTrigger** expression, not crontab: six fields plus an optional year, seconds first, `?` in exactly one day field, in `timezoneId` (`0 0 0 * * ?` daily at 00:00, `0 0 9 ? * MON` Mondays at 09:00). Layout and special characters: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#quartz-cron-expressions).
 

@@ -1,6 +1,6 @@
 # Model serving lifecycle: worked requests
 
-Applies to Domino 6.3 and Domino Cloud. Every route here is in both public API specs unless marked (Cloud). Read calls were verified against Domino Cloud 6.4 on 2026-10-12; field names come from the spec schemas (`ModelApiCreationRequest`, `ModelApiVersionCreationRequest`, `ModelApiUpdateRequest`, `ModelApi`, `NewRegisteredModelV2`).
+Applies to Domino 6.3 and Domino Cloud. Every route here is in both public API specs unless marked (Cloud). Field names come from the spec schemas (`ModelApiCreationRequest`, `ModelApiVersionCreationRequest`, `ModelApiUpdateRequest`, `ModelApi`, `NewRegisteredModelV2`).
 
 ## Setup
 
@@ -62,7 +62,7 @@ body = {
     "environmentVariables": [{"key": "MODEL_PATH", "value": "models/gbm.pkl"}],
     "version": {
         "projectId": os.environ["DOMINO_PROJECT_ID"],
-        "commitId": commit_id,                    # the verified commit; omitting it takes the head, which can be stale
+        "commitId": commit_id,                    # the commit you synced; omitting it takes the head, which can be stale
         "source": {"type": "File", "file": "model.py", "function": "predict", "excludeFiles": ["data/"]},
         "logHttpRequestResponse": False,
         "monitoringEnabled": False,
@@ -77,7 +77,7 @@ version_id = max(versions, key=lambda v: v["number"])["id"]
 wait_version_running(model_api_id, version_id)
 ```
 
-Verified live on Domino Cloud 6.4 (2026-10-12): this body (with `replicas: 1` and no `hardwareTierId`) created the endpoint, which reached `Running` in about 2.5 minutes. Two things to know from that run: the response carried `hardwareTierId: "small-k8s"` rather than the tier flagged `isDefaultForModelApi`, so pass `hardwareTierId` explicitly; and an access token is created automatically but its value is not in the response (read it under **Settings** > **Invocation**).
+On Domino Cloud 6.4 this body (with `replicas: 1` and no `hardwareTierId`) creates the endpoint, which reaches `Running` in about 2.5 minutes. Two things to know: without `hardwareTierId` the response carries `hardwareTierId: "small-k8s"` rather than the tier flagged `isDefaultForModelApi`, so pass `hardwareTierId` explicitly; and an access token is created automatically but its value is not in the response (read it under **Settings** > **Invocation**).
 
 ## Create from a registered model
 
@@ -179,14 +179,14 @@ r = requests.put(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers
 r.raise_for_status()
 ```
 
-The PUT is accepted immediately (verified on Cloud 6.4: 200, `replicas` read back as the new value while the running version stayed `Running` untouched), but the docs say a scale change takes effect only after you restart the endpoint, and the public API has no restart route. The Domino Internal API does not give you one either: in the same live test `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` stopped the version (`{"status": "not_running"}`), and `POST /v4/models/{modelApiId}/{modelApiVersionId}/startModelDeployment` called right afterwards returned `400 Cannot start model version <id>. Current state is 'not_running'`, leaving the version stopped; `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` reports that state (all three internal API, may change between Domino versions, verified on Cloud 6.4 only; on 6.3 confirm them in your deployment's `/docs`). So stop-then-start is not a restart recipe. Restart from the endpoint page in the UI, or publish a new version, then confirm with `GET` (`replicas`, `hardwareTierId`) and the version's deployment status.
+The PUT is accepted immediately (200; `replicas` reads back as the new value while the running version stays `Running`), but the docs say a scale change takes effect only after you restart the endpoint, and the public API has no restart route. The Domino Internal API does not give you one either: `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` stops the version (`{"status": "not_running"}`), and `POST /v4/models/{modelApiId}/{modelApiVersionId}/startModelDeployment` called right afterwards returns `400 Cannot start model version <id>. Current state is 'not_running'`, leaving the version stopped; `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` reports that state (all three internal API, may change between Domino versions; on 6.3 confirm them in your deployment's `/docs`). So stop-then-start is not a restart recipe. Restart from the endpoint page in the UI, or publish a new version, then confirm with `GET` (`replicas`, `hardwareTierId`) and the version's deployment status.
 
 ## Stop and delete
 
 The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API". Live behaviour on Domino Cloud 6.4 (2026-10-12):
 
 - `DELETE` while a version is running returns `500 "Model API with id <id> is running"`. Stop the running version first.
-- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (internal API, may change between Domino versions; verified on Cloud 6.4, confirm on 6.3 in `/docs`); it returned `{"status": "not_running"}` and `activeVersion.deployment` disappeared from the public view. `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` (internal, same caveats) returns the same `{modelId, modelVersionId, status}` record.
+- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (internal API, may change between Domino versions; on 6.3 confirm it in `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` (internal, same caveats) returns the same `{modelId, modelVersionId, status}` record.
 - After a successful `DELETE` (200, empty body) the endpoint is gone from the caller's view: `GET` returns `404 No model API found` and it no longer appears in list results, with or without filters. Do not expect to read it back with `isArchived: true`; export the logs and settings you need before deleting.
 
 ```python
@@ -235,9 +235,9 @@ requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}", hea
 requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}/modelapis", headers=headers).json()
 ```
 
-Verified on Domino Cloud 6.4 (2026-10-12): `PATCH` with `description` and `discoverable` returns 200 and the description persists, but `GET /api/registeredmodels/v1/{modelName}` returns neither `discoverable` nor aliases; its keys are `name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `createdAt`, `updatedAt`, `requestingUserAccess`. Aliases live in MLflow: read them with `GET /api/2.0/mlflow/registered-models/get?name=...` (`aliases`) on the deployment URL with the same bearer token, or with the MLflow client (see `domino-experiment-tracking`).
+`PATCH` with `description` and `discoverable` returns 200 and the description persists, but `GET /api/registeredmodels/v1/{modelName}` returns neither `discoverable` nor aliases; its keys are `name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `createdAt`, `updatedAt`, `requestingUserAccess`. Aliases live in MLflow: read them with `GET /api/2.0/mlflow/registered-models/get?name=...` (`aliases`) on the deployment URL with the same bearer token, or with the MLflow client (see `domino-experiment-tracking`).
 
-`mlflowSource` takes `experimentRunId` (required) plus `artifactPath` or `loggedModelId`. With an MLflow 3 client, `log_model` stores the model as a LoggedModel (`m-<id>`, `mlflow.last_logged_model()` or the `model_id` on the returned model info) rather than as a run artifact, so pass `loggedModelId`; verified on an internal Domino test cluster (6.4.0, MLflow 3.3.2), `artifactPath: "model"` also returned 200 but the version pointed at a nonexistent run artifact and `mlflow.pyfunc.load_model` failed, while the `loggedModelId` version loaded. Use `artifactPath` only for models logged as run artifacts by MLflow 2 clients. `huggingFaceSource` takes `modelId` (required), `modelRevision`, `huggingFaceToken`. `sourceType` is `mlflow` or `huggingface` and names which of the two you filled in. List with `GET /api/registeredmodels/v2?projectId=...&maxResults=25`; the response's `metadata.nextPageToken` goes into the next request's `pageToken` query parameter until it is absent. `POST /api/registeredmodels/v1/{modelName}/versions` (`description`, `experimentRunId`, `artifact`) still exists but is deprecated since 6.2.1.
+`mlflowSource` takes `experimentRunId` (required) plus `artifactPath` or `loggedModelId`. With an MLflow 3 client, `log_model` stores the model as a LoggedModel (`m-<id>`, `mlflow.last_logged_model()` or the `model_id` on the returned model info) rather than as a run artifact, so pass `loggedModelId`: with MLflow 3.3.2, `artifactPath: "model"` also returns 200 but the version points at a nonexistent run artifact and `mlflow.pyfunc.load_model` fails, while the `loggedModelId` version loads. Use `artifactPath` only for models logged as run artifacts by MLflow 2 clients. `huggingFaceSource` takes `modelId` (required), `modelRevision`, `huggingFaceToken`. `sourceType` is `mlflow` or `huggingface` and names which of the two you filled in. List with `GET /api/registeredmodels/v2?projectId=...&maxResults=25`; the response's `metadata.nextPageToken` goes into the next request's `pageToken` query parameter until it is absent. `POST /api/registeredmodels/v1/{modelName}/versions` (`description`, `experimentRunId`, `artifact`) still exists but is deprecated since 6.2.1.
 
 ## python-domino equivalents
 

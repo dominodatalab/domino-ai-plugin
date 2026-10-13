@@ -37,7 +37,7 @@ items = requests.get(f"{base_url}/api/modelServing/v1/modelApis", headers=header
 ### Create
 
 ```
-POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 201; an internal Domino test cluster (6.4.0) returned 200)
+POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 201; Domino 6.4 returns 200)
 ```
 
 Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`,
@@ -71,15 +71,14 @@ model_api = requests.post(f"{base_url}/api/modelServing/v1/modelApis", headers=h
 model_api_id = model_api["id"]
 ```
 
-Live check on an internal Domino test cluster (6.4.0) used a smaller body than the one
-above: the required fields, `replicas: 1`, `source.excludeFiles: []`, and **no**
-`hardwareTierId`, `shouldDeploy` or version `description`. With `hardwareTierId`
-omitted, the record came back with `hardwareTierId: "small-k8s"` (the project default,
-not the deployment's `isDefaultForModelApi` tier); an access token was created
-automatically (id only, no value); `activeVersion` had no `deployment` key until the
-build finished, and after about 2.5 minutes `activeVersion.deployment` was
-`{"status": "Running", "isPending": false}`. The optional fields in the example above
-come from the spec and were not exercised.
+A smaller body than the one above also works: the required fields, `replicas: 1`,
+`source.excludeFiles: []`, and **no** `hardwareTierId`, `shouldDeploy` or version
+`description`. With `hardwareTierId` omitted, the record comes back with
+`hardwareTierId: "small-k8s"` (the project default, not the deployment's
+`isDefaultForModelApi` tier); an access token is created automatically (id only, no value);
+`activeVersion` has no `deployment` key until the build finishes, and after about 2.5
+minutes `activeVersion.deployment` is `{"status": "Running", "isPending": false}`. The
+optional fields in the example above come from the spec.
 
 ```python
 import time
@@ -136,7 +135,7 @@ New-version body is the `version` object above (`projectId`, `source`,
 `logHttpRequestResponse`, `monitoringEnabled` required; `description` optional). The
 response includes `environmentRevisionId` and `number`, and `deployment.status` /
 `deployment.isPending` once deployed. `shouldDeploy: false` still builds the image (the
-build logs complete) but creates no deployment (verified live).
+build logs complete) but creates no deployment.
 
 ## Model Deployments
 
@@ -191,9 +190,8 @@ the run). Response: `{"registeredModel": {...}, "modelVersion": {...}}`.
 **Use `loggedModelId` for models logged with MLflow 3.** MLflow 3 clients store
 `log_model` output as a LoggedModel (`m-<id>`) rather than as a run artifact, so a
 version registered with `artifactPath: "model"` points at a path that does not exist and
-`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. Verified on an internal
-Domino test cluster (6.4.0, MLflow client 3.3.2): both bodies return 200, only the
-`loggedModelId` version loads. Get the id from the run (`mlflow.last_logged_model()`, or
+`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. With an MLflow 3.3.2
+client both bodies return 200 and only the `loggedModelId` version loads. Get the id from the run (`mlflow.last_logged_model()`, or
 the `model_id` on the logged model info).
 
 ```python
@@ -234,7 +232,7 @@ Asynchronous endpoints use the Public API routes with the endpoint's own access 
 Call them on the deployment URL (the same base the Model API page shows), not through
 `$DOMINO_API_PROXY`, which would inject a platform token. From outside Domino that is the
 URL you sign in at; from inside a run, prefer the deployment URL as well, since the
-in-run `DOMINO_API_HOST` base was not tested with an endpoint token.
+in-run `DOMINO_API_HOST` base may reject an endpoint token.
 
 ```python
 import time

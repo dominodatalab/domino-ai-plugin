@@ -78,9 +78,9 @@ env = requests.post(f"{base_url}/api/environments/v2/environments", headers=head
 }).json()["environment"]
 ```
 
-Verified on an internal Domino test cluster (6.4.0) with this body: 200, the record came
-back with `latestRevision.status: "Queued"` and `selectedRevision: null`, and the build
-reached `Succeeded` in about two minutes. The Public API does not expose a base image
+With this body the server answers 200, the record comes back with
+`latestRevision.status: "Queued"` and `selectedRevision: null`, and the build reaches
+`Succeeded` in about two minutes. The Public API does not expose a base image
 URI; copy one from an existing environment's details page (the DSE image) or your
 registry. `PUT .../description` works, but the description is not returned by the
 Public `GET`.
@@ -99,7 +99,7 @@ env = requests.post(f"{base_url}/api/environments/beta/environments", headers=he
 ```
 
 Duplicate an existing environment instead (either target; nothing else in the body).
-Verified live: the copy is named "Duplicate of <name>" and reuses the source's built
+The copy is named "Duplicate of <name>" and reuses the source's built
 revision, so no new build runs.
 
 ```python
@@ -125,7 +125,7 @@ DELETE /api/environments/v1/environments/{environmentId}
 ```
 
 A soft archive: the response is the environment with `archived: true`, and `GET` still
-returns it (verified live).
+returns it.
 
 ## Revisions
 
@@ -136,7 +136,7 @@ PATCH /api/environments/beta/environments/{environmentId}/revisions/{revisionId}
 ```
 
 **`image` is required on both revision routes**: without it the server returns
-`400 image is required` (verified live on both routes), even though the schema marks it
+`400 image is required` on both routes, even though the schema marks it
 optional. Pass the base image URI the environment already uses. The body is a complete
 definition, not a delta: no field inherits from the previous revision, so send the full
 `dockerfileInstructions`, the scripts and `workspaceTools` you want to keep (copy
@@ -175,7 +175,7 @@ rev = requests.post(f"{base_url}/api/environments/v2/environments/{env_id}/revis
 
 Poll `GET /api/environments/v1/environments/{environmentId}` and read
 `environment.latestRevision.status`. The spec enum is lowercase (`queued`, `starting`,
-`pulling`, `building`, `pushing`, `succeeded`, `failed`, `killed`) but an internal Domino test cluster (6.4.0)
+`pulling`, `building`, `pushing`, `succeeded`, `failed`, `killed`) but Domino 6.4
 returns capitalized values (`Succeeded`, `Failed`, `Killed`), so compare
 case-insensitively. `latestRevision` is the newest build; `selectedRevision` is the one
 executions use, and the two differ when the newest build failed or was killed.

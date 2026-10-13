@@ -16,8 +16,7 @@ Follow [domino-api-intro](../domino-api-intro/SKILL.md#authentication). Two base
 - `remotefs_url` for `/remotefs/v1/*` volume, filesystem, snapshot and grant operations.
   **Inside a run these are reachable only on `DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT`**
   (the volumes API page reserves the variable for these operations) **and only with an
-  explicit `Authorization: Bearer`**. Verified from a Job on an internal Domino test
-  cluster (6.4.0): the same `GET /remotefs/v1/volumes` returned 404 through
+  explicit `Authorization: Bearer`**: the same `GET /remotefs/v1/volumes` returns 404 through
   `$DOMINO_API_PROXY` (with or without a header) and through the in-run
   `$DOMINO_API_HOST`, 401 `Authorization header not found` on the hostport without a
   header, and 200 on the hostport (an in-cluster `http://host:port` value; use the
@@ -114,9 +113,9 @@ POST  /remotefs/v1/rpc/delete-volume                     body: {"volumeId": "...
 POST  /remotefs/v1/rpc/bulk-attach-volumes-to-project, /rpc/bulk-copy-volumes-to-project
 ```
 
-The spec lists 204 for the attach, detach, mark and restore RPCs; on an internal Domino
-test cluster (6.4.0) all four returned 200 with the volume record, and `delete-volume`
-returned 204 (volume and its snapshot 404 afterwards). Accept either.
+The spec lists 204 for the attach, detach, mark and restore RPCs; in practice
+all four return 200 with the volume record, and `delete-volume`
+returns 204 (volume and its snapshot 404 afterwards). Accept either.
 
 ```python
 requests.post(f"{remotefs_url}/remotefs/v1/rpc/attach-volume-to-project", headers=remotefs_headers,
@@ -223,7 +222,7 @@ File operations run on a different host than volume operations
 
 - Outside a Domino execution: prefix the path with `/webvfs` on the deployment URL, for
   example `GET https://<deployment>/webvfs/remotefs/v1/volumes/{id}/files?path=raw`, with
-  your PAT or service account token. Verified live: `path=` (empty) lists the root and
+  your PAT or service account token. `path=` (empty) lists the root and
   `path=/` returns `400 invalid path input`; without the prefix the route is 404. Rows
   look like `{"name": {"label", "isDirectory"}, "size": {"label", "sizeInBytes"}, "lastModified"}`,
   and `/files/raw/{path}` returns the file body.
@@ -250,10 +249,9 @@ requests.post(f"{base_url}/api/jobs/v1/jobs", headers=headers, json={
 })
 ```
 
-Verified live: the job mounted the volume read-write at `/domino/netapp-volumes/<name>`
-(DFS project) with snapshots under `/domino/netapp-volumes/snapshots/<name>`, and wrote
-to it. Adding `"snapshotNetAppVolumesOnCompletion": true` (snapshot every mounted volume
-when the job ends) depends on deployment configuration: on the test cluster it returned
+The job mounts the volume read-write at `/domino/netapp-volumes/<name>` (DFS project)
+with snapshots under `/domino/netapp-volumes/snapshots/<name>`, and can write to it. Adding `"snapshotNetAppVolumesOnCompletion": true` (snapshot every mounted volume
+when the job ends) depends on deployment configuration: where the flag is off it returns
 `400 feature flag EnableDominoNetAppSnapshotsOnExecutionCompletion is disabled for user`.
 Send it only where an administrator has enabled that flag, and fall back to
 `POST /remotefs/v1/snapshots` from the job's last step otherwise.

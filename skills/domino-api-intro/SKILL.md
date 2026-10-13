@@ -36,8 +36,8 @@ Settings > User environment variables**) for a personal credential, injected int
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
 share. Set them in the UI or with the Domino Internal API below (no Public API or
-python-domino route; may change between Domino versions; verified on an internal Domino
-test cluster (6.4.0); on 6.3 confirm the routes in your deployment's `/docs`). When an
+python-domino route; may change between Domino versions; on 6.3 confirm the routes in
+your deployment's `/docs`). When an
 agent stores a secret for the user it writes it with these routes and confirms by
 **name only**: the `GET`s return values, so never echo them into a reply or a log. Never
 call the wipe-all `DELETE /v4/users/environmentVariables` unless the user explicitly asks

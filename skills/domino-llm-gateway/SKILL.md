@@ -25,8 +25,8 @@ The extension injects **nothing** into a Workspace: no URL, no token, no `ANTHRO
 
 Send `Authorization: Bearer <token>` on every request.
 
-- **Inside a Domino Workspace, Job or App:** read the access token from `$DOMINO_API_PROXY/access-token` (the sidecar at `http://localhost:8899/access-token`). It is short-lived, so re-read it before every request instead of caching it in a long-running process. Verified live.
-- **Outside Domino (laptop, CI):** a Domino bearer such as a Personal Access Token in a variable the user creates, for example `LLM_GATEWAY_TOKEN`. A Domino access token worked from a laptop in testing; a PAT and the gateway's own tokens (prefix `dgw_`, issued by an administrator) are unverified, and a gateway token may not pass the App login redirect at all.
+- **Inside a Domino Workspace, Job or App:** read the access token from `$DOMINO_API_PROXY/access-token` (the sidecar at `http://localhost:8899/access-token`). It is short-lived, so re-read it before every request instead of caching it in a long-running process.
+- **Outside Domino (laptop, CI):** a Domino bearer such as a Personal Access Token in a variable the user creates, for example `LLM_GATEWAY_TOKEN`. A Domino access token works from a laptop; a PAT or one of the gateway's own tokens (prefix `dgw_`, issued by an administrator) may be answered with the App login redirect or 401, in which case use a Domino access token.
 - Legacy user API keys are deprecated and not used. The Anthropic path needs the bearer in `Authorization`; a credential sent only as `x-api-key` is treated as no credential.
 
 ```python
@@ -66,7 +66,7 @@ A **302 to the Domino login page** (HTML) is a missing, malformed or expired bea
 
 ## Coding assistants through the gateway
 
-Where the extension is installed, offer the user the choice of routing the assistant through the gateway (its calls then fall under the gateway's grants, budgets and guardrails) or keeping the vendor sign-in; never route by default. Claude Code through the gateway is verified live: [CODING-ASSISTANTS.md](./CODING-ASSISTANTS.md).
+Where the extension is installed, offer the user the choice of routing the assistant through the gateway (its calls then fall under the gateway's grants, budgets and guardrails) or keeping the vendor sign-in; never route by default. Claude Code through the gateway: [CODING-ASSISTANTS.md](./CODING-ASSISTANTS.md).
 
 ## What the administrator configures
 

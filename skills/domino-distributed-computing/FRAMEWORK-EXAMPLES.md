@@ -68,7 +68,7 @@ Never print `conf.getAll()` values, `spark.hadoop.*` settings or `os.environ` wh
 
 ### Project-wide Spark settings
 
-Settings that should apply to every on-demand cluster in a Project live in **Settings > Integrations > Domino managed on-demand cluster**, or in the Project's Spark config over the Internal API (internal API, may change between Domino versions; live-verified on Domino 6.4, confirm on 6.3 in your deployment's `/docs`). `onDemandFreeFormConfig` is the free-form box: one `key value` per line.
+Settings that should apply to every on-demand cluster in a Project live in **Settings > Integrations > Domino managed on-demand cluster**, or in the Project's Spark config over the Internal API (internal API, may change between Domino versions; on 6.3 confirm in your deployment's `/docs`). `onDemandFreeFormConfig` is the free-form box: one `key value` per line.
 
 ```python
 import os, requests

@@ -35,15 +35,15 @@ The attachments API endpoint is `POST /bundles/{bundleId}/attachments` with body
 
 | `type` | What it links | `identifier` object |
 |--------|---------------|---------------------|
-| `ModelVersion` | A registered model version | `{"name": "<registered model name>", "version": <int>}` (verified below) |
-| `Report` | A file in the project repository (git or DFS) | `{"branch", "commit", "source": "git" or "DFS", "filename"}` (verified below) |
-| `DatasetSnapshotFile` | A file in a Domino Dataset snapshot | `{"datasetId", "snapshotId", "filename"}` (seen on a live deployment; the UI also adds `datasetName`, `snapshotVersion`, `snapshotCreationTime`) |
+| `ModelVersion` | A registered model version | `{"name": "<registered model name>", "version": <int>}` (example below) |
+| `Report` | A file in the project repository (git or DFS) | `{"branch", "commit", "source": "git" or "DFS", "filename"}` (example below) |
+| `DatasetSnapshotFile` | A file in a Domino Dataset snapshot | `{"datasetId", "snapshotId", "filename"}` (the UI also adds `datasetName`, `snapshotVersion`, `snapshotCreationTime`) |
 | `Endpoint` | A model endpoint (model API) | Not documented in the spec; see below |
 | `NetAppVolumeSnapshotFile` | A file in a NetApp Volume snapshot | Not documented in the spec; see below |
 | `FlowArtifact` | A Domino Flow artifact | Not documented in the spec; see below |
 | `FlowArtifactFile` | A file inside a Flow artifact | Not documented in the spec; see below |
 
-The spec types `identifier` as an opaque object, so the shapes above come from attachments observed on live deployments. The spec's `GET /attachment-overviews` filter parameters name the identifier keys it knows: `identifier.name`, `identifier.version` (model versions); `identifier.branch`, `identifier.commit`, `identifier.source`, `identifier.filename` (reports); `identifier.datasetId`, `identifier.snapshotId` (dataset snapshot files); `identifier.volumeId` (NetApp Volume snapshot files); `identifier.artifactId`, `identifier.executionName`, `identifier.executionWorkflowName`, `identifier.executionWorkflowVersion` (Flow artifacts). For a type whose full shape is not listed above, attach one example through the Domino UI (bundle > **Attachments**), read it back with `GET /bundles/{bundleId}` (the `attachments[]` array carries `type` and `identifier`), and reuse that shape. Do not guess field names.
+The spec types `identifier` as an opaque object, so the shapes above are the ones Domino itself writes. The spec's `GET /attachment-overviews` filter parameters name the identifier keys it knows: `identifier.name`, `identifier.version` (model versions); `identifier.branch`, `identifier.commit`, `identifier.source`, `identifier.filename` (reports); `identifier.datasetId`, `identifier.snapshotId` (dataset snapshot files); `identifier.volumeId` (NetApp Volume snapshot files); `identifier.artifactId`, `identifier.executionName`, `identifier.executionWorkflowName`, `identifier.executionWorkflowVersion` (Flow artifacts). For a type whose full shape is not listed above, attach one example through the Domino UI (bundle > **Attachments**), read it back with `GET /bundles/{bundleId}` (the `attachments[]` array carries `type` and `identifier`), and reuse that shape. Do not guess field names.
 
 `POST /bundles/{id}/register-endpoint` ("Set monitored model as governed": required `approver`, `assignee`, `artifactID`, `evidenceID`, `endpointVersionID`, `isGoverned`) and `PUT /bundles/{id}/update-endpoint/{endpointID}` ("Update monitored model entry") record a monitored model endpoint as governed evidence under an approval; they are not an alternative way to add an `Endpoint` attachment.
 

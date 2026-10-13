@@ -70,7 +70,7 @@ Model Registry notes:
   Domino Standard Environments; do not override the URI. A custom environment needs `mlflow`.
 - `mlflow.pyfunc.load_model` returns a `predict(DataFrame)` wrapper for every MLflow flavor; use
   the flavor loader (`mlflow.sklearn.load_model(...)`) when you need the native object.
-- Aliases are an MLflow registry feature verified on Domino Cloud; on Domino 6.3 pin a version
+- Aliases are an MLflow registry feature available on Domino Cloud; on Domino 6.3 pin a version
   number, or confirm alias support first as described in
   [MODEL-REGISTRY.md](../domino-experiment-tracking/MODEL-REGISTRY.md), which also covers
   registering a model, versions, tags and the Domino registry routes.

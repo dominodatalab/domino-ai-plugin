@@ -15,8 +15,8 @@ The Tags API (`/api/taxonomy/v1`) manages two metadata systems:
 - **Properties**: typed metadata fields (`text`, `number`, `date`, `select`, ...), each
   holding one value per entity.
 
-Every route below is in both published Public API specs; bodies and parameters were
-verified against them (October 2026). Docs:
+Every route below, with its bodies and parameters, is in both published Public API specs.
+Docs:
 https://docs.domino.ai/cloud/reference/api/tags-api,
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/knowledge-management/tags,
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/knowledge-management/properties.

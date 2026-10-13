@@ -41,9 +41,8 @@ done
 
 `sourceTagIds` and `targetTagId` are required. Every assignment on the source tags moves
 to the target and the source tags are deleted; the docs state merging cannot be undone.
-Merge **one source tag per call**: on an internal Domino test cluster (6.4.0), a single
-call with two source tags that sat on the same entity returned `500 failed to merge
-tags`, while one source at a time succeeded (`reassignedEntities` is 0 when the entity
+Merge **one source tag per call**: a single call with two source tags that sit on the same
+entity returns `500 failed to merge tags`, while one source at a time succeeds (`reassignedEntities` is 0 when the entity
 already carried the target).
 
 ## Copy routes (internal, service-account only)
@@ -53,7 +52,7 @@ already carried the target).
 specs describe them as "Internal, service-account only" and say they copy the source's
 assignments **replacing the target's existing tags** (or values). Do not offer them as a
 user workflow: with a user token both return
-`403 insufficient permissions: requires service account` (verified live), and a
+`403 insufficient permissions: requires service account`, and a
 service-account call against an entity that already has tags or values wipes them. To give a new project the same
 classification as an existing one, create it from a Project Template (tags and property
 values carry over) or re-apply the tags with `POST /rpc/tag-entity`.

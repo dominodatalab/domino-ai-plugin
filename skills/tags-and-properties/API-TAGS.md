@@ -14,7 +14,7 @@ All examples assume `BASE` and `H` from [SKILL.md](./SKILL.md#configuration).
 | Concept | Description |
 |---------|-------------|
 | **Namespace** | The key of a tag pair (`Indication`, `Analysis`). Fields: `label`, `allowMultipleAssignments`, `status` (`active`, `deprecated`), `tagCount`, `entityCount`. |
-| **Tag** | A value inside a namespace, optionally nested with `parentId`. Fields: `id`, `label`, `description`, `namespaceId`, `namespaceLabel`, `parentId`, `status`, `children`, `entityCount`; the schema also lists an optional `fullPath` (array of ancestor labels) that live responses have been seen to omit. |
+| **Tag** | A value inside a namespace, optionally nested with `parentId`. Fields: `id`, `label`, `description`, `namespaceId`, `namespaceLabel`, `parentId`, `status`, `children`, `entityCount`; the schema also lists an optional `fullPath` (array of ancestor labels) that responses may omit. |
 | **Entity** | A taggable Domino object identified by `entityType` + `entityId`. Types: [SKILL.md](./SKILL.md#which-path-applies). |
 | **Property / property value** | Typed field and its per-entity value; see the property files. |
 | **`allowMultipleAssignments`** | `true`: an entity can carry several tags from the namespace. `false` (default): a new tag from the namespace replaces the existing one. |
@@ -84,8 +84,8 @@ curl -s -H "$H" "$BASE/tags?namespaceId=<ns>&rootOnly=true&limit=50"
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"label":"SDTM","namespaceId":"<ns>","description":"Study Data Tabulation Model","parentId":"<parent-tag>"}' "$BASE/tags"
 # 201 -> tag record (id, label, description, namespaceId, parentId, status, entityCount, ...).
-#        The schema lists an optional fullPath; on an internal Domino test cluster (6.4.0) neither this response nor
-#        GET /tags/{id} included it, so build the path from parentId or use /tags/autocomplete.
+#        The schema lists an optional fullPath; neither this response nor GET /tags/{id} includes it,
+#        so build the path from parentId or use /tags/autocomplete.
 
 # Get one
 curl -s -H "$H" "$BASE/tags/<id>"
@@ -111,7 +111,7 @@ curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"entityType":"project","entityId":"<project-id>","tagIds":["<tag-1>","<tag-2>"]}' \
   "$BASE/rpc/tag-entity"
 # 201 -> {"entityId","entityType","entityName","tags":[{"id","label", ...}]}
-#        (the schema also lists namespace and fullPath on each tag; a live response carried id and label only)
+#        (the schema also lists namespace and fullPath on each tag; the response carries id and label only)
 # Several tags from one namespace in a single call need allowMultipleAssignments=true on
 # that namespace; otherwise send one request per tag and the newest replaces the previous.
 
@@ -141,7 +141,7 @@ curl -s -H "$H" "$BASE/tags/<tag-id>/entities?entityTypes=project&includeDescend
 curl -s -H "$H" "$BASE/entities?tagIds=<tag-1>&tagIds=<tag-2>&entityTypes=project&entityTypes=app"
 # 200 -> {"data":[{"entityId","entityName","ownerUsername","taggedAt","tags":[{"id","label","namespace"}], ...}],
 #         "meta":{"pagination":{"total","limit","offset"}}}
-#        (the schema also lists entityType per item and fullPath per tag; a live response had neither)
+#        (the schema also lists entityType per item and fullPath per tag; the response has neither)
 ```
 
 `includeDescendants=true` also matches entities tagged with child tags.
@@ -167,7 +167,7 @@ curl -s -H "$H" "$BASE/config"
 # {"maxDepth":5,"maxLabelLength":128,"maxSelectAllowedValuesCount":100,"maxSelectAllowedValueLength":2048}
 ```
 
-Values above are from an internal Domino test cluster (6.4.0); read them at startup rather than
+Values above are examples from one deployment; read them at startup rather than
 hardcoding.
 
 ## Troubleshooting

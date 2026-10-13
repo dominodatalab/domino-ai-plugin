@@ -1,7 +1,7 @@
 ---
 name: domino-trace-setup
 description: Set up GenAI tracing for an LLM or agent application in Domino by checking the Domino SDK and MLflow requirements (the DSE needs nothing installed), then adding a tracing_setup.py helper, span evaluators, a config.yaml, and @add_tracing / DominoAgentContext wiring. Use when the user asks to add tracing, observability, or evaluation to an agent or LLM app running on Domino.
-compatibility: Domino 6.3 and Domino Cloud (agents SDK needs Domino 6.2+ and MLflow 3.2+; verified on the DSE as shipped with MLflow 3.3.2). Runs inside a Domino Workspace or Job, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set.
+compatibility: Domino 6.3 and Domino Cloud (agents SDK needs Domino 6.2+ and MLflow 3.2+; the DSE ships MLflow 3.3.2). Runs inside a Domino Workspace or Job, where MLFLOW_TRACKING_URI and DOMINO_API_HOST are set.
 ---
 
 # Set Up Domino GenAI Tracing
@@ -28,7 +28,7 @@ so the judge shares it; through the gateway, model names are aliases.
 ## Steps
 
 1. **Check requirements.** In the Domino Standard Environment install nothing: it ships the
-   agents code (`dominodatalab` 2.2.0) and MLflow 3.3.2, verified as shipped; one harmless
+   agents code (`dominodatalab` 2.2.0) and MLflow 3.3.2; one harmless
    `Failed to end span ... '_metrics'` warning per trace is expected. Do not add the `agents`
    extra there (it downgrades MLflow sub-packages to 3.2.0). Needs `dominodatalab` 2.1.0+ and
    MLflow 3.2+:

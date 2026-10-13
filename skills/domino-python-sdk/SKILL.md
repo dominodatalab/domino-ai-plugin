@@ -23,7 +23,7 @@ SDK, the REST API, CI/CD integration, or custom tooling. Read
 
 Other Domino skills show REST, not python-domino; the SDK wraps older routes and lags the
 Public API. Every method cited here exists in `domino/domino.py` on `master` of
-https://github.com/dominodatalab/python-domino (checked against 2.2.0).
+https://github.com/dominodatalab/python-domino (release 2.2.0).
 
 ## Installation
 
@@ -86,7 +86,7 @@ environments, Model APIs, apps and CI/CD: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md).
 
 ## REST API
 
-Route catalog with spec-verified request bodies: [API-REFERENCE.md](./API-REFERENCE.md).
+Route catalog with request bodies from the specs: [API-REFERENCE.md](./API-REFERENCE.md).
 Per-area files:
 
 | Guide | Description |

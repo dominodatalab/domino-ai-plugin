@@ -79,7 +79,7 @@ The OpenAI Responses API is also supported. Keep the URL in a Domino environment
 
 **LLM Gateway 2.0**: the successor to the legacy AI Gateway, one OpenAI-compatible base URL in front of external providers and Domino-hosted models; an extension an administrator installs and updates separately from Domino. Calling it, coding assistants through it and the administrator's setup: `domino-llm-gateway` skill.
 
-**Legacy AI Gateway** (6.3 only, where enabled): [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md) covers the Gateway LLMs UI, the MLflow Deployment Client calls it supports, the `/api/aigateway/v1` routes with verified bodies, and the audit download.
+**Legacy AI Gateway** (6.3 only, where enabled): [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md) covers the Gateway LLMs UI, the MLflow Deployment Client calls it supports, the `/api/aigateway/v1` routes and bodies, and the audit download.
 
 **Migrating off the legacy AI Gateway** (its MLflow Deployment Client calls and `/api/aigateway/` URLs fail on Cloud and where the gateway is disabled): [LEGACY-AI-GATEWAY.md](./LEGACY-AI-GATEWAY.md#migrating-away).
 

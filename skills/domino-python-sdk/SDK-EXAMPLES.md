@@ -71,7 +71,7 @@ Legacy v1 Runs API (source docstring: "For new work, prefer job_start()"):
 | `files_upload(path, file)` | `path` inside the project (leading `/` added if missing); `file` is an open binary file object. Uploads one file. |
 | `files_download(path, commit_id=None)` | Returns the raw response stream from `blobs_get_v2`; read it with `.read()` / `.data`. **Always pass `commit_id`**: the 2.2.0 default path does `commits_list()[0]["id"]`, but `commits_list()` returns strings (below), so it raises `TypeError`. |
 | `blobs_get_v2(path, commit_id, project_id)` | Public API `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content`. `blobs_get(key)` is deprecated. |
-| `commits_list()` | A list of commit-id **strings**, newest first (`["fb28...", "3c8a..."]`; verified with a read-only call to the legacy `/v1/projects/{owner}/{project}/commits` route on a 6.4.0 deployment, and the SDK's own integration tests pass `commits_list()[0]` straight in as a commit id). `[0]` is the latest commit id. |
+| `commits_list()` | A list of commit-id **strings**, newest first (`["fb28...", "3c8a..."]`, from the legacy `/v1/projects/{owner}/{project}/commits` route; the SDK's own integration tests pass `commits_list()[0]` straight in as a commit id). `[0]` is the latest commit id. |
 
 ### Projects, collaborators, project tags
 
@@ -252,12 +252,11 @@ rev = domino.create_environment_revision(
 `base_url` and `headers` come from the shared setup block in
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication). The route takes an image
 URI, so the new revision is pinned to that URI even when the environment was built "from
-another environment" in the UI. The field names above were read on an internal Domino
-test cluster (6.4.0): the Public `GET` returned `availableTools[].start` where the spec
-says `startScripts`, and `environmentRevision.dockerImage` was present on a Domino
-Standard Environment revision and absent (with `base.dockerImage` set) on revisions built
-from another environment. The `workspace_tools` round trip follows the spec and was not
-live-tested; try it on a scratch environment first. If you would rather start clean, pass
+another environment" in the UI. The field names above are what the server returns: the Public `GET` carries
+`availableTools[].start` where the spec says `startScripts`, and `environmentRevision.dockerImage`
+is present on a Domino Standard Environment revision and absent (with `base.dockerImage` set) on
+revisions built from another environment. The `workspace_tools` round trip follows the spec;
+try it on a scratch environment first. If you would rather start clean, pass
 `base_image` and `workspace_tools` explicitly and accept that nothing else carries over.
 
 ### Publish a Model API

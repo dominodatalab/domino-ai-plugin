@@ -43,7 +43,7 @@ Follow the docs page end to end; its key steps are:
    (for example `1h`), then restart services. Users log out and in again. The same records can
    be written with `POST /v4/admin/centralConfigSettings` body `{"namespace", "key", "value"}`
    (Internal API, may change between Domino versions; needs the `EditCentralConfig` permission,
-   which on Domino Cloud only Domino holds; not exercised). Routes and listing:
+   which on Domino Cloud only Domino holds). Routes and listing:
    [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md) in the domino-python-sdk skill.
 
 What the user sees: `AWS_SHARED_CREDENTIALS_FILE` points at

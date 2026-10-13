@@ -103,6 +103,11 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
 - No internal references in skill content: no Jira, Confluence, Slack or internal-repo links,
   ticket keys, or paths users cannot obtain. No placeholder hosts such as `your-domino.com`;
   use `$DOMINO_API_HOST` or the value an API response returns.
+- Skill content states facts and instructions only: no provenance (how, when or where
+  something was verified, audits, reviews, test clusters). Put verification evidence in the PR
+  description. Real uncertainty becomes reader guidance ("if this returns 404, confirm the route
+  in your deployment's `/docs`"); version facts and the "internal API, may change between Domino
+  versions" label stay (CONTRIBUTING standard 12).
 
 Existing skills predate these requirements and many violate them (missing
 frontmatter, stale links). Fix violations in the files you are already changing. Do not sweep

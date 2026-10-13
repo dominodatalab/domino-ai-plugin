@@ -44,7 +44,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/extensions (ov
 ## Create an Extension (custom App)
 
 1. **Build and preview** the App in a workspace (App Preview), then **Publish App** as a SysAdmin or CloudAdmin with extended identity propagation on. Over the API: [domino-apps/API-APPS.md](../domino-apps/API-APPS.md).
-2. **Create the Extension** from the App's three-dot menu (**Create Extension**) or **Admin panel > Extensions > Create Extension**: pick the App version and add one or more mount points. Needs admin permissions (a 403 means they are missing; see API-EXTENSIONS.md). Over the API: `POST /api/extensions/beta/extensions` with `name`, `enabled`, `appId`, **`appVersionId`** (a version with extended identity propagation on) and `uiMountPointTypeConfigs`; all five are required in both specs, `description` is optional. Verified body and the other routes: [API-EXTENSIONS.md](./API-EXTENSIONS.md).
+2. **Create the Extension** from the App's three-dot menu (**Create Extension**) or **Admin panel > Extensions > Create Extension**: pick the App version and add one or more mount points. Needs admin permissions (a 403 means they are missing; see API-EXTENSIONS.md). Over the API: `POST /api/extensions/beta/extensions` with `name`, `enabled`, `appId`, **`appVersionId`** (a version with extended identity propagation on) and `uiMountPointTypeConfigs`; all five are required in both specs, `description` is optional. Body and the other routes: [API-EXTENSIONS.md](./API-EXTENSIONS.md).
 3. **Manage** from Admin panel > Extensions: toggle enabled, **Manage Extension > Edit** to change mount points or the App version, **Delete** to soft-delete. Publishing a new App version does not move the Extension; edit it in the UI or `PATCH` `appVersionId` over the API.
 
 ## Official Extensions (manifest-driven)
@@ -65,5 +65,5 @@ Without consent the viewer JWT has limited scope, so privileged reads such as `G
 
 ## Reference files
 
-- [API-EXTENSIONS.md](./API-EXTENSIONS.md): `/api/extensions/beta` routes, verified create body, mount config shapes, Flask context example, patch and delete.
+- [API-EXTENSIONS.md](./API-EXTENSIONS.md): `/api/extensions/beta` routes, create body, mount config shapes, Flask context example, patch and delete.
 - [MANIFEST.md](./MANIFEST.md): `extension_manifest.json` fields, official install lifecycle and routes.

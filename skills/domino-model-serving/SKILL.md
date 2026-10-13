@@ -53,7 +53,7 @@ Logs: `GET .../versions/{modelApiVersionId}/buildLogs`, `exportLogs`, `instanceL
 ## Registered models
 
 - List: `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register: `POST /api/registeredmodels/v2` (`modelName`, `modelSource{sourceType, mlflowSource|huggingFaceSource}`, `create`). `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated since 6.2.1.
-- Get and patch: `GET|PATCH /api/registeredmodels/v1/{modelName}` (`PATCH` takes `description` and `discoverable`; `GET` returns neither `discoverable` nor aliases, verified on Cloud 6.4); versions at `/api/registeredmodels/v1/{modelName}/versions/{version}`; endpoints serving a version at `.../versions/{version}/modelapis`.
+- Get and patch: `GET|PATCH /api/registeredmodels/v1/{modelName}` (`PATCH` takes `description` and `discoverable`; `GET` returns neither `discoverable` nor aliases); versions at `/api/registeredmodels/v1/{modelName}/versions/{version}`; endpoints serving a version at `.../versions/{version}/modelapis`.
 - Aliases and tags are MLflow features: the MLflow client on `MLFLOW_TRACKING_URI`, or `/api/2.0/mlflow/registered-models/...` on the deployment URL; see `domino-experiment-tracking`.
 
 ## Prediction auth

@@ -131,5 +131,4 @@ GET /v4/modelManager/getExportVersionLogs/{exportVersionId}
 DELETE /v4/modelManager/archiveModelExport/{exportId}
 ```
 
-Verified read-only against a Domino Cloud cluster (HTTP 200, empty list on a project with no
-exports).
+On a project with no exports the list route returns HTTP 200 with an empty list.

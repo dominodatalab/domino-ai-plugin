@@ -45,7 +45,7 @@ body = {
     # "overrideEnvironmentId": "<environment id>",    # default: the Project's environment
     # "publishModelId": "<Domino endpoint id>",       # "Update Domino endpoint" after success
     # "capacityType": "on-demand",                    # or "spot"
-    # "mainRepoGitRef": {"type": "branch", "value": "main"},   # Git-based Projects; not live-tested here
+    # "mainRepoGitRef": {"type": "branch", "value": "main"},   # Git-based Projects
     # "computeClusterProperties": {"clusterType": "Ray", "computeEnvironmentId": "<id>", "workerCount": 2,
     #                              "workerHardwareTierId": {"value": "small-k8s"}, "masterHardwareTierId": {"value": "small-k8s"}},
     # "snapshotDatasetsOnCompletion": True, "netAppVolumeIds": [], "externalVolumeMounts": [],

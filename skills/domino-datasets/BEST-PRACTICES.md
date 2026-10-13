@@ -150,7 +150,7 @@ Deleting: an Owner marks a Dataset or snapshot for deletion, which excludes it f
 executions; an admin removes it permanently from **Admin > Manage resources > Datasets**. For a
 snapshot, `DELETE /v4/datasetrw/snapshot/{snapshotId}` (Internal API, may change between Domino
 versions) does the marking from code and `PUT` with `{"status": "Active"}` undoes it; the
-routes and their observed states are in [API.md](./API.md). On 6.3 the recovery window is
+routes and their states are in [API.md](./API.md). On 6.3 the recovery window is
 `com.cerebro.domino.dataset.graceTimeForDeletion` (default 15 minutes). Snapshots count toward storage and quota warnings appear on the Dataset page, so
 delete what you no longer need, and refresh Datasets from external Data Sources with a
 scheduled Job rather than manual uploads.

@@ -122,7 +122,7 @@ off. Body: [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#mount-volumes-in-a-jo
 
 ## Reference files
 
-- [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md): REST API with spec-verified bodies (volumes, filesystems, attach/detach, snapshots, tags, grants, deletion, listing, files, jobs)
+- [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md): REST API with request bodies (volumes, filesystems, attach/detach, snapshots, tags, grants, deletion, listing, files, jobs)
 - [DATA-ACCESS.md](./DATA-ACCESS.md): comparison with Datasets, mount paths, snapshot mounting, read/write examples, best practices
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): missing mounts, permission errors, tag paths, no filesystems, slow reads
 

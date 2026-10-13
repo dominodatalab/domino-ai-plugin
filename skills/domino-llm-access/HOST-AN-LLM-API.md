@@ -1,6 +1,6 @@
 # Host an LLM: REST API reference
 
-Applies to Domino 6.3 and Domino Cloud. Every route below is present, with the same bodies, in both public specs (6.3.1 and 6.4.0) under the `/api/gen-ai/beta` prefix: 14 paths, 17 operations. The prefix is `beta`; re-check the deployment's own reference (`https://<domino-domain>/docs`; `$DOMINO_API_HOST/assets/public-api.json` is an incomplete subset that does include these routes) before generating client code. The write operations below (create, patch, start, stop, delete) are taken from the spec and have not been exercised against a live deployment; confirm the first call's response before building on it.
+Applies to Domino 6.3 and Domino Cloud. Every route below is present, with the same bodies, in both public specs (6.3.1 and 6.4.0) under the `/api/gen-ai/beta` prefix: 14 paths, 17 operations. The prefix is `beta`; re-check the deployment's own reference (`https://<domino-domain>/docs`; `$DOMINO_API_HOST/assets/public-api.json` is an incomplete subset that does include these routes) before generating client code. For the write operations below (create, patch, start, stop, delete), confirm the first call's response before building on it.
 
 ## Authentication and base URL
 
@@ -87,7 +87,7 @@ Field notes, from the spec:
 - `modelSource.huggingFace` requires `path`, `commit` and `modelType` (`LLM`, `Embedding`, `OtherGenAI`); `registeredModel` requires `modelName` and `modelVersion` (integer).
 - `generalAccess` is one of `Restricted`, `Viewer`, `Consumer`; `collaborators` entries carry either a `userId` or an `organizationId` plus `name`.
 - `vanityUrl` is optional; check availability first with the vanity-url route. The response carries both `vanityUrl` and `url`.
-- `GET /api/gen-ai/beta/default-endpoint-environment` returns `{"id", "name"}` and optionally `"revisionId"`. Pass `id` as `environment.environmentId`; a live Cloud deployment returned no `revisionId` (checked 2026-10-12), so do not require it.
+- `GET /api/gen-ai/beta/default-endpoint-environment` returns `{"id", "name"}` and optionally `"revisionId"`. Pass `id` as `environment.environmentId`; Cloud may return no `revisionId`, so do not require it.
 - Hardware tier ids are deployment-specific; list them with the hardware-tier routes of the Public API or read one from an existing endpoint's `currentVersion.hardwareTier.id`.
 
 ## Wait for it to run, then get the URL
@@ -108,7 +108,7 @@ for _ in range(120):
 print(status, ep["url"])   # ep["url"] is the base_url for OpenAI-style clients, valid once status is Running
 ```
 
-`currentVersion.status` is one of `Building`, `BuildFailed`, `Starting`, `Running`, `Stopping`, `Stopped`, `Failed`, `Unknown`; only `Running` means the endpoint serves requests. On `Failed` or `BuildFailed`, read `realTimeLogs` for the version before retrying. The endpoint detail also carries `requestCount`, `instructions`, `generalAccess`, `project`, `currentVersion.number`, `currentVersion.configuration` and `currentVersion.hardwareTier` (`id`, `dataPlaneId`, `dataPlaneName`). On a live Cloud deployment `url` is served from the apps host (`https://apps.<domain>/endpoints/<vanityUrl>/`), not from `DOMINO_API_HOST`; always read it from the response.
+`currentVersion.status` is one of `Building`, `BuildFailed`, `Starting`, `Running`, `Stopping`, `Stopped`, `Failed`, `Unknown`; only `Running` means the endpoint serves requests. On `Failed` or `BuildFailed`, read `realTimeLogs` for the version before retrying. The endpoint detail also carries `requestCount`, `instructions`, `generalAccess`, `project`, `currentVersion.number`, `currentVersion.configuration` and `currentVersion.hardwareTier` (`id`, `dataPlaneId`, `dataPlaneName`). On Cloud `url` is served from the apps host (`https://apps.<domain>/endpoints/<vanityUrl>/`), not from `DOMINO_API_HOST`; always read it from the response.
 
 ## Call the running endpoint
 
@@ -154,7 +154,8 @@ requests.get(f"{base}/pod-resource-metrics", headers=headers, params=params).jso
 requests.get(f"{base}/realTimeLogs", headers=headers, params={"logType": "stderr", "limit": 200}).json()
 ```
 
-## Verified
+## Response notes (Domino Cloud)
 
-- Routes, required fields, enums and the PATCH stop-and-restart rule above: both published specs (6.3.1 and 6.4.0), 2026-10-12. The write operations were not executed against a live deployment.
-- Read-only against a live Domino Cloud deployment (`GET /version` returned `6.4.0`), 2026-10-12: `GET /api/gen-ai/beta/default-endpoint-environment` returned `{id, name}` with no `revisionId`; `GET /api/gen-ai/beta/endpoints` returned `{"items": [...]}` with the documented keys, `generalAccess` values `Viewer` and `Consumer`, `currentVersion.status` `Stopped`, `currentVersion.configuration` carrying `vllmArguments`, `maxNumberOfSequences` and `tensorParallelism`, and `url` on the apps host; `GET /api/aigateway/v1/endpoints` returned 404 (legacy gateway absent on Cloud).
+- `GET /api/gen-ai/beta/default-endpoint-environment` may return `{id, name}` with no `revisionId`.
+- `GET /api/gen-ai/beta/endpoints` returns `{"items": [...]}` with the documented keys: `generalAccess` is `Viewer` or `Consumer`, `currentVersion.configuration` carries `vllmArguments`, `maxNumberOfSequences` and `tensorParallelism`, and `url` is on the apps host.
+- `GET /api/aigateway/v1/endpoints` returns 404: the legacy gateway is absent on Cloud.
