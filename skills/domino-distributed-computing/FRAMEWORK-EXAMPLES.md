@@ -66,6 +66,26 @@ print(conf.get("spark.executor.instances"), conf.get("spark.executor.cores"), co
 
 Never print `conf.getAll()` values, `spark.hadoop.*` settings or `os.environ` wholesale: storage credentials such as `spark.hadoop.fs.s3a.secret.key`, `fs.s3a.session.token` and propagated cloud credentials live there and would land in the Job logs and the transcript. Read the specific non-secret keys you need, as above. Never override `spark.master` or `spark.driver.host`. Executor cores and memory follow the worker hardware tier; pick a larger tier rather than overriding them unless you understand the worker overhead.
 
+### Project-wide Spark settings
+
+Settings that should apply to every on-demand cluster in a Project live in **Settings > Integrations > Domino managed on-demand cluster**, or in the Project's Spark config over the Internal API (internal API, may change between Domino versions; live-verified on Domino 6.4, confirm on 6.3 in your deployment's `/docs`). `onDemandFreeFormConfig` is the free-form box: one `key value` per line.
+
+```python
+import os, requests
+
+base = os.environ["DOMINO_API_PROXY"]
+project_id = os.environ["DOMINO_PROJECT_ID"]
+cfg = requests.get(f"{base}/v4/projects/{project_id}/sparkConfig").json()      # {"sparkMode": "OnDemand", "masterPort": 7077, ...}
+r = requests.patch(f"{base}/v4/projects/{project_id}/sparkConfig", json={
+    "sparkMode": cfg["sparkMode"],                                              # required; "OnDemand" for Domino-managed clusters
+    "onDemandFreeFormConfig": "spark.sql.shuffle.partitions 200\nspark.executor.memoryOverhead 1g",
+})
+r.raise_for_status()
+print(r.json()["onDemandFreeFormConfig"])
+```
+
+Other fields (`freeFormConfig`, `yarnFreeFormConfig`, `masterHost`, `masterPort`, `hadoopUserName`, `hostnameMappings`) belong to the external Hadoop and Spark modes; leave them alone for on-demand clusters.
+
 ## Ray
 
 ### Parallel tasks and actors

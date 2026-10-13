@@ -140,7 +140,7 @@ whichever client the agent uses, so keep the client the agent already has. The c
 choice: LLM Gateway 2.0 where it is installed (`OpenAI(base_url=<gateway URL>/v1, api_key=<in-run
 access token>)` with a gateway alias as `model`; `domino-llm-gateway`), a Domino-hosted endpoint
 (its **Calling** tab URL and served model name; `domino-llm-access`), or a provider SDK. The first
-two need no provider key in the Project. For direct provider calls store API keys as Domino environment variables (**Project > Settings > Environment variables** for a key the Project shares, **Account > Account Settings > User environment variables** for a personal one), never in code, and read them by name:
+two need no provider key in the Project. For direct provider calls store API keys as Domino environment variables (**Project > Settings > Environment variables** for a key the Project shares, **Account > Account Settings > User environment variables** for a personal one; or set them through the API as [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store) shows), never in code, and read them by name:
 
 ```python
 import os

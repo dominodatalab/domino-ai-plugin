@@ -50,7 +50,9 @@ Domino and which project this is, and `search_domino` (`domino_docs`) searches t
 2. Credentials: never hard-code them. Domino injects Project and user environment variables into
    every execution, so store secrets there (**Project > Settings > Environment variables** for
    credentials the Project shares; **Account > Account Settings > User environment variables**
-   for personal ones) and read them by name with `os.environ`, never printing the values.
+   for personal ones; or set them with the internal routes in `domino-api-intro`,
+   "Environment variables as the secret store") and read them by name with `os.environ`,
+   never printing or echoing the values.
 3. Authenticate as `domino-api-intro` says: inside a Domino execution call
    `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop, CI), send a Personal Access
    Token or service account token as `Authorization: Bearer`. Never use legacy API keys.

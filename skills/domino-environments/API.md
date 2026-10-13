@@ -94,6 +94,24 @@ The UI's YAML form of the same data is in [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS
 
 `GET /api/hardwaretiers/v1/hardwaretiers?limit=50` (both specs) lists tiers with `id` (the value Jobs take as `hardwareTier`), `name`, `resources`, `gpuConfiguration`, `computeClusterRestrictions` and `capacity`; `architecture` (`amd64`/`arm64`) appears on 6.4+ only.
 
+## Project default environment and tier
+
+A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (internal API, may change between Domino versions; live-verified on Domino 6.4, confirm on 6.3 in your deployment's `/docs`). Every field is optional and a partial body changes only what it names:
+
+```python
+base = os.environ["DOMINO_API_PROXY"]
+project_id = os.environ["DOMINO_PROJECT_ID"]
+cur = requests.get(f"{base}/v4/projects/{project_id}/settings").json()
+# {"defaultEnvironmentId", "defaultEnvironmentRevisionSpec", "defaultHardwareTierId", "defaultVolumeSizeGiB", "sparkClusterMode", ...}
+r = requests.put(f"{base}/v4/projects/{project_id}/settings", json={
+    "defaultEnvironmentId": env_id,
+    "defaultEnvironmentRevisionSpec": "ActiveRevision",   # or LatestRevision, RestrictedRevision, {"revisionId": "<id>"}
+    "defaultHardwareTierId": "small-k8s",
+    "defaultVolumeSizeGiB": 12,
+})
+r.raise_for_status()                                        # 200 with an empty body; read it back with GET
+```
+
 ## Not in the Public API
 
-Build logs, cancelling a build, setting the Active revision, and the global default environment are UI operations (environment **Revisions** tab; admin settings). python-domino offers `environments_list`, `get_environment`, `create_environment`, `create_environment_revision`, `archive_environment` and `restrict_environment_revision` over these and internal routes; see [domino-python-sdk](../domino-python-sdk/SKILL.md).
+Build logs have no route anywhere (environment **Revisions** tab only). The rest of the revision lifecycle is Internal API (internal API, may change between Domino versions): set the Active revision with `POST /v4/environments/{environmentId}/setactive?revisionId=<revision id>` (live-verified) or `PATCH /v4/environments/{environmentId}` with `{"assignLatestRevisionAsActive": true|false}`; cancel a running build with `POST /v4/environments/{environmentId}/environmentRevision/{revisionId}/cancel`; set the deployment-wide default (admin) with `POST /v4/environments/setDefaultEnvironment` `{"environmentId": "<id>"}` and read it with `GET /v4/environments/defaultEnvironment`. The cancel and default-setting calls were not exercised in this skill's live tests. python-domino offers `environments_list`, `get_environment`, `create_environment`, `create_environment_revision`, `archive_environment` and `restrict_environment_revision` over the public and internal routes; see [domino-python-sdk](../domino-python-sdk/SKILL.md).

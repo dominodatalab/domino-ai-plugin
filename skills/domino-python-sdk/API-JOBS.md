@@ -111,7 +111,7 @@ GET /api/jobs/beta/jobs/{jobId}/logs
 | Parameter | Notes |
 |-----------|-------|
 | `logType` | `stdOut`, `stdErr`, `prepareOutput` or `complete` (case-insensitive) |
-| `limit` | Max log lines; never more than 10,000 per call |
+| `limit` | Max log lines; never more than 10,000 per call. Always send it: without it the route returned only the first 10 lines (internal Domino test cluster, 6.4.0) |
 | `latestTimeNano` | Epoch nanoseconds to start from; take it from `metadata.pagination.latestTimeNano` of the previous page |
 
 ```python

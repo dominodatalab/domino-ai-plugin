@@ -47,19 +47,20 @@ Get the real error before proposing a fix. When the plugin's MCP servers are con
 first: `check_domino_job_run_status` and `check_domino_job_run_results` (the `domino_server`
 tools) return a Job's status and logs, `get_domino_environment_info` says whether you are inside
 Domino and which project this is, and `search_domino` and `query_docs_filesystem_domino` (the
-`domino_docs` tools) search the product documentation. Otherwise use the routes below, all in the
-Public API spec for Domino 6.3 and Domino Cloud, authenticating as `domino-api-intro` says:
+`domino_docs` tools) search the product documentation. Otherwise use the routes below, which are in
+the Public API spec for Domino 6.3 and Domino Cloud except where labelled internal, authenticating
+as `domino-api-intro` says:
 inside a Domino execution call `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop,
 CI), send a Personal Access Token or service account token as `Authorization: Bearer`. Never use
 legacy API keys.
 
-| Workload | In the Domino UI | Public API |
+| Workload | In the Domino UI | API |
 | --- | --- | --- |
 | Job | Jobs, select the Job, **Logs** tab: Setup Output, User Output, Deployment Logs, Support Bundle ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs)) | `GET /api/jobs/beta/jobs/{jobId}` for status, `GET /api/jobs/beta/jobs/{jobId}/logs` for logs |
 | App | The App's details page, logs per version and per instance ([docs](https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning)) | `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`, then `.../instances/{instanceId}/logs` |
 | Model API | The Model API version's build and instance logs | `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` and `.../instanceLogs` |
-| Workspace | Workspaces, select the Workspace, its logs ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/view-workspace-details)) | no Public API route; use the UI |
-| Environment build | Environments, the environment's revision, its build output | no Public API route; use the UI |
+| Workspace | Workspaces, select the Workspace, **Logs** ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/view-workspace-details)) | No Public API route. Internal API, may change between Domino versions: `GET /v4/workspace/project/{projectId}/workspace/{workspaceId}/sessions` for the session id, then `GET /v4/workspace/{projectId}/{sessionId}/logs` (or `.../realTimeLogs`) |
+| Environment build | Environments, the environment's **Revisions** tab, the revision's build log | no route in the Public or the Internal API; use the UI |
 
 ## How to work
 
