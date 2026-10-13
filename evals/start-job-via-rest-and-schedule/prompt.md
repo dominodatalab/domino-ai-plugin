@@ -1,5 +1,5 @@
 ---
-description: "Jobs: POST /api/jobs/v1/jobs with runCommand, poll GET /api/jobs/beta/jobs/{jobId}; scheduled jobs are UI-only."
+description: "Jobs: POST /api/jobs/v1/jobs with runCommand, poll GET /api/jobs/beta/jobs/{jobId}; scheduled jobs have no public route, only the labelled internal /v4 scheduledjobs route or the UI."
 tags: [trigger, domino-jobs, jobs]
 max_turns: 12
 allowed_tools: [Read, Glob, Grep, Skill]

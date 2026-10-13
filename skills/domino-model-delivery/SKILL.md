@@ -37,10 +37,10 @@ Bearer token. Details: https://docs.domino.ai/cloud/reference/api/domino-api-aut
    mounted Dataset, a Data Source, or a project file) and writes predictions to a file.
 2. Run it as a Job: **Jobs > Run** in the UI, or
    `POST $BASE/api/jobs/v1/jobs` with `{"projectId", "runCommand": "python score.py", "environmentId", "hardwareTier"}`
-   (only `projectId` and `runCommand` are required; see [domino-jobs](../domino-jobs/SKILL.md)).
-3. Schedule it: **Jobs > Schedules > Schedule a Job**, Quartz cron such as `0 0 2 * * ?`, optional
-   **Notify emails** and **Update Domino endpoint**. Scheduled Jobs have no Public API route; the
-   product docs say to create them in the UI.
+   ([domino-jobs](../domino-jobs/SKILL.md)).
+3. Schedule it: **Jobs > Schedules > Schedule a Job** (**Notify emails**, **Update Domino endpoint**)
+   or `POST /v4/projects/{projectId}/scheduledjobs` (internal API, may change between Domino versions;
+   `publishModelId` = that endpoint): [SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md).
 4. Collect results: files the Job added or changed are its results. Poll
    `GET $BASE/api/jobs/beta/jobs/{jobId}` until `status.isCompleted`, then read
    `commitDetails.outputCommitId` and fetch a file with

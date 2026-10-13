@@ -193,11 +193,15 @@ is no public equivalent; the UI resolves defaults.
 
 ## Scheduled jobs
 
-Neither published spec has a scheduled-jobs route. Create and edit schedules in the UI:
+Neither published spec has a scheduled-jobs route and python-domino has no scheduled-job
+method. The route the UI uses, `POST /v4/projects/{projectId}/scheduledjobs` (Domino Internal
+API, may change between Domino versions), creates one; it takes `command`, not `runCommand`,
+plus `schedule.cronString`, `timezoneId`, `isPaused`, `allowConcurrentExecution`,
+`hardwareTierIdentifier`, `environmentRevisionSpec`, `scheduledByUserId` and
+`notifyOnCompleteEmailAddresses`, all required. GET, PUT (edit or pause) and DELETE use
+`.../scheduledjobs/{scheduledJobKey}`. Live-verified recipe and bodies:
+[SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md); UI steps:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job.
-The internal route the UI uses (`/v4/projects/{projectId}/scheduledjobs`) is Domino
-Internal API, may change between Domino versions, and takes `command`, not `runCommand`;
-confirm its body in your deployment's `/docs/openapi/openapi-internal.json` before using it.
 
 ## python-domino
 
