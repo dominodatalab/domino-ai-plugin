@@ -62,7 +62,12 @@ PUT /api/users/v1/user/{userId}/tokenCredentials/{credentialId}      GitHub and 
 ### Deactivation
 
 Service accounts: `POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/deactivate`.
-Human users have no Public API deactivate route; use the admin UI.
+Human users have no Public API deactivate route. Administrators do it in the admin UI or
+with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
+body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
+`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). Internal API, may change
+between Domino versions; admin-only; taken from the Cloud/6.4 internal reference and not
+live-tested here. On Domino 6.3 confirm it in your deployment's `/docs` first.
 
 ## Personal Access Tokens
 

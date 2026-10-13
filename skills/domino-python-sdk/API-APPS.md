@@ -129,8 +129,17 @@ GET /api/apps/beta/apps/{appId}/views?startTimestamp=&endTimestamp=&granularity=
 GET /api/apps/beta/apps/vanityUrls/{vanityUrl}
 GET /api/apps/beta/apps/projectFilterOptions;  GET /api/apps/beta/apps/publisherFilterOptions
 POST /api/apps/beta/apps/{appId}/access/requests
-GET, PUT /api/apps/beta/apps/{appId}/roles        (Cloud only)
+GET, PUT /api/apps/beta/apps/{appId}/roles        (Cloud only; 6.3 alternative below)
 ```
+
+Domino 6.3 has no Public roles route. The Domino Internal API manages App access on
+both targets: `POST /v4/modelProducts/{appId}/visibility` with
+`{"visibility": "PUBLIC" | "AUTHENTICATED" | "GRANT_BASED" | "GRANT_BASED_STRICT"}`,
+`POST .../grantAccess` and `POST .../denyAccess` with `{"userId": "<user-id>"}`, plus
+`.../invite` (several users at once) and `.../uninvite`. Internal API, may change between
+Domino versions; taken from the Cloud/6.4 internal reference (python-domino's `app_*`
+methods use the same `/v4/modelProducts` family) and not live-tested; confirm the routes
+in your deployment's `/docs` first.
 
 ## Workflow: create, start, wait, read logs, stop
 

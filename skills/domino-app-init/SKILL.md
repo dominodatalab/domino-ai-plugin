@@ -16,7 +16,7 @@ Collect these before writing files. Skip any the user has already given.
 
 1. **Framework**: `vite-react` (default), `streamlit`, `dash`, `flask`, `gradio` or `fastapi`.
 2. **Project name**: app folder name and `package.json` name (React only).
-3. **Model endpoint integration**: whether the app calls a Domino endpoint. If yes, the call goes through backend code and the user sets `MODEL_API_URL` and `MODEL_API_TOKEN` in Domino, never in the repository. Both values come from the endpoint's page (URL on its overview; token from **Settings > Invocation > Add Model Access Token**, shown once). No API returns that token and `$DOMINO_API_HOST`/`$DOMINO_API_PROXY` do not route `/models/`, so ask the user rather than probing.
+3. **Model endpoint integration**: whether the app calls a Domino endpoint. If yes, the call goes through backend code and the user sets `MODEL_API_URL` and `MODEL_API_TOKEN` as Domino Project variables (API: `domino-api-intro`), never in the repository. Both come from the endpoint's page (URL on its overview; token from **Settings > Invocation > Add Model Access Token**, shown once). No API returns it and `$DOMINO_API_HOST`/`$DOMINO_API_PROXY` do not route `/models/`, so ask the user.
 
 If the target directory already contains an app, stop and ask before overwriting anything.
 
