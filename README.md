@@ -28,7 +28,7 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
-| `skills/` (34 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
+| `skills/` (33 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
 | Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; Cursor asks for `DOMINO_HOST` and `DOMINO_TOKEN` at install) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ❌ not registered; `mcp_config.json` carries only the docs server (register it by hand as the server README shows) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
@@ -313,7 +313,7 @@ public release:
 
 ```bash
 git clone https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
-agy plugin validate ~/domino-ai-plugin   # optional: 34 skills, 3 agents, 1 MCP server
+agy plugin validate ~/domino-ai-plugin   # optional: 33 skills, 3 agents, 1 MCP server
 agy plugin install ~/domino-ai-plugin
 ```
 
@@ -355,7 +355,7 @@ Domino MCP server to be deployed at a public HTTPS endpoint using Streamable HTT
 that deployment doesn't exist yet. Until it does, ship skills-only.
 
 The listing icon is `assets/logo.svg`, used for both `logo` and `composerIcon`. It is the
-pinwheel mark from `skills/domino-ui-design/assets/domino-logo.svg` on a square `#2E2E38` tile,
+Domino pinwheel mark on a square `#2E2E38` tile,
 because the portal requires square icons of at least 48×48. The build fails if any icon or
 screenshot path in `plugin.json` is missing or outside `assets/`.
 
@@ -462,7 +462,7 @@ DFS-based projects.
 Requires `uv`. Tools, routes and each host's registration are documented in
 [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
 
-### Skills (34 total)
+### Skills (33 total)
 
 | Skill | Description |
 | --- | --- |
@@ -475,7 +475,6 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-apps` | Deploy web apps (React, Streamlit, Dash) behind Domino's proxy |
 | `domino-app-init` | Scaffold a new Domino-ready app with framework templates |
 | `domino-debug-proxy` | Diagnose reverse-proxy and routing issues in apps |
-| `domino-ui-design` | Domino UI styling for integrated app design |
 | `domino-ui-bootstrap` | Bootstrap a Vite + React project on the Domino design system |
 | `domino-extensions` | Build and operate Domino UI Extensions |
 | `domino-experiment-tracking` | MLflow experiment tracking and model registry |
@@ -514,7 +513,7 @@ without skill preload; Codex and Gemini CLI don't use them.
 
 | Agent | Routes to |
 | --- | --- |
-| `domino-deploy` | `domino-apps`, `domino-app-init`, `domino-debug-proxy`, `domino-ui-bootstrap`, `domino-ui-design`, `domino-model-endpoints`, `domino-model-serving`, `domino-environments` for deploying apps and model endpoints |
+| `domino-deploy` | `domino-apps`, `domino-app-init`, `domino-debug-proxy`, `domino-ui-bootstrap`, `domino-model-endpoints`, `domino-model-serving`, `domino-environments` for deploying apps and model endpoints |
 | `domino-debug` | `domino-apps`, `domino-jobs`, `domino-environments`, `domino-api-intro` and the skill for the failing workload, with the log locations and Public API routes for fetching evidence |
 | `domino-setup` | `domino-projects`, `domino-environments`, `domino-experiment-setup`, `domino-trace-setup`, `domino-datasets`, `domino-data-sdk`, `domino-data-connectivity`, `domino-llm-gateway`, `domino-llm-access`, `domino-model-monitoring` for new projects and configuration |
 
@@ -542,7 +541,7 @@ domino-ai-plugin/
 ├── mcp_config.json              # Docs MCP server for Antigravity
 ├── rules/domino.md              # Always-on guidance for every host
 ├── assets/logo.svg              # OpenAI listing icon (square)
-├── skills/                      # Shared, provider-neutral skills (34)
+├── skills/                      # Shared, provider-neutral skills (33)
 ├── mcp-servers/domino_mcp_server/
 ├── evals/                       # claude plugin eval cases (not shipped to OpenAI)
 ├── agents/                      # Subagents: thin routers to skills (Claude Code; Cursor reads them too)
