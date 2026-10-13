@@ -92,7 +92,8 @@ The directory name **must equal** `name` (agentskills.io rule; Codex and OpenCod
    needs (references, scripts, templates under `assets/`) inside the skill's own directory.
 5. Follow the [Skill Authoring Standards](#skill-authoring-standards) — auth
    pattern, host env vars, no `python-domino` SDK, verified endpoints,
-   smoke-tested payloads, provider-neutral wording
+   smoke-tested payloads, provider-neutral wording, and only what belongs in a skill
+   (standard 13)
 6. Run `uv run --with pyyaml python scripts/lint-skills.py`
 
 ### Adding a User-Invoked Workflow
@@ -364,6 +365,45 @@ state it as reader guidance ("if this returns 404, confirm the route in your dep
 `/docs`"), not as a test log. Version facts stay as facts ("on Domino 6.4 the response is X"),
 and the labels "internal API, may change between Domino versions" and "on 6.3, confirm in your
 deployment's `/docs`" stay.
+
+### 13. What belongs in a skill
+
+A skill is read by a model in the middle of a task, in a context window it shares with the
+user's files and conversation, so every sentence costs attention and every stale one misleads.
+Write and revise skills with the `skill-creator` skill from Anthropic's `claude-plugins-official`
+marketplace (`claude plugin install skill-creator@claude-plugins-official`, then `/skill-creator`):
+its Skill Writing Guide and "How to think about improvements" are the house style
+here (imperative instructions; progressive disclosure, so `SKILL.md` carries the workflow and
+reference files carry the detail; the reason behind each instruction instead of all-caps MUSTs,
+because a model that knows why handles the case the text did not foresee).
+
+Belongs in a skill:
+
+- Facts the model acts on: routes with method and the fields that matter, config formats,
+  paths, environment variables, limits and defaults.
+- Steps in the order the model performs them, in the imperative.
+- Real constraints, and the decision rules for choosing between options ("if
+  `DOMINO_API_PROXY` is set, call it with no header; otherwise send a bearer token").
+- Short reasons that change behaviour ("listen on `0.0.0.0:8888`; the proxy reaches nothing
+  else").
+- Reader guidance where genuine uncertainty changes the next step (standard 12).
+
+Does not belong, because it costs tokens, dates fast or sends the model the wrong way:
+
+- Provenance (standard 12) and change history: "now", "no longer", "previously", "was fixed",
+  "as of this release". The model acts on the present state; history lives in git.
+- Project and process jargon: PR, audit, round, release candidate, E2E, harness, eval, ticket
+  keys. They mean nothing to the user or the model.
+- Ids, hashes, timestamps or error text copied from a test run.
+- Long rationale, debate or alternatives considered; empty hedging ("it may be possible that").
+- A paragraph that another skill already owns: link the canonical place (`domino-api-intro`
+  for authentication and hosts) instead of repeating it.
+- Tangents outside what the `description` triggers on; host-specific asides beyond standard 11.
+- Marketing, all-caps emphasis, roadmap, "early access" or "coming soon".
+
+When-to-use guidance goes in the `description` (standard 7), not the body. Before opening a PR,
+read the draft as the model would and delete every sentence that does not change what it does
+next.
 
 ## Release branches, tags and backports
 
