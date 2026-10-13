@@ -80,6 +80,7 @@ Skill format:
 - [ ] Cross-references to other skills use their current names (`domino-apps`, not `domino-app-deployment`).
 - [ ] A skill directory always contains `SKILL.md`; reference files alone are not a skill.
 - [ ] Skill wording is provider-neutral, or host-specific steps cover both Claude Code and Codex (CONTRIBUTING standard 11); `scripts/build-openai.sh` passes.
+- [ ] Skill text states facts and instructions only (CONTRIBUTING "What belongs in a skill").
 
 Release mechanics:
 

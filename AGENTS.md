@@ -108,6 +108,13 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
   description. Real uncertainty becomes reader guidance ("if this returns 404, confirm the route
   in your deployment's `/docs`"); version facts and the "internal API, may change between Domino
   versions" label stay (CONTRIBUTING standard 12).
+- A skill holds facts, routes, steps, real constraints, decision rules and the short reasons
+  behind them, and nothing else: no change history ("now", "no longer", "previously"), no
+  project jargon (PR, audit, round, release candidate, E2E, harness, eval, ticket keys), no ids
+  or error text from test runs, no long rationale or hedging, no paragraph another skill owns
+  (link it), no tangents, no marketing or all-caps emphasis. When-to-use text goes in
+  `description`. Write and revise skills with the `skill-creator` skill from Anthropic's
+  `claude-plugins-official` marketplace (CONTRIBUTING standard 13).
 
 Existing skills predate these requirements and many violate them (missing
 frontmatter, stale links). Fix violations in the files you are already changing. Do not sweep

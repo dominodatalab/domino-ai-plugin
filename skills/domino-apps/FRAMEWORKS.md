@@ -75,7 +75,7 @@ if st.button("Predict"):
         st.error(f"Prediction failed: {exc}")
 ```
 
-Streamlit's frontend uses relative URLs, so no base path setting is needed. `[theme]` entries in the same `config.toml` restyle the app (see the `domino-ui-design` skill for Domino's tokens).
+Streamlit's frontend uses relative URLs, so no base path setting is needed. `[theme]` entries in the same `config.toml` restyle the app.
 
 ## Dash
 
@@ -239,7 +239,7 @@ async def health():
     return {"status": "ok"}
 ```
 
-Reference static files and API routes relatively in `index.html` (`static/app.js`, `fetch("predict")`). The `domino-ui-design` skill builds on this layout with Ant Design.
+Reference static files and API routes relatively in `index.html` (`static/app.js`, `fetch("predict")`).
 
 ## Shiny (R)
 
