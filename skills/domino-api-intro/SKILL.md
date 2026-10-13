@@ -20,7 +20,7 @@ Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 |---|---|---|
 | Inside a Domino execution (Workspace, Job, App, Launcher) and `DOMINO_API_PROXY` is set | `$DOMINO_API_PROXY` | None. Send **no** `Authorization` header; the proxy adds the starting user's token. |
 | Inside a Domino execution, `DOMINO_API_PROXY` not set | `$DOMINO_API_HOST` | `Authorization: Bearer` with the short-lived token from `http://localhost:8899/access-token` |
-| Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you; create it under **Account Settings** or with `POST /api/pat/v1/tokens` `{"name", "expiresIn": <seconds>}`, whose response carries the value once, [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#personal-access-tokens)) or a **service account token** (unattended automation) |
+| Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you; **Account Settings** or `POST /api/pat/v1/tokens`, value returned once: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#personal-access-tokens)) or a **service account token** (unattended automation) |
 
 Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`, `api_key=`) are
 deprecated: the auth page says they still work but are "scheduled for deprecation in
@@ -36,11 +36,12 @@ Settings > User environment variables**) for a personal credential, injected int
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
 share. Set them in the UI or with the Domino Internal API below (no Public API or
-python-domino route; internal API, may change between Domino versions; verified on an
-internal Domino test cluster (6.4.0), so on Domino 6.3 confirm the routes in your
-deployment's `/docs`). When an agent stores a secret for the user it writes it with these
-routes and confirms by **name only**: the `GET`s return values, so never echo them into a
-reply or a log.
+python-domino route; may change between Domino versions; verified on an internal Domino
+test cluster (6.4.0); on 6.3 confirm the routes in your deployment's `/docs`). When an
+agent stores a secret for the user it writes it with these routes and confirms by
+**name only**: the `GET`s return values, so never echo them into a reply or a log. Never
+call the wipe-all `DELETE /v4/users/environmentVariables` unless the user explicitly asks
+to remove every user variable; to remove one, delete it by name.
 
 ```
 GET    /v4/projects/{projectId}/environmentVariables           -> [{"name", "value"}]
@@ -48,7 +49,7 @@ POST   /v4/projects/{projectId}/environmentVariables           body {"name", "va
 DELETE /v4/projects/{projectId}/environmentVariables/{name}
 GET    /v4/users/environmentVariables                          -> {"vars": [{"name", "value"}]} (your own)
 PUT    /v4/users/environmentVariables                          body {"NAME": "value", ...}: merged into your variables
-DELETE /v4/users/environmentVariables                          removes all of your user variables
+DELETE /v4/users/environmentVariables                          DESTRUCTIVE: removes ALL your user variables; to remove one, use the accounts DELETE below
 POST   /v4/accounts/idpid/{idpId}/environmentvariables         body {"name", "value"}: one user variable (idpId: GET /api/users/v1/self)
 DELETE /v4/accounts/idpid/{idpId}/environmentvariables/{name}
 ```
@@ -125,6 +126,5 @@ files from the mount path or python-domino. Discovery: [API-SPECS.md](./API-SPEC
 
 ## Next steps
 
-Use the domain skills under `skills/` (domino-python-sdk, domino-jobs, domino-apps,
-domino-governance, domino-datasets, netapp-volumes, tags-and-properties and others).
-They assume the auth and host rules above.
+Use the domain skills (domino-python-sdk, domino-jobs, domino-apps, domino-governance,
+domino-datasets, netapp-volumes, tags-and-properties, others); they assume the rules above.
