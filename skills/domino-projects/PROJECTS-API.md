@@ -66,10 +66,12 @@ r = requests.post(f"{base}/api/projects/v2/projects", headers=headers, json={
     "mainRepository": {
         "uri": "https://github.com/acme/churn-model.git",
         "serviceProvider": "github",            # bitbucket | bitbucketServer | github | githubEnterprise | gitLab | gitLabEnterprise | unknown
-        "gitCredentialId": "<credential id from Account Settings > Git Credentials>",
+        "gitCredentialId": "<id from GET /api/users/beta/credentials/{userId}>",
         "defaultRef": {"refType": "branch", "value": "main"},   # head | branch | tag | commit
     }})
 ```
+
+Git credential ids come from the public `GET /api/users/beta/credentials/{userId}` (both specs; needs `UpdateUser`; returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint`, `protocol`; verified live on Cloud 6.4 with the caller's own `userId`, which is the `ownerId` of any project you own). Create credentials in **Account Settings** > **Git Credentials**: the internal create route exists but its body is untyped in the API reference, so it is not documented here. Service accounts have public create routes under `/api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/` (`tokengitcredentials`, `sshgitcredentials`, `passwordgitcredentials`).
 
 Optional: `repoToCreate{credentialId, owner, repositoryToCreateName, visibility, serviceProvider}` to have Domino create the repository; `templateDetails{templateId, name, templateRevisionId, templateType, importToMainRepo, forceImport}` to start from a project template; `billingTag{tag}`; `isRestricted` (needs `ProjectClassifier`). The older `POST /api/projects/beta/projects` takes `NewProjectV1`: the same fields, plus `repoToCreate.repositoryTemplateName`.
 
@@ -82,7 +84,28 @@ requests.post(f"{base}/api/projects/v1/projects/{project_id}/collaborators", hea
 requests.delete(f"{base}/api/projects/v1/projects/{project_id}/collaborators/<collaboratorId>", headers=headers)
 ```
 
-Needs `ManageCollaborators`. The body shape was validated live on Cloud 6.4 (adding a user who is already a member returns `400 User <id> is already part of project <id>`). User ids are the `ownerId` and `collaborators[].id` values returned by the project routes; the users API is in [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md). There is no public route to change visibility after creation; use **Settings** > **Access & Sharing**.
+Needs `ManageCollaborators`. The body shape was validated live on Cloud 6.4 (adding a user who is already a member returns `400 User <id> is already part of project <id>`). User ids are the `ownerId` and `collaborators[].id` values returned by the project routes; the users API is in [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md).
+
+No public route changes visibility after creation. Use **Settings** > **Access & Sharing**, or the Domino Internal API route `PATCH /v4/projects/{projectId}/visibility` with `{"visibility": "Private"}` (`Public`, `Searchable` or `Private`; internal API, may change between Domino versions). Verified on Cloud 6.4: 200 with an empty body, `GET /api/projects/v1/projects/{projectId}` then reports the new value, and an unknown value returns 400 with a JSON validation error; `Public` is not offered on Domino Cloud. On 6.3, confirm the route in your deployment's `/docs` first.
+
+```python
+requests.patch(f"{base}/v4/projects/{project_id}/visibility", headers=headers,   # internal API, may change
+               json={"visibility": "Searchable"}).raise_for_status()
+```
+
+## Project settings (defaults)
+
+No python-domino method and no public route cover the defaults every Workspace and Job starts with; set them in **Settings** > **Hardware & Environment**, or with the Domino Internal API (`GET` and `PUT /v4/projects/{projectId}/settings`, internal API, may change between Domino versions; verified on Cloud 6.4: `PUT` 200 and the following `GET` returned the new tier; on 6.3 confirm in `/docs`). The `PUT` body (`ProjectSettingsUpdateDto`) takes `defaultEnvironmentId`, `defaultEnvironmentRevisionSpec` (`ActiveRevision`, `LatestRevision`, `RestrictedRevision`, or `{"revisionId": "..."}`), `defaultHardwareTierId` and `defaultVolumeSizeGiB`; `GET` also returns `sparkClusterMode` and `minVolumeSizeGiB`, `maxVolumeSizeGiB`, `recommendedVolumeSizeGiB`, which are not settable here.
+
+```python
+settings = requests.get(f"{base}/v4/projects/{project_id}/settings", headers=headers).json()   # internal API, may change
+requests.put(f"{base}/v4/projects/{project_id}/settings", headers=headers, json={
+    "defaultEnvironmentId": settings["defaultEnvironmentId"],
+    "defaultEnvironmentRevisionSpec": settings["defaultEnvironmentRevisionSpec"],
+    "defaultHardwareTierId": "medium-k8s",                        # a tier id from GET /api/hardwaretiers/v1/hardwaretiers
+    "defaultVolumeSizeGiB": settings["defaultVolumeSizeGiB"],
+}).raise_for_status()
+```
 
 ## Copy, status, goals, archive
 
@@ -136,4 +159,4 @@ Every method needs a client bound to one project: `Domino("owner/project")`; the
 | `get_user_id(username_or_email)` | Resolves a username or email to a user id (internal `/v4/users` route) | Useful before the public collaborator route above |
 | `project_billing_tag(...)`, `project_billing_tag_update(...)`, `project_billing_tag_reset(...)` | Billing tags | |
 
-There is no `project_update`, `project_info` or `project_settings` method; defaults (environment, hardware tier) are set in the UI. Full inventory: [domino-python-sdk](../domino-python-sdk/SKILL.md).
+There is no `project_update`, `project_info` or `project_settings` method; defaults (environment, hardware tier, volume size) are set in the UI or with the internal settings route above. Full inventory: [domino-python-sdk](../domino-python-sdk/SKILL.md).
