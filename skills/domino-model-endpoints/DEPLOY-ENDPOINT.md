@@ -82,7 +82,7 @@ Publish only after that. If a version is already crash-looping, sync the missing
 5. **Request Type**: **Sync** or **Async**.
 6. Publish. The status moves through building and starting to **Running**.
 
-Endpoint environment variables: on the endpoint, **Settings** > **Environment variables** (values up to 64 K). Only endpoint owners and editors can set them; restart running versions to pick up changes. Project and user variables are not injected into endpoints.
+Endpoint environment variables: on the endpoint, **Settings** > **Environment variables** (values up to 64 K). Only endpoint owners and editors can set them; restart running versions to pick up changes (UI, or the internal stop and start routes in [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment)). Project and user variables are not injected into endpoints.
 
 ## Publish with the API
 

@@ -71,7 +71,22 @@ r = requests.post(f"{base}/api/projects/v2/projects", headers=headers, json={
     }})
 ```
 
-Git credential ids come from the public `GET /api/users/beta/credentials/{userId}` (both specs; needs `UpdateUser`; returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint`, `protocol`; the caller's own `userId` is the `ownerId` of any project you own). Create credentials in **Account Settings** > **Git Credentials**: the internal create route exists but its body is untyped in the API reference, so it is not documented here. Service accounts have public create routes under `/api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/` (`tokengitcredentials`, `sshgitcredentials`, `passwordgitcredentials`).
+### Git credentials
+
+List: public `GET /api/users/beta/credentials/{userId}` (both specs; needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (internal API, may change between Domino versions; on 6.3 confirm it in your deployment's `/docs`). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
+
+```python
+user_id = requests.get(f"{base}/api/users/v1/self", headers=headers).json()["user"]["id"]
+cred = {"type": "TokenGitCredentialDto", "accessType": "token", "name": "github-pat",      # personal access token
+        "gitServiceProvider": "github", "token": os.environ["GITHUB_TOKEN"]}
+# username and password: {"type": "PasswordGitCredentialDto", "accessType": "password", "username": "...", "password": "..."}
+# SSH key:               {"type": "SshGitCredentialDto", "accessType": "key", "key": "<private key text>", "passphrase": "<optional>"}
+r = requests.post(f"{base}/v4/accounts/{user_id}/gitcredentials", headers=headers, json=cred)   # internal API, may change between Domino versions
+r.raise_for_status()
+credential_id = r.json()["id"]      # {id, name, gitServiceProvider, domain, fingerprint, protocol}; the secret is never returned
+```
+
+`gitServiceProvider` is `github`, `gitlab`, `githubEnterprise`, `gitlabEnterprise`, `bitbucket`, `bitbucketServer` or `unknown` (this route spells GitLab in lower case; `mainRepository.serviceProvider` takes the public enum with `gitLab` and `gitLabEnterprise`, and the public list capitalises the provider, `Github`). `domain` is required for `githubEnterprise`, `gitlabEnterprise`, `bitbucketServer` and `unknown` (400 without it) and defaults to the provider's public host otherwise. A Bitbucket Server HTTP access token goes in as `PasswordGitCredentialDto` with the username and the token as `password`. Creation does not contact the provider, so prove a credential by creating or syncing a Git-based project with it. Also internal: `GET /v4/accounts/{userId}/gitcredentials` (same fields as the public list) and `DELETE /v4/accounts/{userId}/gitcredentials/{credentialId}`; creating for another user needs `UpdateUser`. Service accounts use the public routes under `/api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/` (`tokengitcredentials`, `sshgitcredentials`, `passwordgitcredentials`; list and delete at `gitcredentials`).
 
 Optional: `repoToCreate{credentialId, owner, repositoryToCreateName, visibility, serviceProvider}` to have Domino create the repository; `templateDetails{templateId, name, templateRevisionId, templateType, importToMainRepo, forceImport}` to start from a project template; `billingTag{tag}`; `isRestricted` (needs `ProjectClassifier`). The older `POST /api/projects/beta/projects` takes `NewProjectV1`: the same fields, plus `repoToCreate.repositoryTemplateName`.
 
@@ -84,7 +99,7 @@ requests.post(f"{base}/api/projects/v1/projects/{project_id}/collaborators", hea
 requests.delete(f"{base}/api/projects/v1/projects/{project_id}/collaborators/<collaboratorId>", headers=headers)
 ```
 
-Needs `ManageCollaborators`. The body shape was validated live on Cloud 6.4 (adding a user who is already a member returns `400 User <id> is already part of project <id>`). User ids are the `ownerId` and `collaborators[].id` values returned by the project routes; the users API is in [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md).
+Needs `ManageCollaborators`; adding a user who is already a member returns 400. User ids are the `ownerId` and `collaborators[].id` values returned by the project routes; the users API is in [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md).
 
 No public route changes visibility after creation. Use **Settings** > **Access & Sharing**, or the Domino Internal API route `PATCH /v4/projects/{projectId}/visibility` with `{"visibility": "Private"}` (`Public`, `Searchable` or `Private`; internal API, may change between Domino versions). It answers 200 with an empty body, `GET /api/projects/v1/projects/{projectId}` then reports the new value, and an unknown value returns 400 with a JSON validation error; `Public` is not offered on Domino Cloud. On 6.3, confirm the route in your deployment's `/docs` first.
 

@@ -2,7 +2,7 @@
 
 Applies to Domino 6.3 and Domino Cloud. Sources: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/scale and https://docs.domino.ai/cloud/admin/platform-configuration/manage-model-deployments.
 
-Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings (from the UI: there is no public restart route, and the internal stop and start routes do not restart a version; see [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment)).
+Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings (from the UI, or stop and start the version with the internal routes in [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment); internal API, may change between Domino versions).
 
 ## Horizontal: number of instances
 

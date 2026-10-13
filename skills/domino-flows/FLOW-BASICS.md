@@ -138,7 +138,22 @@ pyflyte run --remote --name nightly-2026-10-12 --tag team=risk workflow.py train
 
 Run from a Workspace terminal or as a Job command on an environment built from the Domino Standard Environment 6.0 or later. The flow is registered and started immediately; any change to `workflow.py` registers a new flow version on the next launch, and runs are grouped by version in the UI. Run names are unique per project. Commit the flow code: Domino stores the serialized definition, not its source.
 
-Re-run from the UI (**Flows** > flow > version > run > **Re-run**): new name, cache overwrite choice, same or new inputs, and per-task overrides of environment, hardware tier or Git reference. **Recover** resumes a run after a transient failure (timeout, capacity, spot pre-emption, server error), reusing finished outputs. **Rerun Node** re-executes one node with new inputs. All three need an unchanged definition; code changes go through the CLI.
+## Re-run, recover, stop and archive
+
+UI (**Flows** > flow > version > run): **Re-run** starts a new run with a new name, a cache-overwrite choice, the same or new inputs, and per-task overrides of environment, hardware tier or Git reference; **Recover** resumes a run after a transient failure (timeout, capacity, spot pre-emption, server error), reusing finished outputs; **Rerun Node** re-executes one node with new inputs. All three use the run's registered definition; code changes go through the CLI.
+
+The same actions are Flyte API calls, documented at https://docs.domino.ai/cloud/reference/api/flyte/flyte-native-api (the routes below) and https://docs.domino.ai/cloud/reference/api/flyte/flyte-extensions-api (artifact routes). Run them from inside a Workspace or Job: `$FLYTE_PLATFORM_URL_HTTP` (`http://127.0.0.1:7180`) takes the REST routes with no auth header, and `$FLYTE_PLATFORM_URL` is the gRPC address `pyflyte` uses. From outside Domino, `<deployment URL>/flows/api/v1/...` accepts only the browser login and rejects Domino API tokens, so script these actions as a Job or from a Workspace terminal. The Flyte `project` is the Domino project id (`$DOMINO_PROJECT_ID`, also exported as `$FLYTE_DEFAULT_PROJECT`), the `domain` is `development`, and `name` is the run name shown in the UI.
+
+| Action | Call (base `$FLYTE_PLATFORM_URL_HTTP`) |
+|--------|----------------------------------------|
+| Inspect a run | `GET /api/v1/executions/{project}/development/{name}`: `spec.launchPlan` identifies what it ran, `closure.phase` is `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED`, `ABORTED` or `TIMED_OUT`; inputs from `GET /api/v1/data/executions/{project}/development/{name}` (`fullInputs`) |
+| Re-launch with the same inputs | `POST /api/v1/executions/relaunch` with `{"id": {"project", "domain", "name"}, "name": "<new run name>", "overwrite_cache": false}` |
+| Re-run with new inputs | `POST /api/v1/executions` with `{"project", "domain", "name": "<new run name>", "spec": {"launchPlan": <the run's spec.launchPlan>, "overwrite_cache": false}, "inputs": {"literals": {...}}}`, literals in the shape `fullInputs` returns |
+| Recover | `POST /api/v1/executions/recover` with `{"id": {"project", "domain", "name"}}`; finished nodes are reused, the failed ones run again |
+| Stop | `DELETE /api/v1/executions/{project}/development/{name}` (optional `{"cause": "..."}`); the run ends `ABORTED` |
+| Archive or restore | `PUT /api/v1/executions/{project}/development/{name}` with `{"state": "EXECUTION_ARCHIVED"}` or `{"state": "EXECUTION_ACTIVE"}` |
+
+Omit `name` on re-launch or recover and Flyte generates one. Each create call returns the new run's `id` (`{project, domain, name}`); poll `GET /api/v1/executions/{project}/development/{name}` until `closure.phase` is terminal.
 
 ## Monitor
 
@@ -146,7 +161,7 @@ Re-run from the UI (**Flows** > flow > version > run > **Re-run**): new name, ca
 - Flow details: run list per version, **Graph** of the structure, run or archive.
 - Run details: nodes with status, Graph view, **Launch Inputs**, rerun or archive.
 - Node details: versioned inputs and outputs (previews need a typed file), a link to the Domino Job, execution logs.
-- Flyte console: `<deployment URL>/flows/console/select-project` (timeline view, blob URIs of outputs); some native Flyte actions are not supported.
+- Flyte console: `<deployment URL>/flows/console/select-project` (timeline view, blob URIs of outputs); its **Relaunch** and **Recover** are the API calls above.
 - Jobs started by a flow show the flow and task in the Job details and cannot be re-run from the Jobs UI.
 
 ## Reproducibility checklist

@@ -341,4 +341,11 @@ Each scheduled run registers the current definition (a new version only if the c
 pyflyte run --remote --name exp-7 flows/training_pipeline.py training_pipeline --features_path /mnt/data/features/latest.csv
 ```
 
-Then in the Flows UI open run `exp-7`, click the **Train** node and **Rerun Node** with a different input, or **Re-run** the whole flow with a task override (different hardware tier or environment) without touching the code. When a transient failure (spot pre-emption, timeout) kills a node, **Recover** continues from the failed node and reuses the finished outputs. Once the code changes, launch from the CLI again so a new version is registered.
+Then in the Flows UI open run `exp-7`, click the **Train** node and **Rerun Node** with a different input, or **Re-run** the whole flow with a task override (different hardware tier or environment) without touching the code. When a transient failure (spot pre-emption, timeout) kills a node, **Recover** continues from the failed node and reuses the finished outputs; from a Workspace terminal or a Job the same recovery is one call:
+
+```bash
+curl -s -X POST "$FLYTE_PLATFORM_URL_HTTP/api/v1/executions/recover" -H 'Content-Type: application/json' \
+  -d "{\"id\": {\"project\": \"$DOMINO_PROJECT_ID\", \"domain\": \"development\", \"name\": \"exp-7\"}}"
+```
+
+The other calls (re-launch, re-run with new inputs, stop, archive) and why they work only from inside Domino are in [FLOW-BASICS.md](./FLOW-BASICS.md#re-run-recover-stop-and-archive). Once the code changes, launch from the CLI again so a new version is registered.

@@ -179,14 +179,31 @@ r = requests.put(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers
 r.raise_for_status()
 ```
 
-The PUT is accepted immediately (200; `replicas` reads back as the new value while the running version stays `Running`), but the docs say a scale change takes effect only after you restart the endpoint, and the public API has no restart route. The Domino Internal API does not give you one either: `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` stops the version (`{"status": "not_running"}`), and `POST /v4/models/{modelApiId}/{modelApiVersionId}/startModelDeployment` called right afterwards returns `400 Cannot start model version <id>. Current state is 'not_running'`, leaving the version stopped; `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` reports that state (all three internal API, may change between Domino versions; on 6.3 confirm them in your deployment's `/docs`). So stop-then-start is not a restart recipe. Restart from the endpoint page in the UI, or publish a new version, then confirm with `GET` (`replicas`, `hardwareTierId`) and the version's deployment status.
+The PUT is accepted immediately (200; `replicas` reads back as the new value while the running version stays `Running`), but a scale change takes effect only when the version restarts. The public API has no restart route: restart from the endpoint page in the UI, or stop and start the active version with the Domino Internal API (internal API, may change between Domino versions; on 6.3 confirm the routes in your deployment's `/docs`):
+
+```python
+v = f"{base}/v4/models/{model_api_id}/{api['activeVersion']['id']}"       # internal API, may change between Domino versions
+requests.post(f"{v}/stopModelDeployment", headers=headers, json={}).raise_for_status()    # -> {"status": "not_running"}
+for _ in range(6):
+    r = requests.post(f"{v}/startModelDeployment", headers=headers)         # no body; -> {"status": "starting"}
+    if r.status_code != 400:                                                # 400: the stop has not settled yet
+        break
+    time.sleep(5)
+r.raise_for_status()
+for _ in range(30):
+    if requests.get(f"{v}/getModelDeploymentStatus", headers=headers).json()["status"] == "running":
+        break
+    time.sleep(10)
+```
+
+`getModelDeploymentStatus` returns `{modelId, modelVersionId, status}`; `status` is `not_running`, `starting` or `running`, and a restarted version is usually `running` within a minute. Then confirm the change with `GET` on the Model API (`replicas`, `hardwareTierId`) and run the health check from "Wait until a version is Running".
 
 ## Stop and delete
 
-The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API". Live behaviour on Domino Cloud 6.4 (2026-10-12):
+The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API"; what it does:
 
 - `DELETE` while a version is running returns `500 "Model API with id <id> is running"`. Stop the running version first.
-- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (internal API, may change between Domino versions; on 6.3 confirm it in `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `GET /v4/models/{modelApiId}/{modelApiVersionId}/getModelDeploymentStatus` (internal, same caveats) returns the same `{modelId, modelVersionId, status}` record.
+- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (internal API, may change between Domino versions; on 6.3 confirm it in `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `startModelDeployment` brings the version back (restart snippet above).
 - After a successful `DELETE` (200, empty body) the endpoint is gone from the caller's view: `GET` returns `404 No model API found` and it no longer appears in list results, with or without filters. Do not expect to read it back with `isArchived: true`; export the logs and settings you need before deleting.
 
 ```python

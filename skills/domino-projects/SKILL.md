@@ -28,7 +28,7 @@ From a laptop, the Domino CLI syncs a DFS project's files (`domino get`, `sync`,
 
 ## Create a project
 
-UI: **Develop** > **Projects** > **Create Project**: name, template or none, **Visibility**, then the Git provider (credentials, an existing repository URL, or a repository Domino creates) or **Domino (local hosting)** for DFS. Private repositories, pushes and SSH need Git credentials under **Account Settings** > **Git Credentials** (SSH key, personal access token, or username and password; Bitbucket Data Center needs username plus token; Bitbucket Cloud an app password).
+UI: **Develop** > **Projects** > **Create Project**: name, template or none, **Visibility**, then the Git provider (credentials, an existing repository URL, or a repository Domino creates) or **Domino (local hosting)** for DFS. Private repositories, pushes and SSH need Git credentials: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (internal API, may change between Domino versions; bodies in PROJECTS-API.md), with an SSH key, a personal access token, or username and password (Bitbucket Data Center: username plus token; Bitbucket Cloud: an app password).
 
 API: `POST /api/projects/v2/projects` (6.3 and Cloud) with `name`, `description`, `visibility` (`private`, `searchable`; `public` on 6.3 only) and optional `mainRepository{uri, serviceProvider, gitCredentialId, defaultRef}`, `repoToCreate`, `templateDetails`, `ownerId`, `billingTag`, `isRestricted`. Examples in [PROJECTS-API.md](./PROJECTS-API.md).
 

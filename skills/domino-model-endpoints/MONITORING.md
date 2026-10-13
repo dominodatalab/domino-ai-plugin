@@ -23,7 +23,7 @@ Alert thresholds the docs suggest: CPU > 80% for 10 minutes, memory up by more t
 
 ## Health checks and timeouts
 
-**Settings** > **Advanced**. Changing health-check fields restarts the endpoint; a changed request timeout also needs a restart.
+**Settings** > **Advanced**. Changing health-check fields restarts the endpoint; a changed request timeout also needs a restart (UI, or the internal stop and start routes in [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment)).
 
 | Setting | Meaning | Guidance |
 |---------|---------|----------|
