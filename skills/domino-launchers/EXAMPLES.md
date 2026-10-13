@@ -1,6 +1,6 @@
 # Launcher examples
 
-Scripts and result patterns for Domino Launchers. The launcher itself (name, command, controls, hardware tier, environment, notification list) is configured in the wizard under **Deployments > Launchers**; see [SKILL.md](./SKILL.md).
+Scripts and result patterns for Domino Launchers. The launcher itself (name, command, controls, hardware tier, environment, notification list) is configured in the wizard under **Deployments > Launchers** or through the web UI routes in [Manage launchers from code](#manage-launchers-from-code); see [SKILL.md](./SKILL.md).
 
 ## Parse launcher arguments
 
@@ -179,3 +179,68 @@ content = requests.get(f"{base}/api/projects/v1/projects/{project_id}/files/{com
 ```
 
 Outside Domino: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
+
+## Manage launchers from code
+
+These are the Launchers page's own routes (non-public route; may change in a future Domino version; [route types](../domino-api-intro/SKILL.md#route-types)). They are scoped by the Project's owner username and name, not by id, and take a bearer token on `$DOMINO_API_HOST` (in a run, the access-token endpoint; outside, a Personal Access Token; [domino-api-intro](../domino-api-intro/SKILL.md)).
+
+The launcher object, as sent to create and update:
+
+```json
+{
+  "id": null,
+  "projectId": "<project id>",
+  "name": "Score customer data",
+  "description": "Upload a CSV and get predictions back",
+  "command": "score_data.py ${input_file} ${output_format}",
+  "valuePassType": "CommandLineSubstitutionPass",
+  "hardwareTierId": "small-k8s",
+  "parameters": [
+    {"name": "input_file", "parameterType": "File", "defaultValue": "", "allowedValues": [], "description": "Customer data (CSV)", "shouldQuoteValue": true},
+    {"name": "output_format", "parameterType": "Select", "defaultValue": "csv", "allowedValues": [{"value": "csv"}, {"value": "xlsx"}], "description": "Output format", "shouldQuoteValue": true}
+  ]
+}
+```
+
+`parameterType` is one of `Text`, `Select`, `MultiSelect`, `Date`, `Checkbox`, `File`; `allowedValues` entries are `{"value": "..."}` objects; every parameter field is required (a missing one is an HTTP 500 with a `JsResultException` naming it). The stored object also carries `environmentId`, `capacityType`, `externalVolumeMountIds` and `netAppVolumeIds` (null until set). `hardwareTierId` may be `""` for the Project default.
+
+```python
+import os, requests
+
+base = os.environ["DOMINO_API_HOST"]
+headers = {"Authorization": f"Bearer {token}"}
+u = f"{base}/u/{owner}/{project_name}/runLaunchers"
+
+created = requests.post(u, json=launcher, headers=headers).json()      # a draft: "id" is set, "command" is the default
+launcher_id = created["id"]
+created["command"] = launcher["command"]
+requests.put(f"{u}/{launcher_id}", json=created, headers=headers).raise_for_status()   # stores the command; the launcher is now listed
+current = requests.get(f"{u}/{launcher_id}", headers=headers).json()                  # 404 once deleted; 400 for a malformed id
+requests.delete(f"{u}/{launcher_id}", json={}, headers=headers).raise_for_status()    # returns the deleted launcher
+```
+
+To edit, `GET` the object, change fields, `PUT` the whole object back.
+
+List: the Launchers page embeds the stored launchers in its mount props. A launcher created but never `PUT` is a draft and does not appear, so `PUT` it once or keep the ids you create.
+
+```python
+import html, json, re
+
+page = requests.get(f"{base}/u/{owner}/{project_name}/endpoints/launchers",
+                    headers={**headers, "Accept": "text/html"}).text
+props_js = re.search(r"renderComponentByName\(\s*'LaunchersPage',\s*\"(.*?)\",\s*document", page, re.S).group(1)
+props = json.loads(html.unescape(props_js).replace('\\"', '"').replace("\\/", "/"))
+launchers = props["launchers"]            # full launcher objects; props also carry canCreateLaunchers and routes.editLauncher
+```
+
+Start a run (Internal API; non-public route, may change in a future Domino version): one `postParameters` entry per `${name}` in the command, values as a list (several entries for a Multi-select); a File parameter goes in `uploadedFiles` as `{"parameterName", "fileName", "tempFileBase64Encoding"}`. The response is the Job id; the Job's `runCommand` shows the substituted values and `runLauncherId` points back here.
+
+```python
+job_id = requests.post(f"{base}/v4/projects/{project_id}/launcherJob/{launcher_id}", headers=headers, json={
+    "project": project_id,
+    "postParameters": [{"key": "output_format", "value": ["csv"]}],
+    "uploadedFiles": [],
+    "notifyOnCompleteEmailAddresses": [],
+    "jobTitle": "nightly scoring",
+}).json()
+```
