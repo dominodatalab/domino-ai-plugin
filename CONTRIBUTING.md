@@ -406,7 +406,13 @@ Does not belong, because it costs tokens, dates fast or sends the model the wron
 
 When-to-use guidance goes in the `description` (standard 7), not the body. Before opening a PR,
 read the draft as the model would and delete every sentence that does not change what it does
-next.
+next. `scripts/lint-skills.py` enforces the mechanical part of standards 12 and 13 as rules L1
+to L16 over `skills/`, `agents/` and `rules/domino.md` (provenance and "live" markers, past-tense
+test logs, skill self-history, dated parentheticals, shouting labels, process jargon,
+first-person provenance, when-to-use headings, self-describing preambles, and names of removed
+skills from `scripts/removed-skills.txt` fail CI; "today", observed timings, stage labels,
+"smoke test" and spec attestations print a warning for a human to judge). Each message names
+the rule, the file and line, and the standard.
 
 ## Release branches, tags and backports
 

@@ -596,6 +596,10 @@ domino-ai-plugin/
   the rest of the repo. Links between skills are fine.
 - Skill files don't mention Claude unless listed in `scripts/claude-mentions.allow` with a reason
   (for example, Claude as a model name, or a table that covers both Claude Code and Codex).
+- Skill, agent and rule text states facts and instructions only: content-noise rules L1 to L16
+  (CONTRIBUTING standards 12 and 13) fail on provenance narrative, test logs, change history,
+  process jargon, shouting labels, when-to-use headings, self-describing preambles and names of
+  removed skills, and warn on timings, stage labels and spec attestations.
 
 Run it locally with `uv run --with pyyaml python scripts/lint-skills.py`.
 

@@ -1,6 +1,6 @@
 # Comparing and Analyzing Experiment Runs
 
-This guide covers how to compare experiment runs, search for specific runs, and export results in Domino. Product reference: https://docs.domino.ai/cloud/platform-capabilities/features/development/track-monitor
+Compare experiment runs, search for specific runs, and export results in Domino. Product reference: https://docs.domino.ai/cloud/platform-capabilities/features/development/track-monitor
 
 ## Viewing Runs in Domino UI
 
