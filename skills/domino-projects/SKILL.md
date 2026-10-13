@@ -28,7 +28,7 @@ From a laptop, the Domino CLI syncs a DFS project's files (`domino get`, `sync`,
 
 ## Create a project
 
-UI: **Develop** > **Projects** > **Create Project**: name, template or none, **Visibility**, then the Git provider (credentials, an existing repository URL, or a repository Domino creates) or **Domino (local hosting)** for DFS. Private repositories, pushes and SSH need Git credentials: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (internal API, may change between Domino versions; bodies in PROJECTS-API.md), with an SSH key, a personal access token, or username and password (Bitbucket Data Center: username plus token; Bitbucket Cloud: an app password).
+UI: **Develop** > **Projects** > **Create Project**: name, template or none, **Visibility**, then the Git provider (credentials, an existing repository URL, or a repository Domino creates) or **Domino (local hosting)** for DFS. Private repositories, pushes and SSH need Git credentials: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); bodies in PROJECTS-API.md), with an SSH key, a personal access token, or username and password (Bitbucket Data Center: username plus token; Bitbucket Cloud: an app password).
 
 API: `POST /api/projects/v2/projects` (6.3 and Cloud) with `name`, `description`, `visibility` (`private`, `searchable`; `public` on 6.3 only) and optional `mainRepository{uri, serviceProvider, gitCredentialId, defaultRef}`, `repoToCreate`, `templateDetails`, `ownerId`, `billingTag`, `isRestricted`. Examples in [PROJECTS-API.md](./PROJECTS-API.md).
 
@@ -46,11 +46,11 @@ Project roles are independent of a user's Domino role. There is no "Admin" proje
 
 Add collaborators under **Settings** > **Access & Sharing** (username, email or organization, role, notification preference). API: `POST /api/projects/v1/projects/{projectId}/collaborators` with `{"id": "<user or organization id>", "role": "contributor|resultsConsumer|launcherUser|projectImporter"}`; remove with `DELETE .../collaborators/{collaboratorId}`.
 
-Visibility (**Settings** > **Access & Sharing**, or `PATCH /v4/projects/{projectId}/visibility`, internal API, may change between Domino versions; see PROJECTS-API.md): **Private** (collaborators only) or **Searchable** (name and description in search; contents for collaborators). **Public** (anyone with the URL, even without an account) exists on Domino 6.3 only.
+Visibility (**Settings** > **Access & Sharing**, or `PATCH /v4/projects/{projectId}/visibility`, non-public route; may change in a future Domino version; see PROJECTS-API.md): **Private** (collaborators only) or **Searchable** (name and description in search; contents for collaborators). **Public** (anyone with the URL, even without an account) exists on Domino 6.3 only.
 
 ## Settings
 
-- **Hardware & Environment**: default hardware tier, default environment and volume size (default 10 GiB) for every Workspace and Job; contributors can change them, in the UI or with `GET`/`PUT /v4/projects/{projectId}/settings` (internal API, may change between Domino versions; PROJECTS-API.md). Environment details: `domino-environments`.
+- **Hardware & Environment**: default hardware tier, default environment and volume size (default 10 GiB) for every Workspace and Job; contributors can change them, in the UI or with `GET`/`PUT /v4/projects/{projectId}/settings` (non-public route; may change in a future Domino version; PROJECTS-API.md). Environment details: `domino-environments`.
 - **Environment variables**: project-level key/value pairs injected into runs (values up to 64 K), visible to all collaborators, for credentials that must stay out of code. Endpoints do not inherit them.
 - Default Git branch (Git-based): owners set it in settings; by API, `PUT .../repositories/{repositoryId}/default-ref` (Domino Cloud only; `_` for the main repository).
 - **Results**: save run results on the main line or in isolated branches. **Exports**: let other projects import files, environment variables or a code package.

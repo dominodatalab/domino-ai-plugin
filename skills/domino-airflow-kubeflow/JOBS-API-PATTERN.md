@@ -97,7 +97,6 @@ curl -sS -o metrics.json "$BASE/api/projects/v1/projects/$PROJECT_ID/files/$COMM
   orchestrator task log, and fail the task; do not retry blindly, since a retry starts a new Job.
 - Orchestrator timeout while the Job runs: the Job continues in Domino. Record the Job id so a
   manual stop is possible from the UI **Stop** button. Neither Public spec has a Job stop
-  route; python-domino's `job_stop` posts to `/v4/jobs/stop` (internal API, may change between
-  Domino versions).
+  route; python-domino's `job_stop` posts to `/v4/jobs/stop` (non-public route; may change in a future Domino version).
 - Rate limits and 5xx: back off and retry the poll, never the start.
   [ERRORS.md](../domino-api-intro/ERRORS.md).

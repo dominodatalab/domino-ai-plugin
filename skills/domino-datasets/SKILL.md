@@ -54,7 +54,7 @@ UI lists mounted paths under **Data > Datasets** (Workspace) and **Details > Dat
 ## Upload files
 
 - **UI**: open the Dataset, **Upload files**: up to 50 GB or 50,000 files per upload;
-  drag-and-drop keeps folder structure.
+  drag-and-drop keeps folders.
 - **CLI** (larger uploads): `domino upload-dataset [--fileUploadSetting Ignore|Overwrite|Rename]
   [--targetRelativePath <dir>] <owner>/<project>/<dataset> <local-folder>`; flags and values
   are case-sensitive. Install and sign in: [domino-cli](../domino-cli/SKILL.md).
@@ -69,8 +69,8 @@ one is in progress; time scales with size.
 
 **Key fact**: a snapshot is mounted only in executions started after it became `active`. Read
 one from the current run with `GET $DOMINO_API_PROXY/v4/datasetrw/snapshot/{snapshotId}/file/raw?path=<file>`
-(Internal API, may change between Domino versions). The docs' API reference lists this route
-without `/v4`; that form returns 404.
+(non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)). The docs list this route without `/v4`;
+that form returns 404.
 
 - **Create**: UI **Take Snapshot** (all or selected files, optional tag);
   `domino create-snapshot <owner>/<project>/<dataset>`; or
@@ -108,15 +108,14 @@ paths. Reads without a mount (Apps, endpoints): `DatasetClient` in the domino-da
 Owners mark for deletion; an admin purges. Dataset: UI **More Actions > Delete Dataset** or
 `DELETE /api/datasetrw/v1/datasets/{datasetId}` (soft, cancellable, affects every Project
 that mounts it; confirm first). Snapshot: UI, or
-`DELETE /v4/datasetrw/snapshot/{snapshotId}` (internal API, may change between Domino
-versions); restore with `PUT` `{"status": "Active"}`. Details: [API.md](./API.md).
+`DELETE /v4/datasetrw/snapshot/{snapshotId}` (non-public route; may change in a future Domino version); restore with `PUT` `{"status": "Active"}`. Details: [API.md](./API.md).
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---|---|
 | Path missing in the execution | `DOMINO_IS_GIT_BASED`; Dataset mounted in this Project; execution started after the mount |
-| Permission denied writing | Dataset role (Reader is read-only); snapshot paths are always read-only; a pinned snapshot replaces the live mount; test with `os.access(path, os.W_OK)` |
+| Permission denied writing | Dataset role (Reader is read-only); snapshot paths are always read-only; a pinned snapshot replaces the live mount |
 
 ## Reference files
 
@@ -124,6 +123,6 @@ versions); restore with `PUT` `{"status": "Active"}`. Details: [API.md](./API.md
 - [API.md](./API.md): routes, bodies, auth, examples
 - [BEST-PRACTICES.md](./BEST-PRACTICES.md): layout, formats, snapshot limits, large reads
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets and child
-pages, https://docs.domino.ai/cloud/admin/data-administration/datasets,
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets,
+https://docs.domino.ai/cloud/admin/data-administration/datasets,
 https://docs.domino.ai/cloud/reference/cli/cli-reference (`/6.3/` for self-managed).

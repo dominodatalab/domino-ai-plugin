@@ -246,7 +246,7 @@ Launch:
 pyflyte run --remote flows/training_pipeline.py training_pipeline --features_path /mnt/data/features/latest.csv
 ```
 
-Flow Artifacts show up under the run with lineage; DATA artifacts can also be assigned to a Dataset from the UI (**Examine Flow Artifacts** in the docs). Behind that UI action is the internal `POST /v4/datasetrw/dataset/{datasetId}/snapshotFromFlowsArtifacts` (internal API, may change between Domino versions), whose body needs presigned blob URLs, a signature and the artifact id that the Flows backend supplies, so there is no one-call recipe; use the UI or the `run_launch_export_artifacts_task` export above. The export task launches a separate execution that waits for the run to finish, so its node may appear early in the graph.
+Flow Artifacts show up under the run with lineage; DATA artifacts can also be assigned to a Dataset from the UI (**Examine Flow Artifacts** in the docs). Behind that UI action is the internal `POST /v4/datasetrw/dataset/{datasetId}/snapshotFromFlowsArtifacts` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)), whose body needs presigned blob URLs, a signature and the artifact id that the Flows backend supplies, so there is no one-call recipe; use the UI or the `run_launch_export_artifacts_task` export above. The export task launches a separate execution that waits for the run to finish, so its node may appear early in the graph.
 
 ## Example 3: production pinning and an approval gate
 

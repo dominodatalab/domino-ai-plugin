@@ -58,7 +58,7 @@ Neither public spec (`https://docs.domino.ai/api-specs/6.3/public-api.json`, `..
 
 - Find launcher runs: `GET /api/jobs/beta/jobs?projectId=...` returns each run as a Job whose `runLauncherId` field is set; `GET /api/jobs/beta/jobs/{jobId}` and `.../logs` give status and logs (see [domino-jobs](../domino-jobs/SKILL.md)).
 - Fetch a result file: take `job.commitDetails.outputCommitId` from the Job and call `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` (path URL-encoded, response is the raw file).
-- Starting a launcher programmatically exists only in the Domino Internal API (`POST /v4/projects/{projectId}/launcherJob/{launcherId}`; internal API, may change between Domino versions, documented per deployment at `https://<domino-domain>/docs`). Prefer `POST /api/jobs/v1/jobs` with the same command and explicit arguments when automation is the goal.
+- Starting a launcher programmatically exists only in the Domino Internal API (`POST /v4/projects/{projectId}/launcherJob/{launcherId}`; non-public route; may change in a future Domino version, documented per deployment at `https://<domino-domain>/docs`). Prefer `POST /api/jobs/v1/jobs` with the same command and explicit arguments when automation is the goal.
 
 Authentication for these calls: [domino-api-intro](../domino-api-intro/SKILL.md).
 

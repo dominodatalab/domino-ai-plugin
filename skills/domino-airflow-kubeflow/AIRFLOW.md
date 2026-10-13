@@ -110,7 +110,7 @@ from domino.airflow import DominoOperator
 
 Runs through `runs_start_blocking` on the **legacy v1 Runs API** (`/v1/projects/{owner}/{project}/runs`,
 `/v1/projects/{owner}/{project}/run/{id}/stdout`; not in the Public API, absent from the
-cluster's internal reference too, may change between Domino versions). python-domino's README:
+cluster's internal reference too; non-public route, may change in a future Domino version). python-domino's README:
 "Use `job_start` for all new development. `runs_start` is retained for backwards compatibility."
 
 | Parameter | Type / default | Meaning |
@@ -123,7 +123,7 @@ cluster's internal reference too, may change between Domino versions). python-do
 | `isDirect` | `bool`, `None` | run `command[0]` as a shell command; must then be a single element |
 | `commitId` | `str`, `None` | DFS commit to run from (not a git SHA on a Git-based project) |
 | `title` | `str`, `None` | Job title; templated |
-| `tier` | `str`, `None` | hardware tier **name**; checked against `hardware_tiers_list()` (`/v4/projects/{id}/hardwareTiers`, internal API) before start |
+| `tier` | `str`, `None` | hardware tier **name**; checked against `hardware_tiers_list()` (`/v4/projects/{id}/hardwareTiers`, non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)) before start |
 | `publishApiEndpoint` | `bool`, `None` | republish the project's endpoint after the Job |
 | `poll_freq` | `int`, `5` | seconds between status polls |
 | `max_poll_time` | `int`, `6000` | seconds before the task fails (the Job keeps running) |
@@ -144,7 +144,7 @@ from domino.airflow import DominoSparkOperator
 ```
 
 Runs through `job_start_blocking` on the v4 Jobs API (`/v4/jobs/start`, `/v4/jobs/{id}`;
-**internal API, may change between Domino versions**). Despite the name it is the operator for
+**non-public route; may change in a future Domino version**). Despite the name it is the operator for
 **any** Job that needs an explicit environment or a compute cluster.
 
 Same `project`, `host`, `api_key`, `domino_token_file`, `poll_freq`, `max_poll_time`,

@@ -78,8 +78,7 @@ disappears from the v2 list at once, `GET` by id still returns it, and the inter
 lifecycle stays `DeletionInProgress` for some time (more than ten minutes).
 Snapshot files are read through the dataset files service; called from outside Domino, the
 `/datasetrw/...` routes in the spec answer 404 while the `/v4/datasetrw/...` forms work
-(internal API, may change
-between Domino versions), so prefer the mount path or python-domino for file access.
+(non-public route; may change in a future Domino version), so prefer the mount path or python-domino for file access.
 
 ## Snapshots
 
@@ -166,8 +165,7 @@ Writing to the mount path inside a Workspace or Job is the normal way to add dat
 From outside an execution, python-domino `datasets_upload_files(dataset_id, local_path, ...)`
 performs the chunked upload against the dataset files service
 ([SDK-EXAMPLES.md](./SDK-EXAMPLES.md#datasets)). It calls the
-`/v4/datasetrw/datasets/{datasetId}/snapshot/file/*` routes (internal API, may change
-between Domino versions; the spec lists the same protocol under `/datasetrw/...`), a
+`/v4/datasetrw/datasets/{datasetId}/snapshot/file/*` routes (non-public route; may change in a future Domino version; the spec lists the same protocol under `/datasetrw/...`), a
 multi-step resumable upload, so use the SDK rather than calling them directly.
 
 ## python-domino

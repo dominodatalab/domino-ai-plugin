@@ -136,8 +136,7 @@ Domino 6.3 has no Public roles route. The Domino Internal API manages App access
 both targets: `POST /v4/modelProducts/{appId}/visibility` with
 `{"visibility": "PUBLIC" | "AUTHENTICATED" | "GRANT_BASED" | "GRANT_BASED_STRICT"}`,
 `POST .../grantAccess` and `POST .../denyAccess` with `{"userId": "<user-id>"}`, plus
-`.../invite` (several users at once) and `.../uninvite`. Internal API, may change between
-Domino versions; taken from the Cloud/6.4 internal reference (python-domino's `app_*`
+`.../invite` (several users at once) and `.../uninvite`. non-public route; may change in a future Domino version; taken from the Cloud/6.4 internal reference (python-domino's `app_*`
 methods use the same `/v4/modelProducts` family); confirm the routes
 in your deployment's `/docs` first.
 

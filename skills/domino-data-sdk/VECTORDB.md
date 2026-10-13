@@ -10,8 +10,7 @@ Source: `domino_data/vectordb.py` (26 lines).
 
 Qdrant has a Data Source connector too (`connect-to-qdrant` on the same docs path) but no helper
 in this library; use the UI code snippet for it. The snippet is also served by
-`GET /v4/datasource/{dataSourceId}/connection/string/all?dataSourceName=<name>` (Internal API,
-may change between Domino versions), which returns `snippetsByLanguages` for Python, R and SAS.
+`GET /v4/datasource/{dataSourceId}/connection/string/all?dataSourceName=<name>` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)), which returns `snippetsByLanguages` for Python, R and SAS.
 
 ## Prerequisites
 

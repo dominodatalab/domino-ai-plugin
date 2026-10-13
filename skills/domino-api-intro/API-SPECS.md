@@ -39,7 +39,7 @@ curl -s https://<domino-domain>/docs/configuration.json | jq '.sources[] | {titl
 | Document | Contents |
 |----------|----------|
 | `/docs/openapi/openapi-public.json` | That deployment's full Public API |
-| `/docs/openapi/openapi-internal.json` | The Domino Internal API (the `/v4/*` routes) |
+| `/docs/openapi/openapi-internal.json` | The internal API (the `/v4/*` routes; non-public, may change in a future Domino version) |
 | `/docs/openapi/data_taxonomy_service-swagger.json` | Tags and properties service |
 | `/docs/openapi/data_remotefs_service-swagger.json` | NetApp Volumes service |
 | `/docs/openapi/rai_guardrails_service-swagger.json` | Governance service |
@@ -52,7 +52,7 @@ treat it as complete.
 
 `/v4/*` routes are the Domino Internal API. They are not in the Public API spec and are
 not versioned for external use. Prefer the `/api/...` equivalent; where none exists,
-label the call **internal API, may change between Domino versions** at the point of use.
+label the call **non-public route; may change in a future Domino version** at the point of use ([route types](./SKILL.md#route-types)).
 
 ## Product docs
 

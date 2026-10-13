@@ -3,7 +3,7 @@
 All routes below exist in both published Public API specs
 (https://docs.domino.ai/api-specs/6.3/public-api.json and
 https://docs.domino.ai/api-specs/cloud/public-api.json, tag `Datasets`). Every `/v4`
-route named below is labelled Internal API, may change between Domino versions, at its point of
+route named below is labelled non-public route; may change in a future Domino version, at its point of
 use; readers on Domino 6.3 should confirm each one in their deployment's `/docs`.
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/create-and-manage-datasets
 (REST tab) and the API reference under https://docs.domino.ai/cloud/reference/api.
@@ -49,7 +49,7 @@ on 6.4.0 a 400 or 404 arrives as `{"requestId": ..., "errors": ["..."]}`, so rea
 | `POST /api/datasetrw/v1/datasets` | Create | `{"name": "...", "description": "...", "projectId": "...", "grants": [...]}`; or `snapshotId` instead of `projectId` to copy a snapshot into a new Dataset; `name` required |
 | `GET /api/datasetrw/v1/datasets/{datasetId}` | Details | returns `id`, `name`, `description`, `projectId`, `createdAt`, `snapshotIds`, `tags` (tag name to snapshot ID) |
 | `PATCH /api/datasetrw/v1/datasets/{datasetId}` | Rename or re-describe | `{"name": "...", "description": "..."}` (either) |
-| `DELETE /api/datasetrw/v1/datasets/{datasetId}` | Soft delete (works for a non-admin Owner): returns the Dataset, which vanishes from the v2 list at once while `GET` by ID still works; internally it is `DeletionInProgress` and cancellable through `DELETE /v4/datasetrw/dataset/{id}/cancel-request-to-delete` (**Internal API, may change between Domino versions**), and it stays in that state for at least 10 minutes. The spec names the PermanentDelete permission; an admin may need to finish the deletion. Never call it without explicit user confirmation | none |
+| `DELETE /api/datasetrw/v1/datasets/{datasetId}` | Soft delete (works for a non-admin Owner): returns the Dataset, which vanishes from the v2 list at once while `GET` by ID still works; internally it is `DeletionInProgress` and cancellable through `DELETE /v4/datasetrw/dataset/{id}/cancel-request-to-delete` (**non-public route; may change in a future Domino version**), and it stays in that state for at least 10 minutes. The spec names the PermanentDelete permission; an admin may need to finish the deletion. Never call it without explicit user confirmation | none |
 | `GET /api/datasetrw/v1/datasets/{datasetId}/snapshots` | List snapshots | `offset`, `limit` (default 10); each has `id`, `datasetId`, `creatorId`, `createdAt`, `status` |
 | `POST /api/datasetrw/v1/datasets/{datasetId}/snapshots` | Create snapshot | `{"relativeFilePaths": ["*"]}` for all files (active in about 20 s with nested files; `["/*"]` is accepted but the snapshot ends `failed`), or paths such as `["a.txt", "sub/b.txt"]`; returns `status: pending`. One copy at a time: a second `POST` while one is pending returns 400 `a snapshot copy is already in progress` |
 | `GET /api/datasetrw/v1/snapshots/{snapshotId}` | Snapshot details | `status` is one of `pending`, `active`, `failed`, `copying`, `markForDeletion`, `deletionInProgress`, `deleted` |
@@ -61,12 +61,12 @@ on 6.4.0 a 400 or 404 arrives as `{"requestId": ..., "errors": ["..."]}`, so rea
 | `GET /api/projects/v1/projects/{projectId}/shared-datasets` | Datasets shared into a Project: `{"dataset": {"projectId", "sharedDatasetIds": [...]}}`. On Domino 6.4.0 it answers 200 with an empty `sharedDatasetIds` list when nothing is shared. Treat a 404 `sharedDatasetRwEntry ... not found` (an older shape on long-lived Projects) as the same empty case | none |
 | `POST /api/projects/v1/projects/{projectId}/shared-datasets` | Mount a shared Dataset | `{"datasetId": "..."}`; needs `ManageDatasetsRw` and `UseFileStorage` on the Project |
 | `DELETE /api/projects/v1/projects/{projectId}/shared-datasets/{datasetId}` | Unmount; returns `{"success": true}` | none |
-| `GET /v4/datasetrw/snapshot/{snapshotId}/files/recursive?path=` | **Internal API, may change between Domino versions.** File names under a path in a snapshot; rows `[{name: {label, ...}, size, lastModified}]` | `path` required; empty for the root (`/` and `.` return 400) |
-| `GET /v4/datasetrw/snapshot/{snapshotId}/file/raw?path=a.txt` | **Internal API, may change between Domino versions.** Raw file content | `path` required; `download` optional |
+| `GET /v4/datasetrw/snapshot/{snapshotId}/files/recursive?path=` | **non-public route; may change in a future Domino version.** File names under a path in a snapshot; rows `[{name: {label, ...}, size, lastModified}]` | `path` required; empty for the root (`/` and `.` return 400) |
+| `GET /v4/datasetrw/snapshot/{snapshotId}/file/raw?path=a.txt` | **non-public route; may change in a future Domino version.** Raw file content | `path` required; `download` optional |
 
 `GET /api/datasetrw/v1/datasets` also exists but is marked deprecated; use v2. The spec lists the
 file routes as `/datasetrw/snapshot/...` without a prefix, but on Domino 6.4.0 that form (and
-`/api/datasetrw/snapshot/...`) returns 404 and only the `/v4/` form answers, hence the internal
+`/api/datasetrw/snapshot/...`) returns 404 and only the `/v4/` form answers, hence the non-public
 label. The chunked upload routes (`/datasetrw/datasets/{datasetId}/snapshot/file/...`) are what
 the CLI (`domino upload-dataset`, [domino-cli](../domino-cli/SKILL.md)) and python-domino
 `datasets_upload_files` drive; prefer those tools over calling them.
@@ -106,8 +106,7 @@ requests.post(f"{base}/api/datasetrw/v1/datasets/{dataset_id}/tags", headers=hea
 
 Read a snapshot you took in this execution. It is not mounted here (mounts are fixed at
 execution start), so go through the internal file routes, which answer through the proxy and
-from outside with a bearer. Internal API, may change between Domino
-versions; `path` is relative to the snapshot root with no leading slash, and an empty `path`
+from outside with a bearer. non-public route; may change in a future Domino version; `path` is relative to the snapshot root with no leading slash, and an empty `path`
 lists the root:
 
 ```bash
@@ -161,12 +160,12 @@ Snapshot limit hit: an execution that writes a snapshot fails with an error (doc
 limit until proven otherwise. The Public API has no per-snapshot delete or limit route; the
 internal routes in the next section cover both.
 
-## Snapshot deletion and limits (internal API)
+## Snapshot deletion and limits (non-public routes)
 
-Every call here is **Internal API, may change between Domino versions**; a non-admin Dataset
+Every call here is **non-public route; may change in a future Domino version**; a non-admin Dataset
 Owner can make them (on 6.3, confirm each in your deployment's `/docs`).
 
-| Call (Internal API, may change between Domino versions) | Behaviour |
+| Call (non-public route; may change in a future Domino version) | Behaviour |
 |---|---|
 | `DELETE /v4/datasetrw/snapshot/{snapshotId}` | Requests deletion: returns the snapshot with `lifecycleStatus: DeletionInProgress` (`deletionInProgress` in the public `GET`); it stays in the public snapshot list; `GET /v4/datasetrw/snapshot/{snapshotId}/can-cancel-delete` is `true` |
 | `DELETE /v4/datasetrw/snapshot/{snapshotId}/cancel-request-to-delete` | Within the grace period moves it to `MarkedForDeletion` (not back to `Active`); otherwise 400 `not in deletion in progress ... or grace period is over` |
@@ -178,7 +177,7 @@ Owner can make them (on 6.3, confirm each in your deployment's `/docs`).
 | `GET /v4/datasetrw/dataset/enforce-limit/{projectId}` | Whether limits apply to the Project (`true` by default) |
 | `POST /v4/datasetrw/datasets/limit/{projectId}?ignoreLimit=true` (or `false`) | Sets the Project's **Ignore Dataset Limits** override; no body; returns `{projectId, ignoreLimits, id}`. A Project Owner could set and revert it on 6.4.0 |
 
-Recipe at the limit (same Internal API label): list snapshots, `DELETE /v4/datasetrw/snapshot/{id}`
+Recipe at the limit (same non-public label): list snapshots, `DELETE /v4/datasetrw/snapshot/{id}`
 the ones you no longer need (or `PUT` them `MarkedForDeletion`), then ask an admin to purge; or
 set `ignoreLimit=true` on the Project if policy allows. Only `active` snapshots mount in new executions; the files of a
 marked or in-progress snapshot remain until an admin purges them.

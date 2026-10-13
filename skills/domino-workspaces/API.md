@@ -1,6 +1,6 @@
 # Workspaces over the API
 
-Applies to Domino 6.3 and Domino Cloud. The Public API has one Workspace route, `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (resume a stopped Workspace; both specs). Everything else below is the Domino Internal API that the UI calls: **internal API, may change between Domino versions**. Every write here was run live on Domino 6.4 (create, list, read, update, stop, resume, delete, and a Ray-clustered Workspace); the routes were read from that version's internal reference, so on 6.3 confirm the bodies in your deployment's `https://<domino-domain>/docs` (`openapi-internal.json`). python-domino has no Workspace methods.
+Applies to Domino 6.3 and Domino Cloud. The Public API has one Workspace route, `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (resume a stopped Workspace; both specs). Everything else below is the Domino Internal API that the UI calls: **non-public route; may change in a future Domino version**. Every write here was run live on Domino 6.4 (create, list, read, update, stop, resume, delete, and a Ray-clustered Workspace); the routes were read from that version's internal reference, so on 6.3 confirm the bodies in your deployment's `https://<domino-domain>/docs` (`openapi-internal.json`). python-domino has no Workspace methods.
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md). In a run call `$DOMINO_API_PROXY/v4/...` with no `Authorization` header; outside a run `$DOMINO_API_HOST/v4/...` with a Personal Access Token or service-account bearer token.
 
@@ -45,7 +45,7 @@ body = {
     #           "overrideMainGitRepoRef": {"type": "branch", "value": "main"},
     #           "computeClusterConfig": {...}            # see "Attach a cluster"
 }
-ws = requests.post(f"{base}/v4/workspace/project/{project_id}/workspace", json=body)   # internal API, may change between Domino versions
+ws = requests.post(f"{base}/v4/workspace/project/{project_id}/workspace", json=body)   # non-public route; may change in a future Domino version
 ws.raise_for_status()
 ws_id = ws.json()["id"]
 print(ws.json()["state"], ws.json()["configTemplate"]["hardwareTier"]["name"])

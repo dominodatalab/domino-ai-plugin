@@ -65,8 +65,7 @@ Service accounts: `POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountI
 Human users have no Public API deactivate route. Administrators do it in the admin UI or
 with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
 body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
-`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). Internal API, may change
-between Domino versions; admin-only; from the Cloud/6.4 internal reference. On Domino 6.3 confirm it in your
+`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only; from the Cloud/6.4 internal reference. On Domino 6.3 confirm it in your
 deployment's `/docs` first.
 
 ## Personal Access Tokens
@@ -217,8 +216,7 @@ costs = requests.get(f"{base_url}/api/cost/v1/allocation", headers=headers,
 ```
 
 Budgets and alerts are covered by python-domino's `budget_*` and `billing_tag*` methods
-([SDK-EXAMPLES.md](./SDK-EXAMPLES.md)), which call `/v4/cost` routes (internal API, may
-change between Domino versions).
+([SDK-EXAMPLES.md](./SDK-EXAMPLES.md)), which call `/v4/cost` routes (non-public route; may change in a future Domino version).
 
 ## Audit trail
 
@@ -257,7 +255,7 @@ Response: `{"events": [{"timestamp", "actor": {"id", "name"}, "action": {"eventN
 
 ## Internal routes you may still meet
 
-These are Domino Internal API, may change between Domino versions, and are not in either
+These are non-public routes; they may change in a future Domino version, and are not in either
 published spec: `/v4/users?listOnlyUsers=true`, `/v4/admin/centralConfigSettings`,
 `/v4/auth/principal`, `/v4/datasetrw/dataset-cost`, `/v4/domino-cost/budgets`. Confirm
 each in your deployment's `/docs/openapi/openapi-internal.json` before using it, and

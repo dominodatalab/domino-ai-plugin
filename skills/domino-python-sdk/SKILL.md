@@ -106,7 +106,7 @@ Per-area files:
 
 - Verify every route against both published specs before using it
   ([API-SPECS.md](../domino-api-intro/API-SPECS.md)). `/v4/*` routes are the Domino
-  Internal API; the files above label the few that remain.
+  Internal API: non-public routes that may change in a future Domino version; the files above label the few that remain.
 - Field names are not interchangeable across routes: `POST /api/jobs/v1/jobs` takes
   `runCommand` and `hardwareTier`; python-domino `job_start` takes `command` and
   `hardware_tier_id`.

@@ -35,7 +35,7 @@ else:
 `domino.authenticate(auth_token=...)` re-authenticates an existing client, which is how a
 long-running script refreshes the short-lived access token. The client is bound to one
 project (`owner/project-name`); `domino.project_id` resolves its id. Most methods call the
-Domino Internal API (`/v4/...`, `/v1/projects/...`) on behalf of that project.
+Domino Internal API (`/v4/...`, `/v1/projects/...`; non-public routes that may change in a future Domino version) on behalf of that project.
 
 ## Method reference
 
@@ -114,7 +114,7 @@ There is no `datasets_snapshot` or `datasets_tag` method. Snapshot and tag route
 | `models_list()` | Model APIs in the project. |
 | `model_publish(file, function, environment_id, name, description, files_to_exclude=None)` | All five leading arguments required. Returns the created Model API JSON. |
 | `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` | |
-| `model_version_export(...)`, `model_version_sagemaker_export(...)`, `model_version_export_status(model_export_id)`, `model_version_export_logs(model_export_id)` | Image export to a registry (`/v4/models`, internal API, may change between Domino versions). Build-then-export sequence and a CI/CD pipeline: [domino-model-delivery](../domino-model-delivery/EXPORT-API.md). |
+| `model_version_export(...)`, `model_version_sagemaker_export(...)`, `model_version_export_status(model_export_id)`, `model_version_export_logs(model_export_id)` | Image export to a registry (`/v4/models`, non-public route; may change in a future Domino version). Build-then-export sequence and a CI/CD pipeline: [domino-model-delivery](../domino-model-delivery/EXPORT-API.md). |
 | `app_publish(unpublish_running_apps=True, hardware_tier_id=None, environment_id=None, external_volume_mount_ids=None, commit_id=None, branch=None, app_id=None)`, `app_unpublish(app_id=None)`, `app_get_status(app_id)`, `app_id` (property) | Legacy app start/stop; new automation uses the Public API in [domino-apps](../domino-apps/API-APPS.md). |
 
 Budgets and billing tags (`budget_*`, `billing_tag*`, `project_billing_tag*`,
@@ -218,8 +218,7 @@ env = domino.get_environment(env_id)["environment"]     # Public GET: tools, but
 rev_id = env["selectedRevision"]["id"]
 
 # Base image and build configuration are only on the Domino Internal API
-# GET /v4/environments/environmentRevision/{revisionId} (may change between Domino
-# versions). A revision built from another environment has no dockerImage of its own;
+# GET /v4/environments/environmentRevision/{revisionId} (non-public route; may change in a future Domino version). A revision built from another environment has no dockerImage of its own;
 # its base image is under "base".
 details = requests.get(f"{base_url}/v4/environments/environmentRevision/{rev_id}", headers=headers).json()
 current = details["environmentRevision"]
@@ -272,7 +271,7 @@ versions = sorted(domino.model_versions_get(model_id)["data"],
 latest_version_id = versions[0]["_id"]
 ```
 
-`model_publish` posts to `/v1/models` (internal API, may change between Domino versions);
+`model_publish` posts to `/v1/models` (non-public route; may change in a future Domino version);
 the Public API equivalent is `POST /api/modelServing/v1/modelApis`
 ([API-MODELS.md](./API-MODELS.md)).
 

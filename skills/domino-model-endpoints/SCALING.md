@@ -2,7 +2,7 @@
 
 Applies to Domino 6.3 and Domino Cloud. Sources: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/scale and https://docs.domino.ai/cloud/admin/platform-configuration/manage-model-deployments.
 
-Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings (from the UI, or stop and start the version with the internal routes in [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment); internal API, may change between Domino versions).
+Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings (from the UI, or stop and start the version with the internal routes in [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment); non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)).
 
 ## Horizontal: number of instances
 
@@ -23,7 +23,7 @@ Via the API, `PUT /api/modelServing/v1/modelApis/{modelApiId}` takes `name`, `de
 
 ## Python worker parallelism
 
-Each Python endpoint instance runs uWSGI with one worker by default. An administrator raises `com.cerebro.domino.modelmanager.uWsgi.workerCount` under **Admin** > **Platform settings** > **Configuration records** and restarts services. The setting is deployment-wide and applies to synchronous endpoints only. The same records are reachable through the internal `/v4/admin/centralConfigSettings` routes ([API-ADMIN.md](../domino-python-sdk/API-ADMIN.md); internal API, may change between Domino versions, requires `EditCentralConfig`); on Domino Cloud only Domino holds that permission, so for Cloud the UI instruction is the path, and self-managed admins can use either. More workers means more concurrent requests per instance and proportionally more memory, since each worker loads the model.
+Each Python endpoint instance runs uWSGI with one worker by default. An administrator raises `com.cerebro.domino.modelmanager.uWsgi.workerCount` under **Admin** > **Platform settings** > **Configuration records** and restarts services. The setting is deployment-wide and applies to synchronous endpoints only. The same records are reachable through the internal `/v4/admin/centralConfigSettings` routes ([API-ADMIN.md](../domino-python-sdk/API-ADMIN.md); non-public route; may change in a future Domino version, requires `EditCentralConfig`); on Domino Cloud only Domino holds that permission, so for Cloud the UI instruction is the path, and self-managed admins can use either. More workers means more concurrent requests per instance and proportionally more memory, since each worker loads the model.
 
 ## Routing modes
 

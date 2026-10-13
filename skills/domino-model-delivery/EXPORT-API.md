@@ -11,7 +11,7 @@ customer runtime). To serve it, publish a Domino endpoint instead
 ([domino-model-endpoints](../domino-model-endpoints/SKILL.md)): Domino then builds, hosts, scales
 and monitors it.
 
-**Every `/v4/...` route in this file is Domino Internal API, may change between Domino versions.**
+**Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
 They are not in the Public API spec; each cluster documents them under
 `https://<domino-domain>/docs` (`openapi-internal.json`). The routes come from the product page
 (Cloud and 6.3 are identical); the field lists and required flags below come from one Domino
@@ -184,12 +184,12 @@ examples; the mapping is here so you can read existing code. Usage of the client
 
 | Method | Calls | API |
 |---|---|---|
-| `models_list()` | `GET /v1/projects/{owner}/{project}/models` | legacy v1, not in the Public API, may change between Domino versions |
+| `models_list()` | `GET /v1/projects/{owner}/{project}/models` | legacy v1, not in the Public API; non-public route; may change in a future Domino version |
 | `model_versions_get(model_id)` | `GET /v1/models/{modelId}/versions` (versions carry `_id`, `metadata.number`) | legacy v1, as above |
-| `model_version_export(model_id, model_version_id, registry_host, registry_username, registry_password, repository_name, image_tag)` | `POST /v4/models/{modelId}/{modelVersionId}/exportImageToRegistry` | internal API |
-| `model_version_sagemaker_export(...)` (same arguments) | `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker` | internal API; see [EXPORT-TARGETS.md](./EXPORT-TARGETS.md#amazon-sagemaker) |
-| `model_version_export_status(model_export_id)` | `GET /v4/models/{exportId}/getExportImageStatus` | internal API |
-| `model_version_export_logs(model_export_id)` | `GET /v4/models/{exportId}/getExportLogs` | internal API |
+| `model_version_export(model_id, model_version_id, registry_host, registry_username, registry_password, repository_name, image_tag)` | `POST /v4/models/{modelId}/{modelVersionId}/exportImageToRegistry` | non-public route; may change in a future Domino version |
+| `model_version_sagemaker_export(...)` (same arguments) | `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker` | non-public route; may change in a future Domino version; see [EXPORT-TARGETS.md](./EXPORT-TARGETS.md#amazon-sagemaker) |
+| `model_version_export_status(model_export_id)` | `GET /v4/models/{exportId}/getExportImageStatus` | non-public route; may change in a future Domino version |
+| `model_version_export_logs(model_export_id)` | `GET /v4/models/{exportId}/getExportLogs` | non-public route; may change in a future Domino version |
 
 Public API replacements for the two listing calls: `GET /api/modelServing/v1/modelApis?projectId=...`
 and `GET /api/modelServing/v1/modelApis/{modelApiId}/versions`.

@@ -1,12 +1,12 @@
 # Scheduled Jobs over the API
 
-Applies to Domino 6.3 and Domino Cloud. Scheduled Jobs are created in the UI (**Jobs > Schedules > Schedule a Job**) or through the routes below. The Public API has no scheduled-Job route and python-domino has no scheduled-Job method, so the API path is the Domino Internal API that the UI itself calls: **internal API, may change between Domino versions**. Every call here was run live on Domino 6.4 (create, list, fire, update, pause, delete); Domino's own public tooling uses the same routes on earlier lines, but confirm the bodies in your deployment's `https://<domino-domain>/docs` (`openapi-internal.json`) before relying on them on 6.3.
+Applies to Domino 6.3 and Domino Cloud. Scheduled Jobs are created in the UI (**Jobs > Schedules > Schedule a Job**) or through the routes below. The Public API has no scheduled-Job route and python-domino has no scheduled-Job method, so the API path is the Domino Internal API that the UI itself calls: **non-public route; may change in a future Domino version**. Every call here was run live on Domino 6.4 (create, list, fire, update, pause, delete); Domino's own public tooling uses the same routes on earlier lines, but confirm the bodies in your deployment's `https://<domino-domain>/docs` (`openapi-internal.json`) before relying on them on 6.3.
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md). Inside a run call `$DOMINO_API_PROXY/v4/...` with no `Authorization` header; outside a run call `$DOMINO_API_HOST/v4/...` with a Personal Access Token or service-account bearer token.
 
 ## Routes
 
-| Action | Route (all internal API) |
+| Action | Route (all non-public; may change in a future Domino version) |
 |---|---|
 | Create | `POST /v4/projects/{projectId}/scheduledjobs` |
 | List in a Project | `GET /v4/projects/{projectId}/scheduledjobs` -> array of schedule objects |
@@ -50,7 +50,7 @@ body = {
     #                              "workerHardwareTierId": {"value": "small-k8s"}, "masterHardwareTierId": {"value": "small-k8s"}},
     # "snapshotDatasetsOnCompletion": True, "netAppVolumeIds": [], "externalVolumeMounts": [],
 }
-r = requests.post(f"{base}/v4/projects/{project_id}/scheduledjobs", json=body)   # internal API, may change between Domino versions
+r = requests.post(f"{base}/v4/projects/{project_id}/scheduledjobs", json=body)   # non-public route; may change in a future Domino version
 r.raise_for_status()
 sched = r.json()
 key = sched["id"]
@@ -82,7 +82,7 @@ jobs = requests.get(f"{base}/api/jobs/beta/jobs", params={"projectId": project_i
 fired = [j for j in jobs if j["status"]["isScheduled"]]
 ```
 
-Stop a run you do not want with `POST /v4/jobs/stop` `{"projectId", "jobId", "commitResults": false}` (internal API, may change between Domino versions); logs and status come from the public `/api/jobs/beta/jobs/{jobId}` routes ([SKILL.md](./SKILL.md#monitor-a-job)).
+Stop a run you do not want with `POST /v4/jobs/stop` `{"projectId", "jobId", "commitResults": false}` (non-public route; may change in a future Domino version); logs and status come from the public `/api/jobs/beta/jobs/{jobId}` routes ([SKILL.md](./SKILL.md#monitor-a-job)).
 
 ## Update, pause, resume
 

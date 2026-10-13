@@ -275,8 +275,9 @@ also serves its own cluster-specific API reference at `https://<domino-domain>/d
 governance, taxonomy, model monitoring, NetApp volumes and dataset file routes, so do not
 treat it as complete. Routes that exist only in the Internal API (`/v4/*`) are not part of
 the Public API and are not versioned for external use: prefer the `/api/...` equivalent,
-and where none exists label the call **internal API, may change between Domino versions**
-at the point of use. The
+and where none exists label the call `(non-public route; may change in a future Domino version)`
+at the point of use, linking the canonical note in `skills/domino-api-intro/SKILL.md` ("Route
+types") from any file that does not already point to that skill. The
 verified divergence between the two targets is recorded in `coverage/COMPAT.md` (maintainers’ audit workspace, not yet in this repo).
 
 Nothing about versions goes in `description`; it is loaded for every skill on every turn
@@ -365,7 +366,7 @@ restart it in the UI"), never how that was learned ("our live test showed", "ver
 internal cluster", "the audit found"). Where real uncertainty changes what the agent should do,
 state it as reader guidance ("if this returns 404, confirm the route in your deployment's
 `/docs`"), not as a test log. Version facts stay as facts ("on Domino 6.4 the response is X"),
-and the labels "internal API, may change between Domino versions" and "on 6.3, confirm in your
+and the labels "non-public route; may change in a future Domino version" and "on 6.3, confirm in your
 deployment's `/docs`" stay.
 
 ### 13. What belongs in a skill

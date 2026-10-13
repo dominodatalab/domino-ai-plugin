@@ -84,7 +84,8 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
   `$DOMINO_API_HOST/assets/public-api.json` is a subset and misses whole services.
 - `/v4/*` routes are the Domino Internal API (documented per cluster under `/docs`, absent from
   the Public API). Use the `/api/...` equivalent; where none exists, label the call
-  "internal API, may change between Domino versions" where it appears.
+  `(non-public route; may change in a future Domino version)` where it appears and link the
+  canonical note in `skills/domino-api-intro/SKILL.md` ("Route types").
 - Product behaviour comes from docs.domino.ai (`/cloud/...` and `/6.3/...`; `llms.txt` indexes
   every page, and any page is Markdown with `.md` appended). Cite docs.domino.ai, not
   `docs.dominodatalab.com/en/latest`.
@@ -106,8 +107,7 @@ standards are CONTRIBUTING.md 1, 4, 7, 9 and 10; the requirements are:
 - Skill content states facts and instructions only: no provenance (how, when or where
   something was verified, audits, reviews, test clusters). Put verification evidence in the PR
   description. Real uncertainty becomes reader guidance ("if this returns 404, confirm the route
-  in your deployment's `/docs`"); version facts and the "internal API, may change between Domino
-  versions" label stay (CONTRIBUTING standard 12).
+  in your deployment's `/docs`"); version facts and the "non-public route; may change in a future Domino version" label stay (CONTRIBUTING standard 12).
 - A skill holds facts, routes, steps, real constraints, decision rules and the short reasons
   behind them, and nothing else: no change history ("now", "no longer", "previously"), no
   project jargon (PR, audit, round, release candidate, E2E, harness, eval, ticket keys), no ids

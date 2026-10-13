@@ -71,10 +71,8 @@ it. Request fields, logs, result hand-off and failure handling: [JOBS-API-PATTER
 Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md):
 
 - `DominoOperator` starts Jobs with python-domino's `runs_start_blocking` on the **legacy v1
-  Runs API** (`/v1/projects/{owner}/{project}/runs`; not in the Public API, may change between
-  Domino versions). python-domino's README: use `job_start` for all new development.
-- `DominoSparkOperator` uses `job_start_blocking` on the v4 Jobs API (**internal API, may change
-  between Domino versions**) and takes `environment_id`, `hardware_tier_name` and a Spark, Ray,
+  Runs API** (`/v1/projects/{owner}/{project}/runs`; not in the Public API, may change in a future Domino version). python-domino's README: use `job_start` for all new development.
+- `DominoSparkOperator` uses `job_start_blocking` on the v4 Jobs API (**non-public route; may change in a future Domino version**) and takes `environment_id`, `hardware_tier_name` and a Spark, Ray,
   Dask or MPI `compute_cluster_properties`. It raises only when the Job ends `Failed`; a Job that
   ends `Error` or `Stopped` returns normally and the task goes green. AIRFLOW.md has a subclass
   that checks `executionStatus == "Succeeded"`. `DominoOperator` fails on any non-success.

@@ -106,7 +106,7 @@ invocation URL; read that from the Model API's page in Domino.
 `DELETE` on a running Model API returns `500 Model API with id <id> is running`. The
 Public API has no stop route; stop it first with
 `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` (body `{}`;
-internal API, may change between Domino versions) or from the UI, then `DELETE`. After
+non-public route; may change in a future Domino version) or from the UI, then `DELETE`. After
 deletion `GET` returns 404 and the list no longer includes the record.
 
 **Cloud only:** `PUT /api/modelServing/beta/modelApis/{modelApiId}/access` saves
@@ -261,7 +261,7 @@ print(result["status"], result.get("result"), result.get("errors"))
 `models_list()`, `model_publish(file, function, environment_id, name, description, files_to_exclude=None)`,
 `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)`
 and the `model_version_export*` methods call `/v1/models` and `/v4/models`, which are
-Domino Internal API, may change between Domino versions. Signatures and a publish example:
+non-public routes; they may change in a future Domino version. Signatures and a publish example:
 [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#model-apis-and-apps); the export routes and the build call
 the SDK lacks: [EXPORT-API.md](../domino-model-delivery/EXPORT-API.md); the NVIDIA Fleet Command,
 Snowflake and SageMaker targets: [EXPORT-TARGETS.md](../domino-model-delivery/EXPORT-TARGETS.md).

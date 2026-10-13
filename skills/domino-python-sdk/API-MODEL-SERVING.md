@@ -46,7 +46,7 @@ separate resources with separate lifecycles; do not mix their ids.
 ## Lifecycle
 
 - A running Model API cannot be deleted (`500 ... is running`). Stop it first (`POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment`,
-  internal API, may change between Domino versions, or the UI), then `DELETE`; afterwards
+  non-public route; may change in a future Domino version, or the UI), then `DELETE`; afterwards
   `GET` returns 404 and the record is gone from the list.
 - A Model Deployment has `start` and `stop`; after `stop` or `DELETE`, `GET` the resource
   to confirm the state before issuing the next call.

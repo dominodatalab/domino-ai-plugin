@@ -140,16 +140,14 @@ Domino Cloud, Domino Support sets the limits. Behaviour at the limit:
   deleted until an admin acts.
 - What `POST .../snapshots` returns at the limit is not documented; expect an error.
 - A Project can be exempted: **Settings > Hardware & Environment > Ignore Dataset Limits**, or
-  `POST /v4/datasetrw/datasets/limit/{projectId}?ignoreLimit=true` (Internal API, may change
-  between Domino versions; no body; read back with
-  `GET /v4/datasetrw/dataset/enforce-limit/{projectId}`). A Project Owner could set and revert
-  it on Domino 6.4.0. Check first with `GET /v4/datasetrw/snapshot/limit/{projectId}/{datasetId}`
+  `POST /v4/datasetrw/datasets/limit/{projectId}?ignoreLimit=true` (non-public route; may change in a future Domino version; no body; read back with
+  `GET /v4/datasetrw/dataset/enforce-limit/{projectId}`). A Project Owner can set and revert
+  it. Check first with `GET /v4/datasetrw/snapshot/limit/{projectId}/{datasetId}`
   (same label), which returns `true` once the cap is hit.
 
 Deleting: an Owner marks a Dataset or snapshot for deletion, which excludes it from new
 executions; an admin removes it permanently from **Admin > Manage resources > Datasets**. For a
-snapshot, `DELETE /v4/datasetrw/snapshot/{snapshotId}` (Internal API, may change between Domino
-versions) does the marking from code and `PUT` with `{"status": "Active"}` undoes it; the
+snapshot, `DELETE /v4/datasetrw/snapshot/{snapshotId}` (non-public route; may change in a future Domino version) does the marking from code and `PUT` with `{"status": "Active"}` undoes it; the
 routes and their states are in [API.md](./API.md). On 6.3 the recovery window is
 `com.cerebro.domino.dataset.graceTimeForDeletion` (default 15 minutes). Snapshots count toward storage and quota warnings appear on the Dataset page, so
 delete what you no longer need, and refresh Datasets from external Data Sources with a

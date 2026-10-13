@@ -61,7 +61,7 @@ Domino-built Extensions are installed, upgraded and uninstalled from **Admin pan
 | Model inference | The `url` from the endpoint record, not a hand-built host |
 | Automation outside any run | Public deployment URL plus PAT or service account token |
 
-Without consent the viewer JWT has limited scope, so privileged reads such as `GET /v4/users/self` (Domino Internal API, may change between Domino versions) can fail; prefer `/api/...` routes and request consent. Domino does not inject a public-URL variable such as `DOMINO_EXTERNAL_URL`; when the backend needs the deployment's public URL, configure it as a project environment variable.
+Without consent the viewer JWT has limited scope, so privileged reads such as `GET /v4/users/self` (non-public route; may change in a future Domino version) can fail; prefer `/api/...` routes and request consent. Domino does not inject a public-URL variable such as `DOMINO_EXTERNAL_URL`; when the backend needs the deployment's public URL, configure it as a project environment variable.
 
 ## Reference files
 

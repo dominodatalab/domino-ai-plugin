@@ -55,7 +55,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 ## Workspace sessions over the API
 
 - Resume a stopped Workspace: `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` with `{"externalVolumeMounts": [], "netAppVolumeMounts": []}` (both specs) -> `{"workspaceSession": {"id", "executionId"}, "metadata"}`. `workspaceId` is in the Workspace URL or **Show Details**.
-- Create, list, read, update, stop, delete: no public route; the Internal API covers them (`POST /v4/workspace/project/{projectId}/workspace` and the rest in [API.md](./API.md); internal API, may change between Domino versions); python-domino has none.
+- Create, list, read, update, stop, delete: no public route; the Internal API covers them (`POST /v4/workspace/project/{projectId}/workspace` and the rest in [API.md](./API.md); non-public route; may change in a future Domino version); python-domino has none.
 - Authentication: [domino-api-intro](../domino-api-intro/SKILL.md).
 
 ### Which path applies

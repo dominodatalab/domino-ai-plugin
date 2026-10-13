@@ -34,7 +34,7 @@ Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2
 
 **UI**: **Workspaces > + Create New Workspace** or **Jobs > Run**, then the **Compute Cluster** step. Settings: **Min / Max workers** (Spark: executors), **Auto-scale workers**, **Worker hardware tier**, **Head / Master / Scheduler hardware tier** (none for MPI), **Cluster compute environment**, **Dedicated local storage per executor** (mounted at `/tmp`, discarded at shutdown). Cluster size is capped by the per-user execution limit (master and execution each take a slot). Scheduled Jobs take the same settings in their wizard ([domino-jobs](../domino-jobs/SKILL.md)).
 
-**REST**: `computeCluster` on `POST /api/jobs/v1/jobs` (both specs). Clustered Workspaces: the UI, or `computeClusterConfig` on the internal create route ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); internal API, may change between Domino versions).
+**REST**: `computeCluster` on `POST /api/jobs/v1/jobs` (both specs). Clustered Workspaces: the UI, or `computeClusterConfig` on the internal create route ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)).
 
 ```python
 body = {
@@ -65,7 +65,7 @@ Domino injects connection details; never hard-code hosts.
 from pyspark.sql import SparkSession
 spark = SparkSession.builder.appName("my-app").config("spark.sql.shuffle.partitions", "200").getOrCreate()
 ```
-`spark-submit` works in a Job if wrapped in a shell script (`spark-submit "$@"`). Project-wide extra config: **Settings > Integrations > Domino managed on-demand cluster**, or `PATCH /v4/projects/{projectId}/sparkConfig` (internal API, may change between Domino versions; [FRAMEWORK-EXAMPLES.md](./FRAMEWORK-EXAMPLES.md#project-wide-spark-settings)).
+`spark-submit` works in a Job if wrapped in a shell script (`spark-submit "$@"`). Project-wide extra config: **Settings > Integrations > Domino managed on-demand cluster**, or `PATCH /v4/projects/{projectId}/sparkConfig` (non-public route; may change in a future Domino version; [FRAMEWORK-EXAMPLES.md](./FRAMEWORK-EXAMPLES.md#project-wide-spark-settings)).
 
 **Ray**:
 ```python
@@ -85,13 +85,13 @@ client.wait_for_workers(2)      # optional; client.close() when done, never clie
 
 **MPI**: workers are listed in `/domino/mpi/hosts`. In a Workspace run **File Changes > MPI Cluster File Sync > Sync** first (copies `/mnt` code to the workers; Datasets are already mounted there), then `mpirun python train.py` (slots = worker CPU cores; `--map-by`, `--bind-to`, `-x VAR` as usual). In a Job, Domino wraps the command in `mpirun` itself; tune with an `mpi.conf` in the Project root, one `name = value` per line (`rmaps_base_mapping_policy = core`, `hwloc_base_binding_policy = socket`, `mca_base_env_list = VAR`, `orte_hostfile = /mnt/hosts`). Write outputs to a Dataset, not the Project files.
 
-Datasets are mounted on every cluster node at the same path, so a Dataset, NetApp Volume or External Data Volume is the sensible default for output. Object storage (S3 and similar) is fine where it is enabled for the cluster: client libraries in both environments, propagated credentials (domino-data-connectivity).
+Datasets are mounted on every cluster node at the same path, so a Dataset, NetApp Volume or External Data Volume is the default for output. Object storage (S3 and similar) is fine where it is enabled for the cluster: client libraries in both environments, propagated credentials (domino-data-connectivity).
 
 ## Web UI, autoscaling, lifecycle
 
 - Spark, Ray and Dask web UIs: a dedicated tab in the Workspace, or the Job **Details** tab (needs a data plane enabled for Workspaces on Nexus).
-- Autoscaling scales up when average CPU reaches 80% and down after about 5 minutes of low use (admins can tune); scale-down can discard workers holding intermediate results.
-- The cluster, its `/tmp` storage and anything not written to a Dataset, the Project files or external storage die with the execution.
+- Autoscaling scales up when average CPU reaches 80% and down after about 5 minutes of low use (tunable); scale-down can discard workers holding intermediate results.
+- The cluster, its `/tmp` and anything not written to a Dataset, the Project files or external storage die with the execution.
 
 ## Troubleshooting
 

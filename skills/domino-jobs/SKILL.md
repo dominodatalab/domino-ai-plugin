@@ -46,7 +46,7 @@ Tags: `POST /api/jobs/v1/jobs/{jobId}/tags` `{"projectId", "tagName"}`; `DELETE 
 
 ### Which path applies
 
-Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use only the routes above. On 6.4 and later (Domino Cloud today) `POST /api/jobs/v1/projects/{projectId}/job-defaults` also exists: send `{}` or start-Job field overrides to preview a Job's resolved configuration (`404` = absent).
+Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use only the routes above. On 6.4 and later `POST /api/jobs/v1/projects/{projectId}/job-defaults` also exists: send `{}` or start-Job field overrides to preview a Job's resolved configuration (`404` = absent).
 
 ## Monitor a Job
 
@@ -55,17 +55,17 @@ Both specs (beta).
 - List: `GET /api/jobs/beta/jobs?projectId=...&statusFilter=all|queued|running|completed|archived|active&limit=&offset=` -> `{"jobs": [...], "metadata": {..., "totalCount"}}`.
 - Details: `GET /api/jobs/beta/jobs/{jobId}` -> `job.status.executionStatus` (`Queued` ... `Running`, `Succeeded`, `Stopped`, `Failed`, `Error`; see job-states), `status.isCompleted`, `stageTimes.{submissionTime,startTime,completedTime}`, `commitDetails.{inputCommitId,outputCommitId}`, `usage`, `computeCluster`, `runLauncherId`.
 - Logs: `GET /api/jobs/beta/jobs/{jobId}/logs?logType=stdOut|stdErr|prepareOutput|complete&limit=1000&latestTimeNano=...` -> `logs.logContent[].{timestamp,logType,log}`, `logs.isComplete`, `metadata.pagination.latestTimeNano`. Code: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#logs).
-- Verify what a Job ran on: the Job object omits them; use the **Details** tab or `GET /v4/jobs/{jobId}/runtimeExecutionDetails` -> `hardwareTier.id`, `environment.environmentId` (internal API, may change between Domino versions; python-domino `job_runtime_execution_details(job_id)` wraps it).
+- Verify what a Job ran on: the Job object omits them; use the **Details** tab or `GET /v4/jobs/{jobId}/runtimeExecutionDetails` -> `hardwareTier.id`, `environment.environmentId` (non-public route; may change in a future Domino version; python-domino `job_runtime_execution_details(job_id)` wraps it).
 
 ## Stop, re-run, archive
 
-- Stop: **Jobs > Active**, select, **Stop**. No public stop route; internal `POST /v4/jobs/stop` `{"projectId", "jobId", "commitResults"}` (internal API, may change between Domino versions; python-domino `job_stop(job_id, commit_results=True)`, [domino-python-sdk](../domino-python-sdk/SKILL.md)).
+- Stop: **Jobs > Active**, select, **Stop**. No public stop route; internal `POST /v4/jobs/stop` `{"projectId", "jobId", "commitResults"}` (non-public route; may change in a future Domino version; python-domino `job_stop(job_id, commit_results=True)`, [domino-python-sdk](../domino-python-sdk/SKILL.md)).
 - Re-run: select a Job > **Re-Run with Original Version** or **Re-Run with Current Version** (Git refs refresh only if the original ran from a branch).
 - Archive hides Jobs (`showArchived=true` lists them).
 
 ## Scheduled Jobs
 
-UI: **Jobs > Schedules > Schedule a Job**. API: `POST /v4/projects/{projectId}/scheduledjobs` (internal API, may change between Domino versions; no public route or SDK method), then GET, PUT (edit or pause via `isPaused`) and DELETE on `.../{scheduledJobKey}`. Body, firings and examples: [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md).
+UI: **Jobs > Schedules > Schedule a Job**. API: `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version; no public route or SDK method), then GET, PUT (edit or pause via `isPaused`) and DELETE on `.../{scheduledJobKey}`. Body, firings and examples: [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md).
 
 **Schedule** is a repeat interval or a **Quartz CronTrigger** expression, not crontab: six fields plus an optional year, seconds first, `?` in exactly one day field, in `timezoneId` (`0 0 0 * * ?` daily at 00:00, `0 0 9 ? * MON` Mondays at 09:00). Layout and special characters: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#quartz-cron-expressions).
 
@@ -73,7 +73,7 @@ Pipelines: [domino-flows](../domino-flows/SKILL.md); Airflow or Kubeflow: [domin
 
 ## Results and notifications
 
-Files changed under the Project files are results. Write `dominostats.json` at the Project root for dashboard columns, `email.html` for the success email, `.dominoresults` to choose what is shown and attached; `.dominoignore` drops files from the revision. Success emails per collaborator: **Settings > Access and Sharing**, or `PATCH /v4/projects/{projectId}/notificationPreference` (internal API, may change between Domino versions; [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#dashboard-columns-and-emails)).
+Files changed under the Project files are results. Write `dominostats.json` at the Project root for dashboard columns, `email.html` for the success email, `.dominoresults` to choose what is shown and attached; `.dominoignore` drops files from the revision. Success emails per collaborator: **Settings > Access and Sharing**, or `PATCH /v4/projects/{projectId}/notificationPreference` (non-public route; may change in a future Domino version; [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#dashboard-columns-and-emails)).
 
 ## Troubleshooting
 

@@ -40,8 +40,7 @@ server does not reject unknown fields or unknown tier ids:
 `"hardwareTierId": "medium-k8s"` and `"hardwareTier": "no-such-tier-k8s"` both return
 200 and the job runs on the project default tier. The Public job object does not report
 the tier it ran on; to confirm it, read `GET /v4/jobs/{jobId}/runtimeExecutionDetails`
-(`hardwareTier.id`, `environment.environmentId`; internal API, may change between Domino
-versions) or check the Jobs page.
+(`hardwareTier.id`, `environment.environmentId`; non-public route; may change in a future Domino version) or check the Jobs page.
 
 ```python
 response = requests.post(
@@ -154,8 +153,7 @@ failure in automation.
 The Public API has no stop route. Options:
 
 - python-domino `domino.job_stop(job_id, commit_results=True)`; it calls
-  `POST /v4/jobs/stop` with `{"jobId", "commitResults"}` (internal API, may change
-  between Domino versions); the job reports `Stopped` with `isCompleted: true` within
+  `POST /v4/jobs/stop` with `{"jobId", "commitResults"}` (non-public route; may change in a future Domino version); the job reports `Stopped` with `isCompleted: true` within
   seconds. See [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#jobs).
 - The Jobs page in the Domino UI.
 
@@ -194,8 +192,7 @@ is no public equivalent; the UI resolves defaults.
 ## Scheduled jobs
 
 Neither published spec has a scheduled-jobs route and python-domino has no scheduled-job
-method. The route the UI uses, `POST /v4/projects/{projectId}/scheduledjobs` (Domino Internal
-API, may change between Domino versions), creates one; it takes `command`, not `runCommand`,
+method. The route the UI uses, `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version), creates one; it takes `command`, not `runCommand`,
 plus `schedule.cronString`, `timezoneId`, `isPaused`, `allowConcurrentExecution`,
 `hardwareTierIdentifier`, `environmentRevisionSpec`, `scheduledByUserId` and
 `notifyOnCompleteEmailAddresses`, all required. GET, PUT (edit or pause) and DELETE use
@@ -206,6 +203,6 @@ https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a
 ## python-domino
 
 `job_start`, `job_status`, `job_stop`, `jobs_list` and `job_start_blocking` wrap the
-internal `/v4/jobs` routes with Python-side validation. Signatures and examples:
+internal `/v4/jobs` routes (non-public; may change in a future Domino version) with Python-side validation. Signatures and examples:
 [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#jobs). The SDK takes `hardware_tier_id` and
 `command`; the Public API takes `hardwareTier` and `runCommand`.

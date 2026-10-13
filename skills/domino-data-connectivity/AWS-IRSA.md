@@ -42,7 +42,7 @@ Follow the docs page end to end; its key steps are:
    (for example `us-west-2`) and `com.cerebro.domino.auth.aws.sts.defaultSessionDuration`
    (for example `1h`), then restart services. Users log out and in again. The same records can
    be written with `POST /v4/admin/centralConfigSettings` body `{"namespace", "key", "value"}`
-   (Internal API, may change between Domino versions; needs the `EditCentralConfig` permission,
+   (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); needs the `EditCentralConfig` permission,
    which on Domino Cloud only Domino holds). Routes and listing:
    [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md) in the domino-python-sdk skill.
 

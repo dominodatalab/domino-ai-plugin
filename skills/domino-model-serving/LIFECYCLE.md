@@ -179,10 +179,10 @@ r = requests.put(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers
 r.raise_for_status()
 ```
 
-The PUT is accepted immediately (200; `replicas` reads back as the new value while the running version stays `Running`), but a scale change takes effect only when the version restarts. The public API has no restart route: restart from the endpoint page in the UI, or stop and start the active version with the Domino Internal API (internal API, may change between Domino versions; on 6.3 confirm the routes in your deployment's `/docs`):
+The PUT is accepted immediately (200; `replicas` reads back as the new value while the running version stays `Running`), but a scale change takes effect only when the version restarts. The public API has no restart route: restart from the endpoint page in the UI, or stop and start the active version with the Domino Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); on 6.3 confirm the routes in your deployment's `/docs`):
 
 ```python
-v = f"{base}/v4/models/{model_api_id}/{api['activeVersion']['id']}"       # internal API, may change between Domino versions
+v = f"{base}/v4/models/{model_api_id}/{api['activeVersion']['id']}"       # non-public route; may change in a future Domino version
 requests.post(f"{v}/stopModelDeployment", headers=headers, json={}).raise_for_status()    # -> {"status": "not_running"}
 for _ in range(6):
     r = requests.post(f"{v}/startModelDeployment", headers=headers)         # no body; -> {"status": "starting"}
@@ -203,13 +203,13 @@ for _ in range(30):
 The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API"; what it does:
 
 - `DELETE` while a version is running returns `500 "Model API with id <id> is running"`. Stop the running version first.
-- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (internal API, may change between Domino versions; on 6.3 confirm it in `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `startModelDeployment` brings the version back (restart snippet above).
+- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (non-public route; may change in a future Domino version; on 6.3 confirm it in `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `startModelDeployment` brings the version back (restart snippet above).
 - After a successful `DELETE` (200, empty body) the endpoint is gone from the caller's view: `GET` returns `404 No model API found` and it no longer appears in list results, with or without filters. Do not expect to read it back with `isArchived: true`; export the logs and settings you need before deleting.
 
 ```python
 api = requests.get(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers=headers).json()
 version_id = api["activeVersion"]["id"]
-requests.post(f"{base}/v4/models/{model_api_id}/{version_id}/stopModelDeployment",   # internal API, may change between Domino versions
+requests.post(f"{base}/v4/models/{model_api_id}/{version_id}/stopModelDeployment",   # non-public route; may change in a future Domino version
               headers=headers, json={}).raise_for_status()
 requests.delete(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers=headers).raise_for_status()
 assert requests.get(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers=headers).status_code == 404
@@ -258,4 +258,4 @@ requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}/model
 
 ## python-domino equivalents
 
-`Domino("owner/project")` (the project argument is required) exposes `models_list()`, `model_publish(file, function, environment_id, name, description, files_to_exclude=None)`, `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` and the export helpers `model_version_export`, `model_version_sagemaker_export`, `model_version_export_status`, `model_version_export_logs`. They call the older `/v1/models` and `/v4` routes (Domino Internal API, may change between Domino versions) and know nothing about replicas, hardware tiers, async endpoints or registry sources; use the public REST routes above for those. See `domino-python-sdk`.
+`Domino("owner/project")` (the project argument is required) exposes `models_list()`, `model_publish(file, function, environment_id, name, description, files_to_exclude=None)`, `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` and the export helpers `model_version_export`, `model_version_sagemaker_export`, `model_version_export_status`, `model_version_export_logs`. They call the older `/v1/models` and `/v4` routes (non-public route; may change in a future Domino version) and know nothing about replicas, hardware tiers, async endpoints or registry sources; use the public REST routes above for those. See `domino-python-sdk`.

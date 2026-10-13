@@ -144,7 +144,7 @@ definition, not a delta: no field inherits from the previous revision, so send t
 `startScripts`; an environment created without `workspaceTools` reported
 `availableTools: []` live). The Public API does not return the base image or the
 Dockerfile; [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments) shows how to read them
-through the Domino Internal API. The create responses are
+through the Domino Internal API (non-public routes; may change in a future Domino version). The create responses are
 `{"environmentRevision": {"id", "number", "availableTools"}, "metadata"}`; live, the v2
 response carried `architectures` and neither carried `status`, so poll the environment
 (below) for the build state. `isRestricted` is required on `PATCH`.

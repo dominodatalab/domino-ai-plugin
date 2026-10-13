@@ -127,7 +127,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/hardwaretiers/v1
 curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/environments/beta/environments?limit=100"   # id, name
 ```
 
-Dataset ids and snapshot versions come from the Dataset page in the project or the datasets API (`domino-datasets`). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header. Inside a Workspace the plugin can also print the valid values for the current project in one call: `from flytekitplugins.domino.helpers import retrieve_valid_properties; retrieve_valid_properties()` (it reads the `/v4/jobs/.../retrieveValidProperties` route through the API proxy, a Domino Internal API route that may change between Domino versions, and prints environments with their revisions and the other job properties; `page_size` raises the number of environments listed).
+Dataset ids and snapshot versions come from the Dataset page in the project or the datasets API (`domino-datasets`). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header. Inside a Workspace the plugin can also print the valid values for the current project in one call: `from flytekitplugins.domino.helpers import retrieve_valid_properties; retrieve_valid_properties()` (it reads the `/v4/jobs/.../retrieveValidProperties` route through the API proxy, a non-public route that may change in a future Domino version ([route types](../domino-api-intro/SKILL.md#route-types)), and prints environments with their revisions and the other job properties; `page_size` raises the number of environments listed).
 
 ## Launch
 

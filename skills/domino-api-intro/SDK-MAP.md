@@ -20,7 +20,7 @@ All Public API families below are served on the same base URL: `$DOMINO_API_PROX
 | Tags and properties | `/api/taxonomy/v1` | [tags-and-properties](../tags-and-properties/SKILL.md) |
 | Apps | `/api/apps/v1`, `/api/apps/beta` | [domino-apps](../domino-apps/SKILL.md), [API-APPS](../domino-apps/API-APPS.md) |
 | Model APIs, registry | `/api/modelServing/v1` (except `modelDeployments`, which is SageMaker: next row), `/api/registeredmodels/v1`, `/v2` | [domino-model-serving](../domino-model-serving/SKILL.md), [domino-model-endpoints](../domino-model-endpoints/SKILL.md), [API-MODELS](../domino-python-sdk/API-MODELS.md) |
-| Model export out of Domino (registry, NVIDIA Fleet Command, Snowflake), SageMaker external endpoints (deployment targets), batch scoring Jobs | `/v4/models/...` (internal API, may change between Domino versions), `/api/admin/v1/deploymentTargets`, `/api/modelServing/v1/modelDeployments`, the Jobs routes | [domino-model-delivery](../domino-model-delivery/SKILL.md) |
+| Model export out of Domino (registry, NVIDIA Fleet Command, Snowflake), SageMaker external endpoints (deployment targets), batch scoring Jobs | `/v4/models/...` (non-public route; may change in a future Domino version, see [route types](./SKILL.md#route-types)), `/api/admin/v1/deploymentTargets`, `/api/modelServing/v1/modelDeployments`, the Jobs routes | [domino-model-delivery](../domino-model-delivery/SKILL.md) |
 | Governance | `/api/governance/v1` | [domino-governance](../domino-governance/SKILL.md) |
 | Extensions | `/api/extensions/beta` | [domino-extensions](../domino-extensions/SKILL.md) |
 | Workspaces | `/api/projects/v1/.../workspaces/{id}/sessions`; `/api/workspace/v1` (Cloud only) | [domino-workspaces](../domino-workspaces/SKILL.md) |

@@ -21,7 +21,7 @@ and `/remotefs/v1/volumes`), with the
 documented exception that NetApp file operations under `/remotefs/v1/.../files/*` take a
 `/webvfs` prefix. The dataset files service is different: from outside,
 the spec's `/datasetrw/...` snapshot-file routes return 404 (HTML), and only the
-`/v4/datasetrw/...` form answers (internal API, may change between Domino versions).
+`/v4/datasetrw/...` form answers (non-public route; may change in a future Domino version, see [route types](./SKILL.md#route-types)).
 Inside a run `$DOMINO_API_PROXY` or
 `$DOMINO_API_HOST` stands in for the base for the Nucleus `/api/...` routes, but not for
 `/remotefs/v1` (next section).

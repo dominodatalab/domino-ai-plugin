@@ -35,8 +35,8 @@ Domino environment variables, nothing else: a **user** variable (**Account > Acc
 Settings > User environment variables**) for a personal credential, injected into every
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
-share. Set them in the UI or with the Domino Internal API below (no Public API or
-python-domino route; may change between Domino versions; on 6.3 confirm the routes in
+share. Set them in the UI or with the non-public routes below (no Public API or
+python-domino route; may change in a future Domino version; on 6.3 confirm the routes in
 your deployment's `/docs`). When an
 agent stores a secret for the user it writes it with these routes and confirms by
 **name only**: the `GET`s return values, so never echo them into a reply or a log. Never
@@ -105,14 +105,16 @@ else:                                           # outside Domino: PAT or service
 and `DOMINO_API_HOST` are injected into every execution (glossary:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables).
 
-## Routes
+## Route types
 
-Prefer Public API routes (`/api/...`, plus `/remotefs/v1` and `/model-monitor`) from the
-published specs. `/v4/*` routes are the Domino Internal API: use them only when no Public
-API equivalent exists, and label them "internal API, may change between Domino versions"
-where they appear. The spec's `/datasetrw/...` snapshot-file routes did not answer on a
-6.4.0 deployment (only `/v4/datasetrw/...` did; [HOSTS.md](./HOSTS.md)), so read dataset
-files from the mount path or python-domino. Discovery: [API-SPECS.md](./API-SPECS.md).
+Most Domino endpoints are stable. Public API routes (`/api/...`, plus `/remotefs/v1` and
+`/model-monitor`) are versioned and documented in the published specs. Non-public routes,
+meaning the internal API (`/v4/...`, documented per deployment at `https://<domino-domain>/docs`)
+and web UI routes, also work, but can change in a future version of Domino. Use a public route
+when one exists; where none does, the skills label the call `(non-public route; may change in a
+future Domino version)` at the point of use. If a non-public call fails after an upgrade, check
+the route in your deployment's `/docs`. Dataset file routes: [HOSTS.md](./HOSTS.md).
+Discovery: [API-SPECS.md](./API-SPECS.md).
 
 ## Reference files (this skill)
 

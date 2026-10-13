@@ -31,7 +31,7 @@ Exact tags and partner images: https://docs.domino.ai/cloud/platform-capabilitie
 - **Start from an existing Environment** with **Active (auto-rebuilds)** (follows the base's active revision) or a pinned revision.
 - **Start from a custom base image**: an image URI; keep **Automatically make compatible with Domino** unless it is already a Domino image (absent once a cluster type is selected).
 
-Then **Supported Clusters** (cluster-node environments only), **Visibility** (Private, an Organization, or Global for admins), the revision toggle, and **Create Environment** or **Customize before building**. Later: **Edit Definition** > **Build**; base image and supported clusters cannot change afterwards (duplicate instead). Archive from the environment menu (not while it is a Project default). Project default: **Settings > Hardware & Environment** or `PUT /v4/projects/{projectId}/settings` (internal API, may change between Domino versions; [API.md](./API.md#project-default-environment-and-tier)).
+Then **Supported Clusters** (cluster-node environments only), **Visibility** (Private, an Organization, or Global for admins), the revision toggle, and **Create Environment** or **Customize before building**. Later: **Edit Definition** > **Build**; base image and supported clusters cannot change afterwards (duplicate instead). Archive from the environment menu (not while it is a Project default). Project default: **Settings > Hardware & Environment** or `PUT /v4/projects/{projectId}/settings` (non-public route; may change in a future Domino version; [API.md](./API.md#project-default-environment-and-tier)).
 
 ## Edit Definition
 

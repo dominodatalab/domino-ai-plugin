@@ -1,6 +1,6 @@
 # Export targets: NVIDIA Fleet Command, Snowflake, SageMaker, the Exports page
 
-**Every `/v4/...` route in this file is Domino Internal API, may change between Domino versions.**
+**Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
 They are documented on the product pages cited below and on each cluster's reference
 (`https://<domino-domain>/docs`, `openapi-internal.json`); they are not in the Public API spec.
 Authentication as in [SKILL.md](./SKILL.md#authentication): Bearer token, never `X-Domino-Api-Key`.
@@ -74,7 +74,7 @@ Publish (UI):
    and environment, then **Authenticate & Export**. The current project HEAD becomes the next
    version and Snowflake overwrites the UDF.
 
-The same operation exists as an internal API call with the fields the dialog asks for:
+The same operation exists as a non-public call (may change in a future Domino version) with the fields the dialog asks for:
 
 ```text
 POST /v4/models/{modelId}/{modelVersionId}/exportImageForSnowflake   (also /v4/modelManager/exportImageForSnowflake/{modelId}/{modelVersionId})
@@ -107,7 +107,7 @@ and `.../versions`. Only supported when the Domino control plane runs on AWS EKS
 https://docs.domino.ai/cloud/platform-capabilities/features/models/deploy-sagemaker. REST
 details: [domino-python-sdk API-MODELS.md](../domino-python-sdk/API-MODELS.md).
 
-**Legacy image export (internal API).** `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker`
+**Legacy image export (non-public route; may change in a future Domino version).** `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker`
 with the same body as `exportImageToRegistry` (`registryUrl`, `repository`, `tag`, `username`,
 `password`) pushes a SageMaker-compatible image to ECR; python-domino's
 `model_version_sagemaker_export(...)` wraps it and
@@ -118,7 +118,7 @@ credential dance with `boto3`. You then create the SageMaker model and endpoint 
 
 **Exports** in the project navigation lists every exported model with its target, latest
 version and, for Snowflake and other monitored exports, drift and model-quality columns (green
-check healthy, red number of alerts, grey no data). Internal API behind it:
+check healthy, red number of alerts, grey no data). Non-public routes (may change in a future Domino version) behind it:
 
 ```text
 GET /v4/modelManager/getModelExports/{projectId}?startIndex=0&count=50&sort=created&sortDirection=desc
