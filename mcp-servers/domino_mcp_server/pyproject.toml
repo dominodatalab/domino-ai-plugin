@@ -4,12 +4,13 @@ version = "0.1.0"
 description = "MCP server for the Domino Data Lab platform: start Jobs, read their status and logs, sync DFS project files"
 readme = "README.md"
 requires-python = ">=3.11"
-# mcp 2.x removed mcp.server.fastmcp (FastMCP became MCPServer); stay on 1.x until the server is
-# ported. The `cli` extra (typer) is not needed to run the server.
+# The standalone FastMCP framework (gofastmcp.com) on top of the official `mcp` SDK 2.x, which
+# speaks protocol 2026-07-28 and still answers handshake-era clients (2024-11-05 to 2025-11-25).
+# `mcp.server.fastmcp` from the SDK 1.x no longer exists in 2.x; the server imports `fastmcp`.
 dependencies = [
-    "mcp>=1.6.0,<2",
-    "requests>=2.31,<3",
-    "python-dotenv>=1.0,<2",
+    "fastmcp>=4.1,<5",
+    "requests>=2.34,<3",
+    "python-dotenv>=1.2,<2",
 ]
 
 # Tests: `uv run --with pytest pytest` in this directory (pytest is deliberately not a dependency

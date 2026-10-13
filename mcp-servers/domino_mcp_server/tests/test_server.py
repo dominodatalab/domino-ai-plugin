@@ -755,6 +755,7 @@ def test_smart_sync_force_overwrite_replaces_and_reports_previous_key(server, la
 
 def test_tool_names_schemas_and_instructions(server, run):
     tools = {t.name: t for t in run(server.mcp.list_tools())}
+    schema = {name: t.parameters for name, t in tools.items()}   # FastMCP exposes the input schema as `parameters`
     assert set(tools) == {
         "check_domino_job_run_results", "check_domino_job_run_status", "run_domino_job",
         "open_web_browser", "get_domino_environment_info", "list_domino_project_files",
@@ -762,14 +763,14 @@ def test_tool_names_schemas_and_instructions(server, run):
         "sync_local_file_to_domino", "smart_sync_file",
     }
     # the thread wrapper keeps the real signature, so the schema has the real parameters
-    assert set(tools["run_domino_job"].inputSchema["properties"]) == {
+    assert set(schema["run_domino_job"]["properties"]) == {
         "user_name", "project_name", "run_command", "title", "git_branch", "hardware_tier", "environment_id", "wait_seconds", "commit_id"}
     assert "commitId" in tools["upload_file_to_domino_project"].description
     assert "commitId" in tools["sync_local_file_to_domino"].description
     assert "commitId" in tools["smart_sync_file"].description
-    assert set(tools["smart_sync_file"].inputSchema["properties"]) >= {"content", "content_base64"}
-    assert tools["smart_sync_file"].inputSchema["required"] == ["user_name", "project_name", "file_path"]
-    assert "wait_seconds" in tools["check_domino_job_run_status"].inputSchema["properties"]
+    assert set(schema["smart_sync_file"]["properties"]) >= {"content", "content_base64"}
+    assert schema["smart_sync_file"]["required"] == ["user_name", "project_name", "file_path"]
+    assert "wait_seconds" in schema["check_domino_job_run_status"]["properties"]
     assert "wait_seconds=300" in tools["check_domino_job_run_status"].description
     assert "conflict detection" in tools["smart_sync_file"].description
     instructions = server._plugin_instructions()
@@ -785,7 +786,7 @@ def test_tool_names_schemas_and_instructions(server, run):
 
 def test_tool_errors_are_reported_as_mcp_errors(server, clean_env, run):
     """FastMCP turns a raised DominoError into an isError tool result with the message."""
-    from mcp.server.fastmcp.exceptions import ToolError
+    from fastmcp.exceptions import ToolError
     with pytest.raises(ToolError) as err:
         run(server.mcp.call_tool("check_domino_job_run_status", {"run_id": "job1"}))
     assert "DOMINO_HOST" in str(err.value)
@@ -795,8 +796,32 @@ def test_tools_run_through_fastmcp_with_threaded_wrapper(server, laptop, http, r
     http.add("GET", "/api/jobs/beta/jobs/job1", FakeResponse(200, {"job": {
         "id": "job1", "status": {"executionStatus": "Running", "isCompleted": False}}}))
     result = run(server.mcp.call_tool("check_domino_job_run_status", {"run_id": "job1"}))
-    text = " ".join(getattr(c, "text", "") for c in (result if isinstance(result, list) else result[0]))
-    assert '"status": "Running"' in text
+    import json
+    text = " ".join(getattr(c, "text", "") for c in result.content)
+    assert json.loads(text)["status"] == "Running"
+    assert result.structured_content and result.structured_content.get("status") == "Running"
+
+
+@pytest.mark.parametrize("mode", ["legacy", "2026-07-28"])
+def test_client_identity_is_captured_on_the_first_request(server, laptop, run, mode):
+    """The Codex cap depends on the client name; it must be seen on handshake-era and 2026-07-28 clients."""
+    from fastmcp import Client
+    from mcp.types import Implementation
+
+    async def go():
+        async with Client(server.mcp, client_info=Implementation(name="codex-test", version="1"), mode=mode) as c:
+            await c.list_tools()
+    run(go())
+    assert server._CLIENT_NAME == "codex-test"
+    assert server._CLIENT_PROTOCOL == ("2026-07-28" if mode == "2026-07-28" else "2025-11-25")
+    assert server._wait_cap() == server._WAIT_CAP_CODEX
+
+
+def test_tool_descriptions_keep_args_and_returns(server, run):
+    tools = {t.name: t for t in run(server.mcp.list_tools())}
+    desc = tools["upload_file_to_domino_project"].description
+    assert "Args:" in desc and "Returns:" in desc and "commitId" in desc
+    assert tools["upload_file_to_domino_project"].parameters["properties"]["overwrite"]["description"]
 
 
 # ---------------------------------------------------------------------------------------------

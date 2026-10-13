@@ -26,7 +26,8 @@ from pathlib import Path
 import anyio
 import requests
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
+from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 # ---------------------------------------------------------------------------------------------
 # Environment
@@ -353,19 +354,66 @@ def _api_json(method: str, path: str, **kwargs: Any) -> Any:
                           f"login page or another site.") from None
 
 
-_CLIENT_NAME = ""   # the MCP client's name from initialize, once a tool call has run
+_CLIENT_NAME = ""   # the MCP client's name, once a tool call has run (one host per stdio process)
+_CLIENT_PROTOCOL = ""
 
 
-def _capture_client_name() -> None:
-    """Remember which MCP host is connected (one host per stdio process)."""
-    global _CLIENT_NAME
-    if _CLIENT_NAME:
+def _client_identity(ctx: Any) -> tuple:
+    """(client name, protocol version) of the current request, best effort.
+
+    Handshake-era clients (protocol 2024-11-05 to 2025-11-25) identify themselves in
+    `initialize`, which the SDK keeps as the session's client params; 2026-07-28 clients send
+    `io.modelcontextprotocol/clientInfo` in every request's `_meta`.
+    """
+    name, protocol = "", ""
+    rc = ctx.request_context
+    if rc is not None:
+        protocol = str(getattr(rc, "protocol_version", "") or "")
+        info = (rc.meta or {}).get("io.modelcontextprotocol/clientInfo") if rc.meta else None
+        if isinstance(info, dict):
+            name = str(info.get("name") or "")
+    if not name:
+        params = getattr(ctx.session, "client_params", None)
+        info = getattr(params, "client_info", None) or getattr(params, "clientInfo", None)
+        name = str(getattr(info, "name", "") or "")
+    return name, protocol
+
+
+def _capture_client_name(ctx: Any) -> None:
+    """Remember which MCP host is connected and say so once on stderr (for support)."""
+    global _CLIENT_NAME, _CLIENT_PROTOCOL
+    if _CLIENT_NAME or ctx is None:
         return
     try:
-        params = mcp.get_context().session.client_params
-        _CLIENT_NAME = ((params.clientInfo.name if params and params.clientInfo else "") or "").lower()
+        name, protocol = _client_identity(ctx)
     except Exception:
-        _CLIENT_NAME = ""
+        return
+    if name or protocol:
+        _CLIENT_NAME, _CLIENT_PROTOCOL = name.lower(), protocol
+        print(f"domino_mcp_server: client {name or 'unknown'} speaks MCP {protocol or 'unknown'}",
+              file=sys.stderr)
+
+
+class _IdentifyClient(Middleware):
+    """Captures the client's name and protocol version on its first request, and reports the
+    first tools/list on stderr, so a host's connection can be checked without a model call."""
+
+    _listed = False
+
+    async def on_request(self, context: MiddlewareContext, call_next: Callable[..., Any]) -> Any:
+        _capture_client_name(context.fastmcp_context)
+        return await call_next(context)
+
+    async def on_list_tools(self, context: MiddlewareContext, call_next: Callable[..., Any]) -> Any:
+        result = await call_next(context)
+        if not _IdentifyClient._listed:
+            _IdentifyClient._listed = True
+            try:
+                count = len(result)
+            except TypeError:
+                count = "?"
+            print(f"domino_mcp_server: tools/list answered with {count} tools", file=sys.stderr)
+        return result
 
 
 def _run_with_budget(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -381,7 +429,6 @@ def _threaded(fn: Callable[..., Any]) -> Callable[..., Any]:
     so the stdio event loop stays free and no call outlives the host's tool timeout."""
     @functools.wraps(fn)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        _capture_client_name()
         return await anyio.to_thread.run_sync(functools.partial(_run_with_budget, fn, *args, **kwargs))
     return wrapper
 
@@ -412,7 +459,20 @@ def _plugin_instructions() -> str | None:
     return lead.encode("utf-8")[:900].decode("utf-8", "ignore") or None
 
 
-mcp = FastMCP("domino_server", instructions=_plugin_instructions())
+mcp = FastMCP("domino_server", instructions=_plugin_instructions(), middleware=[_IdentifyClient()])
+
+
+def _tool(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """Register a tool with its whole docstring as the description.
+
+    FastMCP keeps only the docstring's summary as the description and moves the Args section
+    into the parameter schema; the Returns section, which tells the model what comes back and
+    what to do with it (commitId, run_id, conflicts), would be lost. The skills document these
+    docstrings, so they are sent in full, as the SDK 1.x server did.
+    """
+    import inspect
+    mcp.tool(fn, description=inspect.cleandoc(fn.__doc__ or ""))
+    return fn
 
 
 # ---------------------------------------------------------------------------------------------
@@ -982,7 +1042,7 @@ def _resolve_environment_id(value: str) -> str:
 # Tools: jobs
 # ---------------------------------------------------------------------------------------------
 
-@mcp.tool()
+@_tool
 @_threaded
 def check_domino_job_run_results(run_id: str, user_name: str | None = None,
                                  project_name: str | None = None,
@@ -1029,7 +1089,7 @@ def check_domino_job_run_results(run_id: str, user_name: str | None = None,
     return result
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def check_domino_job_run_status(run_id: str, user_name: str | None = None,
                                 project_name: str | None = None,
@@ -1058,7 +1118,7 @@ def check_domino_job_run_status(run_id: str, user_name: str | None = None,
     return _poll_job(encoded_run_id, wait_seconds)
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def run_domino_job(user_name: str, project_name: str, run_command: str, title: str,
                    git_branch: str | None = None, hardware_tier: str | None = None,
@@ -1167,7 +1227,7 @@ def run_domino_job(user_name: str, project_name: str, run_command: str, title: s
     return result
 
 
-@mcp.tool()
+@_tool
 def open_web_browser(url: str) -> bool:
     """Opens the specified URL in the default web browser on the machine running this server.
     Inside a Domino Workspace or Job there is no browser: the tool returns False without doing
@@ -1187,7 +1247,7 @@ def open_web_browser(url: str) -> bool:
         return False
 
 
-@mcp.tool()
+@_tool
 async def get_domino_environment_info() -> Dict[str, Any]:
     """
     Returns information about the current Domino environment. Call this at the start of a
@@ -1321,7 +1381,7 @@ def _project_gate(user_name: str, project_name: str) -> _ProjectGate:
         return _project_gates.setdefault((user_name, project_name), _ProjectGate())
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def list_domino_project_files(user_name: str, project_name: str, path: str = "/") -> Dict[str, Any]:
     """
@@ -1421,7 +1481,7 @@ def _upload_file(user_name: str, project_name: str, file_path: str, data: bytes,
             gate.end_write()
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def upload_file_to_domino_project(
     user_name: str,
@@ -1456,7 +1516,7 @@ def upload_file_to_domino_project(
     return _upload_file(user_name, project_name, file_path, data, overwrite)
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def download_file_from_domino_project(
     user_name: str,
@@ -1500,7 +1560,7 @@ def download_file_from_domino_project(
     }
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def sync_local_file_to_domino(
     user_name: str,
@@ -1542,7 +1602,7 @@ def sync_local_file_to_domino(
     return _upload_file(user_name, project_name, domino_file_path, data, overwrite)
 
 
-@mcp.tool()
+@_tool
 @_threaded
 def smart_sync_file(
     user_name: str,
@@ -1668,5 +1728,6 @@ def _smart_sync_locked(user_name: str, project_name: str, path: str, data: bytes
 
 
 if __name__ == "__main__":
-    # Initialize and run the server using stdio transport
-    mcp.run(transport='stdio')
+    # Run the server over stdio. FastMCP's startup banner would go to stderr, which some hosts
+    # show as an error; keep stderr for real diagnostics.
+    mcp.run(transport="stdio", show_banner=False)
