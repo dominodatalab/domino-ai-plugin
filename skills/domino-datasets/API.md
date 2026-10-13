@@ -4,9 +4,9 @@ All routes below exist in both published Public API specs
 (https://docs.domino.ai/api-specs/6.3/public-api.json and
 https://docs.domino.ai/api-specs/cloud/public-api.json, tag `Datasets`). Every write (create,
 snapshot, tag, grant, shared-dataset link, delete) was exercised on a live Domino 6.4.0
-deployment on 2026-10-12; "verified" below means observed there. Every `/v4` route named below
-(the snapshot file routes and the delete-cancellation route) is labelled Internal API, may
-change between Domino versions, at its point of use.
+deployment on 2026-10-12 and 2026-10-13; "verified" below means observed there. Every `/v4`
+route named below is labelled Internal API, may change between Domino versions, at its point of
+use; readers on Domino 6.3 should confirm each one in their deployment's `/docs`.
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/create-and-manage-datasets
 (REST tab) and the API reference under https://docs.domino.ai/cloud/reference/api.
 
@@ -160,8 +160,30 @@ requests.post(f"{base}/api/projects/v1/projects/{other_project_id}/shared-datase
 
 Snapshot limit hit: an execution that writes a snapshot fails with an error (documented); what
 `POST .../snapshots` returns at the limit is not documented, so treat any non-2xx there as the
-limit until proven otherwise. There is no per-snapshot `DELETE` in the Public API: mark old
-snapshots for deletion in the UI and have an admin remove them, or raise the limit.
+limit until proven otherwise. The Public API has no per-snapshot delete or limit route; the
+internal routes in the next section cover both.
+
+## Snapshot deletion and limits (internal API)
+
+Every call here is **Internal API, may change between Domino versions**. Verified on Domino
+6.4.0 by a non-admin Dataset Owner on a scratch Dataset (6.3 readers: confirm in `/docs`).
+
+| Call (Internal API, may change between Domino versions) | Observed |
+|---|---|
+| `DELETE /v4/datasetrw/snapshot/{snapshotId}` | Requests deletion: returns the snapshot with `lifecycleStatus: DeletionInProgress` (`deletionInProgress` in the public `GET`); it stays in the public snapshot list; `GET /v4/datasetrw/snapshot/{snapshotId}/can-cancel-delete` is `true` |
+| `DELETE /v4/datasetrw/snapshot/{snapshotId}/cancel-request-to-delete` | Within the grace period moves it to `MarkedForDeletion` (not back to `Active`); otherwise 400 `not in deletion in progress ... or grace period is over` |
+| `PUT /v4/datasetrw/snapshot/{snapshotId}` with `{"status": "MarkedForDeletion"}` | Marks it (public status `markForDeletion`); `can-cancel-delete` is `false` and the cancel route refuses, since nothing is in progress |
+| `PUT /v4/datasetrw/snapshot/{snapshotId}` with `{"status": "Active"}` | Restores a marked snapshot to `active` (verified from both paths above). The schema also allows `Pending`, `Copying`, `Failed`, `Deleted`, `DeletionInProgress`; do not set those by hand |
+| `DELETE /v4/datasetrw/marked-snapshots`, `DELETE /v4/datasetrw/marked-datasets` | Admin purge of everything marked. Admin-only, not exercised; never call from a user context |
+| `GET /v4/datasetrw/snapshot/limit/{projectId}/{datasetId}` | `true` once the Dataset has hit the active-snapshot cap |
+| `GET /v4/datasetrw/dataset/snapshot/limit` | The deployment's cap (`20` observed) |
+| `GET /v4/datasetrw/dataset/enforce-limit/{projectId}` | Whether limits apply to the Project (`true` by default) |
+| `POST /v4/datasetrw/datasets/limit/{projectId}?ignoreLimit=true` (or `false`) | Sets the Project's **Ignore Dataset Limits** override; no body; returns `{projectId, ignoreLimits, id}`. A Project Owner could set and revert it on 6.4.0 |
+
+Recipe at the limit (same Internal API label): list snapshots, `DELETE /v4/datasetrw/snapshot/{id}`
+the ones you no longer need (or `PUT` them `MarkedForDeletion`), then ask an admin to purge; or
+set `ignoreLimit=true` on the Project if policy allows. Only `active` snapshots mount in new executions; the files of a
+marked or in-progress snapshot remain until an admin purges them.
 
 ## python-domino
 
