@@ -96,14 +96,10 @@ if __name__ == "__main__":
         print(f"Run ID: {run.info.run_id}")
 ```
 
-Facts the example depends on (dominodatalab 2.2.0, `domino/agents`):
+Two facts the example depends on; the rest of the SDK reference is in the `domino-genai-tracing` skill ([ADD-TRACING-DECORATOR.md](../domino-genai-tracing/ADD-TRACING-DECORATOR.md), [DOMINO-RUN.md](../domino-genai-tracing/DOMINO-RUN.md), [EVALUATORS.md](../domino-genai-tracing/EVALUATORS.md)):
 
-- `add_tracing(name, autolog_frameworks=[], evaluator=None, trace_evaluator=None, eagerly_evaluate_streamed_results=True, span_type="UNKNOWN", attributes=None)`. Put it directly on the function, with no decorator in between.
-- The evaluator receives the finished span and returns `{metric: number}`; a string value is stored as a label. If it raises, the SDK logs the error and records nothing: never return a made-up default score, and omit a metric whose input is missing.
-- Every evaluator result in a call tree is written to the shared **trace**, not to its span; when decorated functions nest, the outer evaluator runs last and overwrites same-named metrics. Give each function's metrics distinct names.
-- Evaluators run only in development. In a deployed agent (`DOMINO_AGENT_IS_PROD=true`) the SDK skips them; score production traces out of band (`domino-genai-tracing` skill, EVALUATORS.md).
-- `DominoAgentContext` and `DominoRun` take `experiment_name`, `run_id`, `agent_config_path`, `custom_summary_metrics` and nothing else (no `run_name`). `DominoAgentContext` marks the run as an agent version, which the Experiment Manager can deploy when the script ran as a Job. `experiment_name` must name an experiment that already exists (the SDK raises otherwise); `mlflow.set_experiment(name)` beforehand creates it and makes it the active experiment the run then uses.
-- At exit the context manager logs one run metric per `(metric, statistic)` pair, named `<statistic>_<metric>` (for example `mean_response_length`); statistics are `mean`, `median`, `stdev`, `max`, `min`. Without `custom_summary_metrics` it logs the mean of every metric.
+- An evaluator that raises records nothing (the SDK logs the error), so never return a made-up default score, and omit a metric whose input is missing. Results are tags on the shared trace, so give each decorated function's metrics distinct names.
+- `DominoAgentContext` takes `experiment_name`, `run_id`, `agent_config_path` and `custom_summary_metrics` only (no `run_name`); `experiment_name` must already exist, so call `mlflow.set_experiment(name)` first and omit it. At exit it logs one `<statistic>_<metric>` run metric per `custom_summary_metrics` pair.
 
 ## Framework autologging
 

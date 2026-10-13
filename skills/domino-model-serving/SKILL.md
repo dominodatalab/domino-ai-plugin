@@ -12,15 +12,9 @@ Programmatic lifecycle for Domino endpoints (**Model APIs** in the API) and regi
 
 ## Authentication and base URL
 
-https://docs.domino.ai/cloud/reference/api/domino-api-authentication. Legacy API keys are deprecated; do not use them.
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication). Legacy API keys are deprecated; do not use them.
 
-| Context | Base | Authorization |
-|---------|------|---------------|
-| In a run, `DOMINO_API_PROXY` set | `$DOMINO_API_PROXY` | none (the proxy adds the token) |
-| In a run, no proxy | `$DOMINO_API_HOST` | `Bearer` from `http://localhost:8899/access-token` |
-| Outside Domino | deployment URL | `Bearer` PAT or service-account token |
-
-Smoke test: `GET /api/modelServing/v1/modelApis?limit=1` returns 200.
+Connectivity check: `GET /api/modelServing/v1/modelApis?limit=1` returns 200.
 
 ## Three surfaces (do not mix them)
 
@@ -48,11 +42,11 @@ Management calls go to the base above under `/api/...`. Predictions go to the de
 
 Logs: `GET .../versions/{modelApiVersionId}/buildLogs`, `exportLogs`, `instanceLogs`.
 
-`/api/modelServing/v1/modelDeployments` (with `start`, `stop`, `credentials`, `logs`, `versions`) is a separate entity: a registered model deployed onto an admin-defined external deployment target, SageMaker only today. It is not a Model API; see [domino-model-delivery](../domino-model-delivery/EXPORT-TARGETS.md#amazon-sagemaker).
+`/api/modelServing/v1/modelDeployments` (with `start`, `stop`, `credentials`, `logs`, `versions`) is a separate entity: a registered model deployed onto an admin-defined external deployment target, SageMaker only. It is not a Model API; see [domino-model-delivery](../domino-model-delivery/EXPORT-TARGETS.md#amazon-sagemaker).
 
 ## Registered models
 
-- List: `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register: `POST /api/registeredmodels/v2` (`modelName`, `modelSource{sourceType, mlflowSource|huggingFaceSource}`, `create`). `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated since 6.2.1.
+- List: `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register: `POST /api/registeredmodels/v2` (`modelName`, `modelSource{sourceType, mlflowSource|huggingFaceSource}`, `create`). `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated.
 - Get and patch: `GET|PATCH /api/registeredmodels/v1/{modelName}` (`PATCH` takes `description` and `discoverable`; `GET` returns neither `discoverable` nor aliases); versions at `/api/registeredmodels/v1/{modelName}/versions/{version}`; endpoints serving a version at `.../versions/{version}/modelapis`.
 - Aliases and tags are MLflow features: the MLflow client on `MLFLOW_TRACKING_URI`, or `/api/2.0/mlflow/registered-models/...` on the deployment URL; see `domino-experiment-tracking`.
 
@@ -66,7 +60,7 @@ Restricted **sync** endpoints require HTTP Basic with the endpoint access token 
 curl -s "$DOMINO_API_HOST/version"   # "version": "6.3.x" self-managed; "6.4.x" or later on Domino Cloud
 ```
 
-Domino Cloud adds `/api/modelServing/beta/modelApis/{modelApiId}/visibility` (`Public`, `Discoverable`, `Private`), `.../access` and `.../collaborators` (roles `Owner`, `Editor`, `Operator`, `Viewer`); absent from the 6.3 spec, where you set them in the UI (**Settings** > **Access and Sharing**). Everything else is in both specs.
+Domino Cloud adds `/api/modelServing/beta/modelApis/{modelApiId}/visibility` (`Public`, `Discoverable`, `Private`), `.../access` and `.../collaborators` (roles `Owner`, `Editor`, `Operator`, `Viewer`); not on 6.3, where you set them in the UI (**Settings** > **Access and Sharing**).
 
 ## Related
 

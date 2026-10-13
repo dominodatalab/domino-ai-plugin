@@ -60,15 +60,15 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 
 ### Which path applies
 
-Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.4 and later (Domino Cloud today) `GET /api/workspace/v1/workspace/{workspaceId}/writable-project-mounts` returns `mainDfsMount`, `mainGitMount`, `importedGitMounts` (`404` = absent).
+Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.4 and later (including Domino Cloud) `GET /api/workspace/v1/workspace/{workspaceId}/writable-project-mounts` returns `mainDfsMount`, `mainGitMount`, `importedGitMounts` (`404` = absent).
 
 ## Manage Workspaces
 
-**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (storage persists and still bills), **Start** to resume (restricted Projects use the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (docs: 10 days stopped, then a 30-day grace period). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
+**Workspaces > My / All / Deleted** in a Project, or **Develop > Workspaces** globally. **Stop** (storage persists and still bills), **Start** to resume (restricted Projects use the current restricted revision), **Delete** only after stopping and syncing. Auto-deletion, if enabled, uses admin-configurable periods (10 days stopped, then 30 days of grace). Per Workspace: **Logs**, **Usage**, **History** (sessions, commits, support bundle).
 
 ## Coding assistants and extra apps
 
-- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login. If the LLM Gateway 2.0 Extension is installed, ask whether to route the assistant through it (`domino-llm-gateway`) or sign in with the vendor as usual; never route by default. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login. If the LLM Gateway 2.0 Extension is installed, offer to route the assistant through it, never by default ([domino-llm-gateway](../domino-llm-gateway/CODING-ASSISTANTS.md)). Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
 - Only the IDE port (8888) is proxied; jupyter-server-proxy (in the DSE) exposes other ports at `https://<browser URL>/<owner>/<project>/notebookSession/$DOMINO_RUN_ID/proxy/<port>/`. App Preview is the way to develop a Domino App.
 
 ## Troubleshooting

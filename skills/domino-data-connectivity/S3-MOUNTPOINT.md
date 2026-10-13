@@ -6,10 +6,10 @@ at `/domino/edv/<name>` without FUSE privileges in the container.
 
 - Blueprint: https://domino.ai/resources/blueprints/transforming-s3-into-local-storage, code in
   https://github.com/dominodatalab/domino-blueprints/tree/main/mountpoint-s3
-- Driver: https://github.com/awslabs/mountpoint-s3-csi-driver. The blueprint pins no version
-  and its manifests (`uid`, `gid`, `allow-other`) are from the v1 driver; this skill shows the
-  last v1 release, 1.15.0 (2025-06-25). The v2 line (2.8.0 on 2026-09-02) changes the
-  architecture and is not validated on Domino; see "Driver v2" below before choosing it.
+- Driver: https://github.com/awslabs/mountpoint-s3-csi-driver. The blueprint pins no version;
+  the manifests here (`uid`, `gid`, `allow-other`) are for the v1 driver (1.15.0, the last v1
+  release). The v2 line changes the architecture and is not validated on Domino; see "Driver
+  v2" below before choosing it.
 - EDV registration (product docs): https://docs.domino.ai/cloud/admin/data-administration/external-data/external-data-volumes
 - Mountpoint semantics and limits: https://docs.aws.amazon.com/AmazonS3/latest/userguide/mountpoint.html
 
@@ -81,12 +81,10 @@ helm upgrade --install aws-mountpoint-s3-csi-driver \
   --set node.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::ACCOUNT_ID:role/MountpointS3Role
 ```
 
-**Driver v2.** Upstream's `docs/UPGRADING_TO_V2.md` describes the changes: Mountpoint runs in
-separate pods in the `mount-s3` namespace (logs via `kubectl logs -n mount-s3 ...`), scheduled
-after the workload with a preempting priority class, which upstream warns conflicts with node
-autoscalers such as Karpenter and Cluster Autoscaler; the driver sets `fsGroup`, permissions and
+**Driver v2** runs Mountpoint in separate pods in the `mount-s3` namespace with a preempting
+priority class (conflicts with Karpenter and Cluster Autoscaler) and sets `fsGroup` and
 `mountOptions` itself, so the `uid`/`gid`/`allow-other` flags below may be redundant. Test v2 on
-a non-production Domino cluster before adopting it.
+a non-production Domino cluster first.
 
 ### 3. PersistentVolume and labelled PersistentVolumeClaim
 

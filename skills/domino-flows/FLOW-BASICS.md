@@ -1,6 +1,6 @@
 # Domino Flows: definitions, configuration, launching, monitoring
 
-Applies to Domino 6.3 and Domino Cloud. Sources: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows, `.../launch-flows`, `.../monitor-flows`, `.../reproducibility-flows`, `.../advanced-flows` (the 6.3 pages are identical).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows, `.../launch-flows`, `.../monitor-flows`, `.../reproducibility-flows`, `.../advanced-flows` (the 6.3 pages are identical).
 
 ## Two ways to declare a task
 
@@ -41,7 +41,7 @@ How to consume a task result depends on how many outputs the task declares, for 
 - **One output**: the call returns a single promise. Pass it as is (`value=prep_results`, `return train_results`). Do not write `prep_results["processed_data"]`: it compiles, but flytekit binds it as a lookup *inside* the output value (an attribute path on the file), not as selecting the output.
 - **Two or more outputs**: the call returns a namedtuple of promises. Select by attribute (`res.train`, `res.test`) or unpack (`train, test = split(...)`). String indexing (`res["train"]`) fails at compile time with `TypeError: tuple indices must be integers or slices, not str`.
 
-The docs.domino.ai define-flows page shows string indexing (`data_prep_results["processed_data"]`); that form fails for multi-output tasks and binds the wrong thing for single-output ones (with `flytekit` 1.15 and `flytekitplugins-dominojob` 0.18). Passing one task's output into another creates the dependency edge; tasks without a data dependency run in parallel. A `@workflow` function may return nothing, one output, or a tuple. `@workflow` compiles lazily, so call `my_workflow.compile()` in a Workspace to surface these errors before `pyflyte run`.
+The define-flows docs page shows string indexing (`data_prep_results["processed_data"]`); do not copy it. Passing one task's output into another creates the dependency edge; tasks without a data dependency run in parallel. A `@workflow` function may return nothing, one output, or a tuple. `@workflow` compiles lazily, so call `my_workflow.compile()` in a Workspace to surface these errors before `pyflyte run`.
 
 ## Types
 
@@ -168,7 +168,7 @@ Omit `name` on re-launch or recover and Flyte generates one. Each create call re
 
 Every launch serializes the flow structure, each task's job config (commit, environment revision, tier, snapshots) and the inputs; identical definitions reuse the version. For deterministic reruns:
 
-1. Replace `use_latest=True` with a complete config: `CommitId`, `MainRepoGitRef` pinned to a commit (Git-based projects), `EnvironmentId`, `EnvironmentRevisionSpec`, `HardwareTierId`, `VolumeSizeGiB`, `DatasetSnapshots`, `NetAppVolumeSnapshots` and `ExternalVolumeMountIds` (empty lists where unused); the constructor raises if any is missing. Example 3 in [EXAMPLES.md](./EXAMPLES.md) shows the full set.
+1. Replace `use_latest=True` with a complete config (the field list in "Complete config or `use_latest`" above); Example 3 in [EXAMPLES.md](./EXAMPLES.md) shows the full set.
 2. Read external data from a pinned Dataset or NetApp Volume snapshot (`DatasetSnapshots`, `NetAppVolumeSnapshots`); for anything else (a Data Source table, a bucket), snapshot it in a first task that copies it to an output.
 3. Write results only as outputs, never to a shared mutable location.
 

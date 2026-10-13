@@ -100,7 +100,7 @@ html = f"""
 email_html.write_text(html)
 ```
 
-Rules from the docs: inline CSS only, tables for layout, image paths relative to the Project root, `<head><title>` becomes the subject, and if a `.dominoresults` file exists it must list `email.html`.
+Rules: inline CSS only, tables for layout, image paths relative to the Project root, `<head><title>` becomes the subject, and if a `.dominoresults` file exists it must list `email.html`.
 
 ## Notebook reports
 
@@ -178,4 +178,4 @@ path = quote("results/predictions.csv", safe="")
 content = requests.get(f"{base}/api/projects/v1/projects/{project_id}/files/{commit}/{path}/content").content
 ```
 
-Outside Domino use `$DOMINO_API_HOST` with `Authorization: Bearer <Personal Access Token>`; see [domino-api-intro](../domino-api-intro/SKILL.md).
+Outside Domino: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).

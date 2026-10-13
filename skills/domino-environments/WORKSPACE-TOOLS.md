@@ -1,6 +1,6 @@
 # Workspace tools and IDE configuration
 
-Applies to Domino 6.3 and Domino Cloud. How an environment declares the IDEs a Workspace can launch, and how to customize them. Creating and editing environments: [SKILL.md](./SKILL.md).
+How an environment declares the IDEs a Workspace can launch, and how to customize them. Creating and editing environments: [SKILL.md](./SKILL.md).
 
 ## Pluggable Workspace Tools
 

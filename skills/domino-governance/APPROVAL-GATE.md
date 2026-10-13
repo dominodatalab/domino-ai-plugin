@@ -2,7 +2,7 @@
 
 Use when implementing approver automation: list pending approvals on the bundle, download the bundle report PDF, review attachments and evidence, publish an approval event, optionally set the primary stage on the bundle, and verify the stage actually changed.
 
-HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## Core calls
 
@@ -44,4 +44,3 @@ GET /bundles/{bundle_id}
 - After publish-approval-event or bundle PATCH, re-fetch and verify `bundle["stage"]` or `currentStageInfo.status` changed.
 - Parallel gates need all approvals before advance.
 - Reject reopens the evidence stage; it does not delete the bundle.
-- Distinguish policy approval gates from Domino RBAC on the project.

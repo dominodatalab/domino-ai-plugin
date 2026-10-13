@@ -12,7 +12,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/knowledge
 
 ## CSV format
 
-Per the docs, each row defines one tag and the file has **no header row**:
+Each row defines one tag and the file has **no header row**:
 
 ```
 namespace_label,namespace_description,tag_path,tag_description
@@ -96,9 +96,6 @@ head -1 "taxonomy-backup-$(date +%Y%m%d).csv"   # if this is a header line, drop
 # restore: idempotent for rows that already exist
 curl -s -X POST -H "$H" -F "file=@taxonomy-backup-20260508.csv" "$BASE/rpc/import-from-file"
 ```
-
-The spec types the export as `text/csv` and the import format has no header row; whether
-the export itself writes one is not stated, so inspect the first line before a round trip.
 
 ### Reviewable changes
 

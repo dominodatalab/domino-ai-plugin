@@ -20,7 +20,7 @@ accounts to Azure Workload Identity through a Domsed `Mutation` with
 `cloudWorkloadIdentity: cloud_type: azure`; code then uses Azure's own
 `WorkloadIdentityCredential`. This file covers the user-token path only.
 
-Two properties of the `domino_aad` package shape everything below (read from the 0.0.4 wheel):
+Two properties of the `domino_aad` package (0.0.4) shape everything below:
 
 - **One token per identity provider.** `DominoCredential("<alias>").get_token(...)` ignores the
   scopes it is given and returns the token Keycloak exchanged for that alias. An Entra access
@@ -29,8 +29,7 @@ Two properties of the `domino_aad` package shape everything below (read from the
 - **No refresh after the first hour.** The credential caches the token it obtained at
   construction with a 3600-second expiry; when that passes it re-requests but discards the
   result, so calls keep presenting the stale token. Construct a new `DominoCredential` for each
-  unit of work and never keep one for longer than an hour (the blueprint owners have been told).
-  Consent prompts use `input()`, so a Job whose user has not consented fails with `EOFError`;
+  unit of work and never keep one for longer than an hour. Consent prompts use `input()`, so a Job whose user has not consented fails with `EOFError`;
   consent once from a Workspace first.
 
 Prefer the documented alternatives when they fit: an Azure Blob, ADLS or Databricks **Data

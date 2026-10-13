@@ -1,20 +1,13 @@
 # Which base URL for which API
 
-Authentication rules: [SKILL.md](./SKILL.md#authentication) and
-https://docs.domino.ai/cloud/reference/api/domino-api-authentication.
-
-| Where the code runs | Base URL | Credential |
-|---|---|---|
-| Inside a Domino execution, `DOMINO_API_PROXY` set | `$DOMINO_API_PROXY` | none (proxy adds the token) |
-| Inside a Domino execution, proxy not set | `$DOMINO_API_HOST` | Bearer from `http://localhost:8899/access-token` |
-| Outside Domino | The deployment URL (set `DOMINO_API_HOST` to it) | Bearer PAT or service account token |
+Base URL and credential for each place code runs: [SKILL.md](./SKILL.md#authentication).
 
 Do not derive the deployment URL from a JWT claim, and do not copy hostnames out of one
 execution into another. Read `DOMINO_API_HOST` or use the URL an API response returns.
 
 ## One base for the Public API
 
-Both published specs declare a single server, the deployment hostname. From outside
+The Public API has a single server, the deployment hostname. From outside
 Domino the `/api/...`, `/remotefs/v1` and `/model-monitor/...` paths are served on that
 base (for example `GET /api/users/v1/self`, `/api/jobs/beta/jobs`, `/api/taxonomy/v1/config`
 and `/remotefs/v1/volumes`), with the
@@ -35,7 +28,7 @@ https://docs.domino.ai/6.3/reference/api/domino-volumes-api).
 | Operation | Inside a run | Outside Domino |
 |-----------|--------------|----------------|
 | Volume and filesystem CRUD, snapshots, grants, transfers | `$DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT` **only**, always with `Authorization: Bearer` from `http://localhost:8899/access-token` (also served at `$DOMINO_API_PROXY/access-token`). `$DOMINO_API_PROXY` and the in-run `$DOMINO_API_HOST` return 404 for `/remotefs/v1/*`, and the hostport without a header returns 401 | deployment URL with a PAT or service account token |
-| File operations under `/remotefs/v1/volumes/{id}/files/*` and `/remotefs/v1/snapshots/{id}/files/*` | `http://data-webvfs-service.domino-compute:80` with the path as shown in the reference; send the same access-token bearer as for the other remotefs routes (the published spec binds no security scheme to any `/remotefs/v1`, `/api/taxonomy` or `/datasetrw` operation, so the auth mode comes from live behaviour) | deployment URL with `/webvfs` prefixed to the path |
+| File operations under `/remotefs/v1/volumes/{id}/files/*` and `/remotefs/v1/snapshots/{id}/files/*` | `http://data-webvfs-service.domino-compute:80` with the path as shown in the reference; send the same access-token bearer as for the other remotefs routes | deployment URL with `/webvfs` prefixed to the path |
 
 Details: [netapp-volumes](../netapp-volumes/API-NETAPP-VOLUMES.md).
 
@@ -62,19 +55,12 @@ Governance routes use the suffix `/api/governance/v1` on the same base. The
 to the deployment URL with a PAT or service account token. Use that skill's procedure
 rather than restating it.
 
-## API gateway (Domino 6.3 feature flag)
+## 404 on the in-run base
 
-Self-managed Domino 6.3 exposes the feature flag `ShortLived.ApiGateway.UserCodeLocalDpEnabled`
-(default `true`). It routes traffic from user workloads on the local data plane through the
-Envoy gateway and ext-auth service; `false` reverts to per-service proxy routing in the
-execution's nginx sidecar
-(https://docs.domino.ai/6.3/admin/configuration/feature-flags). Domino Cloud is operated by
-Domino; there is no customer-side switch.
-
-What it means for callers: none of the variable names above change. If an `/api/...` route
-returns 404 on `$DOMINO_API_HOST` inside a run, confirm the path against
-[API-SPECS.md](./API-SPECS.md), then retry on the deployment URL with a PAT or service
-account token.
+If an `/api/...` route returns 404 on `$DOMINO_API_PROXY` or `$DOMINO_API_HOST` inside a
+run, confirm the path against [API-SPECS.md](./API-SPECS.md), then retry on the deployment
+URL with a PAT or service account token. Whether the in-run gateway routes a service is a
+deployment setting, not something the caller can change.
 
 ## Related
 

@@ -127,14 +127,13 @@ a PVC with the same name in another Data Plane shows up as an addition).
 ## Non-public routes
 
 The Public API has no EDV routes. The Domino Internal API has the full set; every route here is
-**non-public route; may change in a future Domino version**, as documented in the 6.4.0 internal
-reference (`/docs`, `openapi-internal.json`); if a call answers 404 or 400, confirm the route and
-body in your deployment's `/docs`. Registration, update and unregistration
+a **non-public route; may change in a future Domino version**. If a call answers 404 or 400,
+confirm the route and body in your deployment's `/docs`. Registration, update and unregistration
 are admin operations: document them, never run them from a user context.
 
 | Call (non-public route; may change in a future Domino version) | Notes |
 |---|---|
-| `GET /v4/datamount/all` | Every registered EDV (`DataMountDto`: `id`, `name`, `volumeType`, `pvcName`, `mountPath`, `readOnly`, `isPublic`, `users`, `projects`, `status`, `dataPlanes`). Returned `[]` on the test deployment |
+| `GET /v4/datamount/all` | Every registered EDV (`DataMountDto`: `id`, `name`, `volumeType`, `pvcName`, `mountPath`, `readOnly`, `isPublic`, `users`, `projects`, `status`, `dataPlanes`) |
 | `GET /v4/datamount/pvcs/available?volumeType=Nfs` (`Smb`, `Efs`, `Generic`) | Labelled PVCs not yet registered |
 | `GET /v4/datamount/isMountPathValid?mountPath=<name>` | Whether a Relative Mount Path is unique and free of reserved words |
 | `POST /v4/datamount` (admin) | Register. Body `{"name", "volumeType": "Nfs" / "Smb" / "Efs" / "Generic", "pvcName", "mountPath", "users": [<user ids>], "readOnly", "isPublic", "dataPlaneIds": [], "description", "pvId"}`; `name`, `volumeType`, `pvcName`, `mountPath`, `users`, `readOnly`, `isPublic`, `dataPlaneIds` required. `isPublic: true` is **Everyone**; otherwise list the users |

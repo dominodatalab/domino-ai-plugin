@@ -2,7 +2,7 @@
 
 Validator and approver handle a drift or monitor finding on an existing production bundle: bundle reopens, new evidence against current policy, re-approval, close finding, bundle back to approved.
 
-HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## Core calls
 
@@ -13,7 +13,7 @@ POST /findings {**drift_finding, "bundleId": bundle_id}
 POST /rpc/submit-result-to-policy {"bundleId": bundle_id, "policyId": policy_id, **new_evidence}
 
 POST /rpc/compute-policy {"bundleId": bundle_id, "policyId": policy_id}
-# poll GET /results/latest?bundleID=bundle_id (SKILL.md)
+# poll GET /results/latest?bundleID=bundle_id (API-GOVERNANCE.md "After compute-policy (polling)")
 
 POST /rpc/publish-approval-event {**approval_event, "bundleId": bundle_id}
 

@@ -113,16 +113,10 @@ client = DataSourceClient(token="<personal-access-token>")        # explicit bea
 client = DataSourceClient(token_file="/path/to/token")            # alternate token file
 ```
 
-`DataSourceClient(api_key=...)` and `DOMINO_USER_API_KEY` still exist but use the legacy user
-API key, which is deprecated; do not recommend them. Data Sources with Individual credentials
-need the current user to have entered theirs under **Data > Data Sources**.
-
-Credential precedence in 6.7.4 differs per call path: Domino API calls (`get_datasource`) use
-`token`, then the `DOMINO_API_PROXY` JWT, then `DOMINO_TOKEN_FILE`, then the API key; Data
-Source proxy HTTP calls (listing, signed URLs) use `token`, then the API key, then the proxy
-JWT, then the token file; Flight queries send the API key and the JWT together when both
-exist. In a run that still injects `DOMINO_USER_API_KEY`, listing and signing therefore go out
-with the legacy key.
+`api_key=` and `DOMINO_USER_API_KEY` are the deprecated legacy key. If `DOMINO_USER_API_KEY`
+is set in the run, listing and signed-URL calls use it; unset it to force the proxy JWT. Data
+Sources with Individual credentials need the current user to have entered theirs under
+**Data > Data Sources**.
 
 ## Errors
 

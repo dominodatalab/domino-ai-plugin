@@ -6,7 +6,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 # Domino Extensions
 
-Applies to Domino 6.3 and Domino Cloud. The routes and mount points below are identical in both public API specs.
+Applies to Domino 6.3 and Domino Cloud.
 
 An **Extension** surfaces a published **App** at a Domino UI **mount point** (Project sidebar, Dataset details page, Dataset file three-dot menu, Model details page, Admin panel). Domino opens the App in a new tab and passes the originating page's context as query parameters. One App can back several Extensions; pointing an Extension at a newer App version is an admin configuration change, not a rebuild.
 
@@ -39,12 +39,12 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/extensions (ov
 | `adminPanel` | New page in the Admin panel | none |
 | `netAppVolume`, `netAppVolumeFileContext` | NetApp Volume pages (in the API schema; the docs list only the five above) | `netAppVolumeId`, `netAppVolumeSnapshotId`, `filePath` |
 
-`urlConfig.contextualQueryParams` accepts only the spec enum (the eight names above), and the App receives exactly what the config lists. The docs call the file parameter `datasetFilePath`; the spec and Domino's own extensions use `filePath`. Read the parameters on the App's root route, validate the ones you need and return a clear 400 when they are missing, and call Domino with the forwarded `Authorization` header. A worked Flask example and the exact config shapes are in [API-EXTENSIONS.md](./API-EXTENSIONS.md).
+`urlConfig.contextualQueryParams` accepts only the spec enum (the eight names above), and the App receives exactly what the config lists. The file parameter is `filePath`, not `datasetFilePath`. Read the parameters on the App's root route, validate the ones you need and return a clear 400 when they are missing, and call Domino with the forwarded `Authorization` header. A worked Flask example and the exact config shapes are in [API-EXTENSIONS.md](./API-EXTENSIONS.md).
 
 ## Create an Extension (custom App)
 
 1. **Build and preview** the App in a workspace (App Preview), then **Publish App** as a SysAdmin or CloudAdmin with extended identity propagation on. Over the API: [domino-apps/API-APPS.md](../domino-apps/API-APPS.md).
-2. **Create the Extension** from the App's three-dot menu (**Create Extension**) or **Admin panel > Extensions > Create Extension**: pick the App version and add one or more mount points. Needs admin permissions (a 403 means they are missing; see API-EXTENSIONS.md). Over the API: `POST /api/extensions/beta/extensions` with `name`, `enabled`, `appId`, **`appVersionId`** (a version with extended identity propagation on) and `uiMountPointTypeConfigs`; all five are required in both specs, `description` is optional. Body and the other routes: [API-EXTENSIONS.md](./API-EXTENSIONS.md).
+2. **Create the Extension** from the App's three-dot menu (**Create Extension**) or **Admin panel > Extensions > Create Extension**: pick the App version and add one or more mount points. Needs admin permissions (a 403 means they are missing; see API-EXTENSIONS.md). Over the API: `POST /api/extensions/beta/extensions` with `name`, `enabled`, `appId`, **`appVersionId`** (a version with extended identity propagation on) and `uiMountPointTypeConfigs`; all five are required, `description` is optional. Body and the other routes: [API-EXTENSIONS.md](./API-EXTENSIONS.md).
 3. **Manage** from Admin panel > Extensions: toggle enabled, **Manage Extension > Edit** to change mount points or the App version, **Delete** to soft-delete. Publishing a new App version does not move the Extension; edit it in the UI or `PATCH` `appVersionId` over the API.
 
 ## Official Extensions (manifest-driven)

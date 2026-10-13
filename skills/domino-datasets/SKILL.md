@@ -23,8 +23,8 @@ file-count cap. Object storage: domino-data-sdk skill; NetApp ONTAP: netapp-volu
 | Its snapshots (RO) | `/domino/datasets/snapshots/<name>/<n>` and `/<tag>` | `/mnt/imported/data/snapshots/<name>/<n>` and `/<tag>` |
 
 `<n>` is the snapshot number, `<tag>` the most recently added tag. Every Project starts with a
-default Dataset named after the Project: Project `churn` has `/mnt/data/churn` (Git-based) or
-`/domino/datasets/local/churn` (DFS). Detect the layout from the injected variables:
+default Dataset named after the Project (`/mnt/data/churn` Git-based, `/domino/datasets/local/churn`
+DFS). Detect the layout from the injected variables:
 
 ```python
 import os
@@ -46,10 +46,11 @@ UI lists mounted paths under **Data > Datasets** (Workspace) and **Details > Dat
 - **REST**: `POST /api/datasetrw/v1/datasets` with
   `{"name": "...", "description": "...", "projectId": "<project-id>", "grants": []}`;
   `name` is required and unique in the Project; `snapshotId` instead of `projectId` copies a
-  snapshot into a new Dataset. All routes, bodies and auth: [API.md](./API.md).
+  snapshot into a new Dataset. All routes and bodies: [API.md](./API.md); auth:
+  [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 - **python-domino**: `Domino.datasets_create(dataset_name, dataset_description)` (positional
   names, not `name=`/`description=`) creates it in the client's configured Project through the
-  legacy `/dataset` routes, which are not in the Public API; prefer the REST route.
+  legacy `/dataset` routes (not Public API); prefer the REST route.
 
 ## Upload files
 
@@ -67,7 +68,7 @@ UI lists mounted paths under **Data > Datasets** (Workspace) and **Details > Dat
 A snapshot is a read-only, immutable copy taken at a point in time. Do not modify files while
 one is in progress; time scales with size.
 
-**Key fact**: a snapshot is mounted only in executions started after it became `active`. Read
+A snapshot is mounted only in executions started after it became `active`. Read
 one from the current run with `GET $DOMINO_API_PROXY/v4/datasetrw/snapshot/{snapshotId}/file/raw?path=<file>`
 (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)). The docs list this route without `/v4`;
 that form returns 404.
@@ -120,7 +121,7 @@ that mounts it; confirm first). Snapshot: UI, or
 ## Reference files
 
 - [MOUNT-PATHS.md](./MOUNT-PATHS.md): mount trees, detection, pinned snapshots
-- [API.md](./API.md): routes, bodies, auth, examples
+- [API.md](./API.md): routes, bodies, examples
 - [BEST-PRACTICES.md](./BEST-PRACTICES.md): layout, formats, snapshot limits, large reads
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets,

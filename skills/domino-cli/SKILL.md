@@ -38,8 +38,8 @@ The CLI is a Java application (the headless install needs a JRE); it keeps its p
    The code expires quickly; rerun the command for a new one.
 
 A CLI older than 6.2.3 uses a retired authentication client and cannot log in; reinstall from
-**Download CLI**. After `domino login` the CLI keeps its own session; the product pages document
-no token-based or API-key login for it. Full install notes, OS support and proxies:
+**Download CLI**. After `domino login` the CLI keeps its own session; there is no token or
+API-key login for the CLI. Full install notes, OS support and proxies:
 [CLI-INSTALL.md](./CLI-INSTALL.md).
 
 ## Everyday workflow (DFS project)
@@ -90,15 +90,15 @@ domino.sync(); domino.init("name"); domino.upload("message")
 
 CRAN `domino` 0.3.1 (2017) runs the installed CLI with `system()`, so install and log in with the
 CLI first (the browser or device flow above). Its `domino.login(username, password, host)` feeds
-a username and password to the CLI's old interactive prompt; whether that still works with the
-browser sign-in is undocumented, so prefer a terminal `domino login`. Exported functions,
+a username and password to the CLI's old interactive prompt and may fail against the current
+CLI; prefer a terminal `domino login`. Exported functions,
 signatures and limits: [R-PACKAGE.md](./R-PACKAGE.md).
 
 ## Pitfalls
 
 - The CLI syncs the **Domino File System**. On a Git-based project that is the **Artifacts**
-  section (the docs call the CLI faster than the UI when there are many artifacts); code goes
-  through git and Jobs through the UI or API ([domino-jobs](../domino-jobs/SKILL.md)).
+  section; code goes through git and Jobs through the UI or API
+  ([domino-jobs](../domino-jobs/SKILL.md)).
 - "blob file not found" on `domino run`: run `domino sync` first.
 - More than about 1,000 files in one `upload` can time out; upload in batches.
 - "too many open files" during `sync`: add an empty `.noLock` file at the project root.

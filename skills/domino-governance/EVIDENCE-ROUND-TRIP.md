@@ -2,14 +2,14 @@
 
 Submitter and reviewer cycle: compute-policy, submit result, reviewer opens a finding, submitter resolves with new evidence, recompute, close finding, advance stage.
 
-HTTP: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200).
+Base URL and auth: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## Core calls
 
 ```python
 POST /rpc/compute-policy {"bundleId": bundle_id, "policyId": policy_id}
 # poll: GET /results/latest?bundleID=bundle_id until needed artifacts have isLatest=true
-# see SKILL.md "After compute-policy (polling)"
+# see API-GOVERNANCE.md "After compute-policy (polling)"
 
 POST /rpc/submit-result-to-policy {"bundleId": bundle_id, "policyId": policy_id, **submit_body}
 
@@ -40,7 +40,7 @@ GET /bundles/{bundle_id}/findings
 
 ## Gotchas
 
-- Poll `GET /results/latest?bundleID=...` after each compute-policy (see SKILL.md).
+- Poll `GET /results/latest?bundleID=...` after each compute-policy ([API-GOVERNANCE.md](./API-GOVERNANCE.md#after-compute-policy-polling)).
 - Findings can open at bundle level or per evidence stage.
 - Resolving a finding requires a new submission and recompute; PUT status alone is not enough for audit meaning.
 - Do not advance while open findings remain on the stage.

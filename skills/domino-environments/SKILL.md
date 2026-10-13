@@ -61,7 +61,7 @@ One `pip install` per set of packages, pinned versions, `&&` to merge layers, `A
 | Method | When | Cost |
 |---|---|---|
 | Dockerfile `RUN pip install ...` | anything used regularly | one build; fastest starts |
-| `requirements.txt` in the Project root (`/mnt` on DFS; Git-based: docs name both `/mnt/code` and the artifacts folder; test) | per-Project extras | reinstalled every start |
+| `requirements.txt` in the Project root (`/mnt` on DFS, `/mnt/code` on Git-based) | per-Project extras | reinstalled every start |
 | `install.R` + `source('install.R')` | R equivalents | per session |
 | Package Persistence (Workspaces) | interactive installs kept across sessions | enable on the revision; custom images need `uv` and `renv` |
 | `!pip install --user ...` in a notebook | one-off | lost on restart |
@@ -81,7 +81,7 @@ Both specs: `GET /api/environments/beta/environments` (list), `GET /api/environm
 
 ### Which path applies
 
-Read `GET $DOMINO_API_HOST/version`. On `6.3.x` only the routes above exist. On 6.4 and later (Domino Cloud today) `POST /api/environments/v2/environments`, `POST .../v2/environments/{environmentId}/revisions` (preferred there) and `PUT .../v1/environments/{environmentId}/name` / `/description` also exist (`404` = absent).
+Read `GET $DOMINO_API_HOST/version`. On `6.3.x` only the routes above exist. On 6.4 and later (including Domino Cloud) `POST /api/environments/v2/environments`, `POST .../v2/environments/{environmentId}/revisions` (preferred there) and `PUT .../v1/environments/{environmentId}/name` / `/description` also exist (`404` = absent).
 
 ## Troubleshooting builds
 

@@ -6,12 +6,7 @@ compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run u
 
 # Domino Python SDK and REST API
 
-Applies to Domino 6.3 and Domino Cloud.
-
-## Activation
-
-Use this skill when the user wants to call Domino programmatically: the python-domino
-SDK, the REST API, CI/CD integration, or custom tooling. Read
+Applies to Domino 6.3 and Domino Cloud. Read
 [domino-api-intro](../domino-api-intro/SKILL.md) first for auth and base URLs.
 
 ## Two surfaces
@@ -22,8 +17,7 @@ SDK, the REST API, CI/CD integration, or custom tooling. Read
 | Use for | Quick scripts inside Domino, existing automation | New automation and anything the SDK lacks |
 
 Other Domino skills show REST, not python-domino; the SDK wraps older routes and lags the
-Public API. Every method cited here exists in `domino/domino.py` on `master` of
-https://github.com/dominodatalab/python-domino (release 2.2.0).
+Public API. Method names follow python-domino 2.2.0.
 
 ## Installation
 
@@ -74,7 +68,7 @@ domino = Domino(
 
 Notes: the `project` argument (`owner/name`) is required; the constructor calls
 `GET /version` and refuses incompatible Domino versions; `api_proxy` only works inside a
-run (the docs state it does not work against an HTTPS endpoint).
+run (it does not work against an HTTPS endpoint).
 
 REST calls use the shared setup block in
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication) (`base_url`, `headers`).

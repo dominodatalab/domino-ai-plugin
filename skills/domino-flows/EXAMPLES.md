@@ -1,6 +1,6 @@
 # Domino Flows examples
 
-Applies to Domino 6.3 and Domino Cloud. Every API used here is documented at https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows and `.../define-flow-artifacts`. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows and `.../define-flow-artifacts`. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
 
 ## Example 1: data pipeline (load, clean, features)
 
@@ -43,8 +43,6 @@ def data_pipeline(source_path: str = "/mnt/data/raw/transactions.csv", max_missi
     features = feature_task(clean=clean)
     return features.features                                       # two outputs: a namedtuple, select by attribute
 ```
-
-A task with one declared output returns the promise itself; one with several returns a namedtuple (`features.features`, `features.row_count`, or `features_file, row_count = feature_task(...)`). `features["features"]` does not compile for multi-output tasks (`TypeError: tuple indices must be integers or slices, not str`), and `raw["raw"]` on a single-output task binds a lookup inside the file rather than the output.
 
 `flows/stages/load.py`:
 
@@ -246,7 +244,7 @@ Launch:
 pyflyte run --remote flows/training_pipeline.py training_pipeline --features_path /mnt/data/features/latest.csv
 ```
 
-Flow Artifacts show up under the run with lineage; DATA artifacts can also be assigned to a Dataset from the UI (**Examine Flow Artifacts** in the docs). Behind that UI action is the internal `POST /v4/datasetrw/dataset/{datasetId}/snapshotFromFlowsArtifacts` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)), whose body needs presigned blob URLs, a signature and the artifact id that the Flows backend supplies, so there is no one-call recipe; use the UI or the `run_launch_export_artifacts_task` export above. The export task launches a separate execution that waits for the run to finish, so its node may appear early in the graph.
+Flow Artifacts show up under the run with lineage; DATA artifacts can also be assigned to a Dataset from the UI (**Examine Flow Artifacts**); that action is not scriptable (its route needs signed URLs only the Flows backend supplies), so use the UI or the `run_launch_export_artifacts_task` export above. The export task launches a separate execution that waits for the run to finish, so its node may appear early in the graph.
 
 ## Example 3: production pinning and an approval gate
 
@@ -326,7 +324,7 @@ Path("/workflow/outputs").mkdir(parents=True, exist_ok=True)
 shutil.copyfile("/workflow/inputs/model", "/workflow/outputs/bundle")
 ```
 
-In a DFS project drop `MainRepoGitRef` (it is only checked for Git-based projects). To run the flow nightly, create a scheduled Job in the project with this command (the Flows docs document `pyflyte run` "as the start command for a Job"; a scheduled Job is the pattern that follows, not a separate documented scheduler):
+In a DFS project drop `MainRepoGitRef` (it is only checked for Git-based projects). To run the flow nightly, create a scheduled Job in the project with this command:
 
 ```bash
 pyflyte run --remote flows/release_pipeline.py release_pipeline --features_path /mnt/data/features/latest.csv

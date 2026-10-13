@@ -31,7 +31,7 @@ The **app folder** (the target path from Step 1) needs a `.gitignore` that exclu
 - `*.log`, `npm-debug.log*`, `yarn-debug.log*`, `yarn-error.log*` — package manager logs.
 - `.DS_Store`, `Thumbs.db` — OS junk.
 - `.env`, `.env.local`, `.env.*.local` — local environment files. Keep `.env.example` if the project has one.
-- **Claude Code only:** `.claude/settings.local.json` — this is the per-user MCP/permissions file. It can leak machine-specific paths and personal preferences. `.mcp.json` **should** be committed (it's shared project config); `.claude/settings.local.json` should not. Codex's `.codex/config.toml` from Step 6 is shared project config and needs no entry. Only add this entry when the project root equals the app folder — when they differ, `.claude/settings.local.json` lives at the project root (Step 6), so it belongs in *that* directory's `.gitignore`. Don't create or modify a project-root `.gitignore` for this; surface the missing entry to the user and let them decide.
+- **Claude Code only:** `.claude/settings.local.json` — this is the per-user MCP/permissions file. Codex's `.codex/config.toml` from Step 6 is shared project config and needs no entry. Only add this entry when the project root equals the app folder — when they differ, `.claude/settings.local.json` lives at the project root (Step 6), so it belongs in *that* directory's `.gitignore`. Don't create or modify a project-root `.gitignore` for this; surface the missing entry to the user and let them decide.
 
 **How to handle the file itself:**
 

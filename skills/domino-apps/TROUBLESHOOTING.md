@@ -91,7 +91,6 @@ Domino's Streamlit example sets the same two options in `~/.streamlit/config.tom
 
 - In-run calls go through `$DOMINO_API_PROXY` with no `Authorization` header, or carry a bearer from `http://localhost:8899/access-token` (fetch it per request; it expires).
 - Calling as the viewer requires extended identity propagation (enabled by a SysAdmin or CloudAdmin at publish time) and the viewer's consent; otherwise the forwarded JWT has limited scope.
-- `X-Domino-Api-Key` and `DOMINO_USER_API_KEY` are deprecated; do not fall back to them.
 
 ## Diagnostics
 

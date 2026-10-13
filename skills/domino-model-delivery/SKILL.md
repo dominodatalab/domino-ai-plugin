@@ -22,14 +22,8 @@ Deploying or updating a Domino-hosted endpoint, including from CI/CD, is
 
 ## Authentication
 
-| Where the call runs | Base URL | Credential |
-|---|---|---|
-| Inside a Domino run, `DOMINO_API_PROXY` set | `$DOMINO_API_PROXY` | none; the proxy adds the starting user's token |
-| Inside a run, no proxy | `$DOMINO_API_HOST` | `Authorization: Bearer $(curl -s http://localhost:8899/access-token)` |
-| Outside Domino (CI runner, laptop) | the deployment URL users open in a browser, exported as `DOMINO_API_HOST` | `Authorization: Bearer <Personal Access Token or service-account token>` |
-
-The export product pages still show `X-Domino-Api-Key`; legacy API keys are deprecated, send a
-Bearer token. Details: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
+Base URL and credential per context: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
+Legacy API keys (`X-Domino-Api-Key`) are deprecated; send a Bearer token.
 
 ## Batch scoring in one screen
 
@@ -83,8 +77,8 @@ Kubernetes manifests, the test call, `.modelignore` and the python-domino method
   re-exports the project HEAD.
 - **SageMaker**: an admin creates a deployment target (`/api/admin/v1/deploymentTargets`, Public
   API), then **Endpoints > External > Create external endpoint** or
-  `POST /api/modelServing/v1/modelDeployments`; AWS EKS control plane only. The older
-  `exportImageForSagemaker` image export still exists.
+  `POST /api/modelServing/v1/modelDeployments`; AWS EKS control plane only. The
+  `exportImageForSagemaker` image export is the alternative.
 - **Exports page** lists every export with target `Sagemaker`, `NvidiaFleetcommand`, `Snowflake`
   or `Domino`; `GET /v4/modelManager/getModelExports/{projectId}` (non-public route; may change in a future Domino version).
 

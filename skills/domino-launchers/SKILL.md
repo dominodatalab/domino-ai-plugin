@@ -46,15 +46,15 @@ Details and patterns: https://docs.domino.ai/cloud/platform-capabilities/core-co
 
 ## Run a Launcher
 
-Consumers open **Deployments > Launchers**, click the launcher, fill in the form and run it. Collaborators with the **Contributor** or **Launcher User** role can run launchers; **Results Consumers** can only view results. Grant the role under Project **Settings > Access and Sharing** or with the Public API, `POST /api/projects/v1/projects/{projectId}/collaborators` `{"id": "<user id>", "role": "launcherUser"}` (both specs; `GET /api/users/v1/self` and the user routes give ids; details in [domino-projects](../domino-projects/SKILL.md)).
+Consumers open **Deployments > Launchers**, click the launcher, fill in the form and run it. Collaborators with the **Contributor** or **Launcher User** role can run launchers; **Results Consumers** can only view results. Grant the role under Project **Settings > Access and Sharing** or with the Public API, `POST /api/projects/v1/projects/{projectId}/collaborators` `{"id": "<user id>", "role": "launcherUser"}` (6.3 and Cloud; `GET /api/users/v1/self` and the user routes give ids; details in [domino-projects](../domino-projects/SKILL.md)).
 
 ## Copy a Launcher between Projects
 
-Open the launcher, click the gear icon > **Edit** > **Switch to JSON Edit Mode** to view or paste the JSON definition. The docs state this editor is available only in private (self-managed) deployments; on Domino Cloud rebuild the launcher in the wizard.
+Open the launcher, click the gear icon > **Edit** > **Switch to JSON Edit Mode** to view or paste the JSON definition. This editor exists only on self-managed deployments; on Domino Cloud rebuild the launcher in the wizard.
 
 ## API
 
-Neither public spec (`https://docs.domino.ai/api-specs/6.3/public-api.json`, `.../cloud/public-api.json`) contains a launcher route, so launchers cannot be created or run through the Public API. What you can do:
+The Public API has no launcher routes, so launchers cannot be created or run through it. What you can do:
 
 - Find launcher runs: `GET /api/jobs/beta/jobs?projectId=...` returns each run as a Job whose `runLauncherId` field is set; `GET /api/jobs/beta/jobs/{jobId}` and `.../logs` give status and logs (see [domino-jobs](../domino-jobs/SKILL.md)).
 - Fetch a result file: take `job.commitDetails.outputCommitId` from the Job and call `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` (path URL-encoded, response is the raw file).

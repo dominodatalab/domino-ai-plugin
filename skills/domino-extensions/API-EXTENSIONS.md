@@ -1,6 +1,6 @@
 # Extensions REST surface
 
-Routes under `/api/extensions/beta/` exist, with identical bodies, in both public API specs (`https://docs.domino.ai/api-specs/6.3/public-api.json`, `https://docs.domino.ai/api-specs/cloud/public-api.json`). Authentication and base URL follow the `domino-api-intro` skill: in a run `DOMINO_API_PROXY` with no header, or a bearer from `http://localhost:8899/access-token` on `DOMINO_API_HOST`; outside a run a Personal Access Token or service account bearer on the deployment's public URL. The docs describe Extension creation as an Admin task; on Domino Cloud a user who is not a SysAdmin but holds admin-panel system operations can create, patch and delete Extensions over this API, so expect a permission check rather than a SysAdmin-only gate, and read a 403 as missing permissions.
+Routes under `/api/extensions/beta/`. Auth and base URL: [domino-api-intro](../domino-api-intro/SKILL.md#authentication). Create, patch and delete need admin-panel system-operations permission (not necessarily SysAdmin); a 403 means it is missing.
 
 ## Routes
 
@@ -24,16 +24,8 @@ Routes under `/api/extensions/beta/` exist, with identical bodies, in both publi
 `ExtensionCreationRequest` requires `name`, `enabled`, `appId`, `appVersionId` and `uiMountPointTypeConfigs`; `description` is optional and stored. **The App version must have extended identity propagation enabled**: with a version whose `content.extendedIdentityPropagationToAppsEnabled` is `false` the server answers `400 App version <id> does not have extended identity propagation enabled`. Create such a version with `POST /api/apps/v1/apps/{appId}/versions` and `{"content": {"environmentId": "...", "extendedIdentityPropagationToAppsEnabled": true}, "deployment": {"hardwareTierId": "..."}}`. Publishing an App with extended identity propagation requires a SysAdmin or CloudAdmin; do not set `extendedIdentityPropagationToAppsEnabled` unless the user confirms they hold that role, and otherwise ask an admin to publish the Extension App. Get `appId` from `GET /api/apps/v1/apps?projectId=...&name=...` and the version id from `currentVersion.id` (the most recently started version). The Cloud spec also returns `latestVersion.id` (most recently created version, started or not); the 6.3 spec does not, so on 6.3 list `GET /api/apps/v1/apps/{appId}/versions` (`items[]` newest first, with `id`, `versionNumber`, `createdAt`) and take the highest `versionNumber`.
 
 ```python
-import os
 import requests
-
-if os.environ.get("DOMINO_API_PROXY"):
-    base_url = os.environ["DOMINO_API_PROXY"].rstrip("/")
-    headers = {}
-else:
-    base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
-    token = requests.get("http://localhost:8899/access-token").text.strip()
-    headers = {"Authorization": f"Bearer {token}"}
+# base_url and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
 
 body = {
     "name": "My Extension",
@@ -58,11 +50,11 @@ response.raise_for_status()
 extension = response.json()          # ExtensionResponse: id, name, enabled, appId, appVersionId, kind, ...
 ```
 
-Mount config shapes (both specs): every config has `enabled` (required) and `urlConfig` (`contextualQueryParams`, optional `route`); `projectSidebar` adds `allProjects` and `mountPoints[{enabled, projectId}]`; `datasetFileContext` and `netAppVolumeFileContext` add `allProjects`, `mountPoints` and `fileTypes`; `dataset`, `modelDetails`, `adminPanel` and `netAppVolume` take only `enabled` and `urlConfig`. `contextualQueryParams` values come from the enum `projectId`, `datasetId`, `datasetSnapshotId`, `filePath`, `modelId`, `modelVersionId`, `netAppVolumeId`, `netAppVolumeSnapshotId`; the server stores and returns them capitalized (`ProjectId`), so compare case-insensitively when reading them back. `DELETE` is a soft delete: `GET` still returns the record with `deletedAt`, the default list omits it, and `?deleted=true` lists it.
+Mount config shapes: every config has `enabled` (required) and `urlConfig` (`contextualQueryParams`, optional `route`); `projectSidebar` adds `allProjects` and `mountPoints[{enabled, projectId}]`; `datasetFileContext` and `netAppVolumeFileContext` add `allProjects`, `mountPoints` and `fileTypes`; `dataset`, `modelDetails`, `adminPanel` and `netAppVolume` take only `enabled` and `urlConfig`. `contextualQueryParams` values come from the enum `projectId`, `datasetId`, `datasetSnapshotId`, `filePath`, `modelId`, `modelVersionId`, `netAppVolumeId`, `netAppVolumeSnapshotId`; the server stores and returns them capitalized (`ProjectId`), so compare case-insensitively when reading them back. `DELETE` is a soft delete: `GET` still returns the record with `deletedAt`, the default list omits it, and `?deleted=true` lists it.
 
 ## Handle the context in the App
 
-The parameters an App receives are the ones its `urlConfig.contextualQueryParams` lists, drawn from the spec enum. Typical configurations: `projectSidebar` passes `projectId`; `dataset` passes `datasetId`; `datasetFileContext` passes `datasetId`, `datasetSnapshotId` and `filePath`; `modelDetails` passes `modelId` and `modelVersionId`; `adminPanel` passes none; the NetApp mounts pass `netAppVolumeId`, `netAppVolumeSnapshotId` and `filePath`. Note that the create-manage-extensions docs page calls the file parameter `datasetFilePath`, but the spec enum and Domino's own clinical-data-explorer read `filePath`; that extension also reads a `mountPointType` parameter to learn where it was opened from. Validate what you need and fail clearly, because a user can open the App URL without any parameters.
+The parameters an App receives are the ones its `urlConfig.contextualQueryParams` lists ([SKILL.md](./SKILL.md#mount-points-and-context)). Domino's own clinical-data-explorer reads `filePath` and a `mountPointType` parameter to learn where it was opened from. Validate what you need and fail clearly, because a user can open the App URL without any parameters.
 
 ```python
 # Flask App mounted on Datasets: read the context, call Domino as the viewer
@@ -84,7 +76,7 @@ def index():
     return flask.render_template("dataset.html", dataset=dataset)
 ```
 
-`GET /api/datasetrw/v1/datasets/{datasetId}` exists in both public specs; the same pattern works for any `/api/...` route the viewer is allowed to call.
+The same pattern works for any `/api/...` route the viewer is allowed to call.
 
 ## Move an Extension to a new App version
 

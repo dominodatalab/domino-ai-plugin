@@ -86,7 +86,7 @@ def confidence_evaluator(span):
 
 ## LLM-as-judge evaluators
 
-Model names in these examples (`gpt-6.1-sol`) are examples; use a model your provider serves, or a gateway alias where the `domino-llm-gateway` extension is installed. The judge's own model call happens after the agent's span has ended. With autologging enabled it is traced too: as a separate trace when the decorated function was the top of the call tree, or as a child span of the still-open outer trace when it was nested. Pause autologging around the judge call to keep judge traffic out of the agent's traces. The pause is process-wide (MLflow autologging has no per-thread state), so an agent call running concurrently in another thread loses its LLM spans while a judge runs: keep evaluation loops single-threaded, or move LLM judging to a post-hoc Job (see below). The helper assumes `mlflow.openai.autolog()` was enabled at startup; do not use it otherwise, since it would switch autologging on.
+The judge's own model call happens after the agent's span has ended. With autologging enabled it is traced too: as a separate trace when the decorated function was the top of the call tree, or as a child span of the still-open outer trace when it was nested. Pause autologging around the judge call to keep judge traffic out of the agent's traces. The pause is process-wide (MLflow autologging has no per-thread state), so an agent call running concurrently in another thread loses its LLM spans while a judge runs: keep evaluation loops single-threaded, or move LLM judging to a post-hoc Job (see below). The helper assumes `mlflow.openai.autolog()` was enabled at startup; do not use it otherwise, since it would switch autologging on.
 
 ```python
 from contextlib import contextmanager
@@ -216,7 +216,7 @@ def safety_evaluator(span):
     return {"safety_flag_count": flags, "is_safe": 1.0 if flags == 0 else 0.0}
 ```
 
-An evaluator like this scores a **finished** trace after the fact; it does not stop anything. Where the LLM Gateway 2.0 extension is installed and the requirement is to block or redact content, use the gateway's guardrails: the administrator configures rules that screen prompts and responses at call time (deny, redact or log), which is a different job from scoring. The two combine well: guardrails enforce, evaluators measure. Tracing itself does not depend on the gateway. See the `domino-llm-gateway` skill.
+To block or redact at call time use LLM Gateway 2.0 guardrails (`domino-llm-gateway`); evaluators only score finished traces.
 
 ## Composite and conditional evaluators
 

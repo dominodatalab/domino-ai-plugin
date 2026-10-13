@@ -66,13 +66,7 @@ Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/comp
 
 ## Large artifacts
 
-For multi-GB artifacts (LLM weights, checkpoints) upload straight to blob storage instead of through the MLflow proxy (AWS and GCP deployments only):
-
-```python
-os.environ["MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD"] = "true"
-os.environ["MLFLOW_MULTIPART_UPLOAD_CHUNK_SIZE"] = "104857600"   # optional, 100 MB; a file splits into at most 1000 chunks
-# optional: MLFLOW_MULTIPART_UPLOAD_MINIMUM_FILE_SIZE
-```
+Multi-GB artifacts (LLM weights, checkpoints) upload straight to blob storage with `MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD=true` (AWS and GCP deployments): [MLFLOW-BASICS.md](./MLFLOW-BASICS.md#large-artifact-upload).
 
 ## Registering a model
 

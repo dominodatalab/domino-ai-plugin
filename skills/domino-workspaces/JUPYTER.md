@@ -1,6 +1,6 @@
 # Jupyter and JupyterLab Workspaces in Domino
 
-Applies to Domino 6.3 and Domino Cloud. Launching, persistence, SSH and the session API are in [SKILL.md](./SKILL.md).
+Launching, persistence, SSH and the session API are in [SKILL.md](./SKILL.md).
 
 ## Jupyter Notebook vs JupyterLab
 
@@ -16,12 +16,7 @@ A stopped Workspace is resumed with **Start** in the UI or `POST /api/projects/v
 
 ## Where files live
 
-| | DFS Project | Git-based Project |
-|---|---|---|
-| Working directory (`DOMINO_WORKING_DIR`) | `/mnt` | `/mnt/code` |
-| Notebooks you want tracked | under `/mnt` | under `/mnt/code` (Git) or `/mnt/artifacts` (DFS artifacts) |
-| Datasets | `/domino/datasets/local/<name>` | `/mnt/data/<name>` |
-| Job results written from a notebook | Project root | `/mnt/artifacts/results/` |
+Working directory, artifacts and Dataset paths per Project type: [SKILL.md](./SKILL.md#paths-and-what-persists). Notebooks you want tracked go under `/mnt` (DFS) or `/mnt/code` (Git-based; `/mnt/artifacts` for DFS-tracked artifacts); Job results written from a notebook go to the Project root (DFS) or `/mnt/artifacts/results/` (Git-based).
 
 JupyterLab opens in `DOMINO_WORKING_DIR` and can browse the whole filesystem, but only files under `/mnt` persist and sync. Save, then **File Changes > Sync** in the Workspace pane; the IDE's save does not push to Domino.
 
@@ -55,7 +50,7 @@ Platform API calls go through `os.environ["DOMINO_API_PROXY"]` with no `Authoriz
 
 ## Coding assistants in Jupyter
 
-The DSE includes CLI coding agents that work from a JupyterLab terminal; VS Code adds the extension panels. Jupyter AI is not part of the Domino Standard Environment and Domino's docs do not cover it; if a custom environment installs it, follow the jupyter-ai project documentation, not Domino's. Current Domino guidance: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+The DSE includes CLI coding agents that work from a JupyterLab terminal; VS Code adds the extension panels. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
 
 ## Notebooks as Jobs
 
@@ -70,10 +65,6 @@ pm.execute_notebook("input.ipynb", "output.ipynb", parameters={"data_path": "/mn
 ```
 
 See [domino-jobs](../domino-jobs/SKILL.md) for scheduling and the Jobs API.
-
-## Keyboard basics
-
-`Shift+Enter` run and advance, `Ctrl+Enter` run in place, `Alt+Enter` run and insert below.
 
 ## Troubleshooting
 

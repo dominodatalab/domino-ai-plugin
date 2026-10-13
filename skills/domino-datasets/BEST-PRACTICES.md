@@ -127,28 +127,17 @@ data = np.memmap(f"{root}/my-dataset/processed/features.dat", dtype="float32", m
 
 Domino 6.3 enforces `com.cerebro.domino.dataset.quota.maxActiveSnapshotsPerDataset` (default
 20) and `com.cerebro.domino.dataset.quota.maxDatasetsPerProject` while
-`com.cerebro.domino.dataset.quota.enabled` is `true` (configuration records,
-https://docs.domino.ai/6.3/admin/configuration/central-configuration#read-write-datasets). On
-Domino Cloud, Domino Support sets the limits. Behaviour at the limit:
+`com.cerebro.domino.dataset.quota.enabled` is `true`
+(https://docs.domino.ai/6.3/admin/configuration/central-configuration#read-write-datasets); on
+Domino Cloud, Domino Support sets the limits. At the limit an execution that would write a
+snapshot errors, and a manual **Take Snapshot** marks the oldest snapshot for deletion if you
+proceed; a marked snapshot stops mounting, and nothing is permanently deleted until an admin
+acts (https://docs.domino.ai/cloud/admin/data-administration/datasets#set-limits-on-dataset-usage).
 
-- An execution whose Dataset configuration would write a new snapshot gets an error; before
-  more snapshots can be written you must delete old ones or raise the limit
-  (https://docs.domino.ai/cloud/admin/data-administration/datasets#set-limits-on-dataset-usage).
-- A manual **Take Snapshot** in the UI warns that the limit is reached and, if you proceed,
-  marks the oldest snapshot for deletion (the 6.3 configuration reference for
-  `maxActiveSnapshotsPerDataset`). A marked snapshot stops mounting; nothing is permanently
-  deleted until an admin acts.
-- What `POST .../snapshots` returns at the limit is not documented; expect an error.
-- A Project can be exempted: **Settings > Hardware & Environment > Ignore Dataset Limits**, or
-  `POST /v4/datasetrw/datasets/limit/{projectId}?ignoreLimit=true` (non-public route; may change in a future Domino version; no body; read back with
-  `GET /v4/datasetrw/dataset/enforce-limit/{projectId}`). A Project Owner can set and revert
-  it. Check first with `GET /v4/datasetrw/snapshot/limit/{projectId}/{datasetId}`
-  (same label), which returns `true` once the cap is hit.
-
-Deleting: an Owner marks a Dataset or snapshot for deletion, which excludes it from new
-executions; an admin removes it permanently from **Admin > Manage resources > Datasets**. For a
-snapshot, `DELETE /v4/datasetrw/snapshot/{snapshotId}` (non-public route; may change in a future Domino version) does the marking from code and `PUT` with `{"status": "Active"}` undoes it; the
-routes and their states are in [API.md](./API.md). On 6.3 the recovery window is
-`com.cerebro.domino.dataset.graceTimeForDeletion` (default 15 minutes). Snapshots count toward storage and quota warnings appear on the Dataset page, so
-delete what you no longer need, and refresh Datasets from external Data Sources with a
-scheduled Job rather than manual uploads.
+Housekeeping: delete snapshots you no longer need (an Owner marks, an admin purges from
+**Admin > Manage resources > Datasets**; on 6.3 the recovery window is
+`com.cerebro.domino.dataset.graceTimeForDeletion`, default 15 minutes); exempt a Project only
+when policy allows (**Settings > Hardware & Environment > Ignore Dataset Limits**); refresh
+Datasets from external Data Sources with a scheduled Job rather than manual uploads. Routes for
+deleting, marking, restoring, reading the cap and setting the exemption:
+[API.md](./API.md#snapshot-deletion-and-limits-non-public-routes).

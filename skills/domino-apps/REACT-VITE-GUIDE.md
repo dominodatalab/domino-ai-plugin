@@ -110,7 +110,7 @@ app.use((req, res) => {                       // SPA fallback for extension-less
 app.listen(8888, '0.0.0.0', () => console.log('listening on 0.0.0.0:8888'))
 ```
 
-The same server can call the Domino platform API as the publisher (`DOMINO_API_PROXY` with no header, or a bearer from `http://localhost:8899/access-token` on `DOMINO_API_HOST`) or as the viewer by forwarding the incoming `Authorization` header when extended identity propagation is enabled for the App.
+The same server can call the Domino platform API as the publisher or, when extended identity propagation is enabled for the App, as the viewer by forwarding the incoming `Authorization` header ([SKILL.md](./SKILL.md#calling-domino-apis-and-model-endpoints-from-an-app)).
 
 ### Frontend call
 

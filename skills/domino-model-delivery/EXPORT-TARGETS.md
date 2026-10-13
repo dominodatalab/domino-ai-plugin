@@ -1,16 +1,15 @@
 # Export targets: NVIDIA Fleet Command, Snowflake, SageMaker, the Exports page
 
 **Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
-They are documented on the product pages cited below and on each cluster's reference
-(`https://<domino-domain>/docs`, `openapi-internal.json`); they are not in the Public API spec.
-Authentication as in [SKILL.md](./SKILL.md#authentication): Bearer token, never `X-Domino-Api-Key`.
+They are documented on the product pages cited below and in each deployment's
+`https://<domino-domain>/docs` (`openapi-internal.json`). Auth: [SKILL.md](./SKILL.md#authentication).
 
 ## NVIDIA Fleet Command (edge)
 
 Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/export-nvidia
 (same on 6.3). Domino pushes the endpoint container image and a Helm chart to private
-repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The cluster
-reference labels the route **BETA**.
+repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The route is
+labelled beta.
 
 Prerequisites: a Domino endpoint deployed from the project and in **Ready to Run** state, so a
 model id and a built model version id exist (list them with
@@ -30,12 +29,12 @@ json.dump({"containerRepository": "<org>/<team>/<container-repo>", "tag": "1.4.0
 | Field | Required | Rule |
 |---|---|---|
 | `containerRepository` | yes | existing private NGC container repository; lowercase alphanumerics, dashes, slashes, no spaces |
-| `tag` | no (cluster reference) | alphanumerics, underscores, periods, dashes |
+| `tag` | no | alphanumerics, underscores, periods, dashes |
 | `helmRepository` | yes | existing private NGC Helm repository, same character rules |
 | `helmVersion` | yes | semver |
 | `ngcApiKey` | yes | NGC API key; generate it in NGC, keep it in a Project or user environment variable and read it by name (`os.environ["NGC_API_KEY"]`); a CI runner outside Domino holds its own copy |
 
-Constraints from the product page:
+Constraints:
 
 - The endpoint port on the edge device is hardcoded to **30008**; a second Domino model on the
   same device fails unless you override the port in `values.yaml` in the Fleet Command UI.
@@ -96,7 +95,7 @@ the next export).
 
 Two mechanisms exist; prefer the first.
 
-**Deployment targets (current, Public API in both specs).** An admin registers an external
+**Deployment targets (Public API, 6.3 and Cloud).** An admin registers an external
 deployment target (`GET/POST /api/admin/v1/deploymentTargets`, types from
 `/api/admin/v1/deploymentTargetTypes`, resource configurations under
 `.../{deploymentTargetId}/resourceConfigurations`). A user then deploys a **registered model**

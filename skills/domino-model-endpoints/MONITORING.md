@@ -1,6 +1,6 @@
 # Operational monitoring of Domino endpoints
 
-Applies to Domino 6.3 and Domino Cloud. Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/monitor-model-endpoints. This file covers serving health (CPU, memory, traffic, status codes, logs). Drift and model-quality monitoring is the `domino-model-monitoring` skill.
+Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/monitor-model-endpoints. This file covers serving health (CPU, memory, traffic, status codes, logs). Drift and model-quality monitoring is the `domino-model-monitoring` skill.
 
 ## Where the metrics are
 
@@ -19,7 +19,7 @@ Applies to Domino 6.3 and Domino Cloud. Source: https://docs.domino.ai/cloud/pla
 | 5xx | > 0.1% | Model errors or resource exhaustion; read the instance logs |
 | 504 | Any | Requests exceed the request timeout; optimize or raise the timeout |
 
-Alert thresholds the docs suggest: CPU > 80% for 10 minutes, memory up by more than 1 GB in an hour, error rate > 2%.
+Suggested alert thresholds: CPU > 80% for 10 minutes, memory up by more than 1 GB in an hour, error rate > 2%.
 
 ## Health checks and timeouts
 
@@ -46,7 +46,7 @@ Open the **Logs** column for any version:
 | Instance | stdout and stderr of each container (your `print` output and tracebacks) | Prediction errors, slow processing, memory warnings; filter by pod and container |
 | Deployment | Kubernetes events, heartbeats, pod status | Pods not starting, resource allocation, health-check restarts |
 
-Over the API (both specs): `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` (optional `buildId`, `sinceTimeNano`), `.../exportLogs`, `.../instanceLogs` (optional `podName`, `containerName`, `sinceTimeNano`, `tail`, `maxResults`). Each instance-log entry is `{timestamp, timeNano, log, streamType, tags[{key, value}]}`, and the pod has two containers: the model container (tag `kubernetes.container_name` starting with `model-`) and the `istio-proxy` sidecar.
+Over the API: `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` (optional `buildId`, `sinceTimeNano`), `.../exportLogs`, `.../instanceLogs` (optional `podName`, `containerName`, `sinceTimeNano`, `tail`, `maxResults`). Each instance-log entry is `{timestamp, timeNano, log, streamType, tags[{key, value}]}`, and the pod has two containers: the model container (tag `kubernetes.container_name` starting with `model-`) and the `istio-proxy` sidecar.
 
 ```bash
 TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: PAT or service-account token
@@ -54,7 +54,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
   "$DOMINO_API_HOST/api/modelServing/v1/modelApis/$MODEL_ID/versions/$VERSION_ID/instanceLogs?maxResults=3000"
 ```
 
-Fetch **without** `tail` and with a large `maxResults`, then keep the model-container entries. The sidecar emits hundreds of startup lines, so `tail=true` with a small window returns sidecar lines only and hides a crash (`tail=true&maxResults=200` returns no model-container lines for a crash-looping version; `maxResults=3000` without `tail` returns the full traceback). Healthy: a model-container line `WSGI app 0 (mountpoint='') ready`. Crash loop: `no app loaded. GAME OVER` after a `Traceback`, with the exception line as the cause. No model-container lines means nothing has been logged yet, not that the version is healthy. The filtering snippet is under "Health check after publishing" in [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md); filter on the `kubernetes.container_name` tag rather than relying on `containerName`. With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header.
+Fetch **without** `tail` and with a large `maxResults`, then keep the model-container entries: the sidecar's hundreds of startup lines otherwise hide a crash. Healthy: `WSGI app 0 (mountpoint='') ready`; crash loop: `no app loaded. GAME OVER` after a `Traceback`; no model-container lines means nothing has been logged yet. The filtering snippet and the full procedure are under "Health check after publishing" in [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md#health-check-after-publishing). With `DOMINO_API_PROXY` set, call `$DOMINO_API_PROXY/api/...` without the header.
 
 ## Debugging workflow
 

@@ -1,8 +1,6 @@
 # Bundle Lifecycle
 
-This document explains how governance bundles progress through policy stages in Domino.
-
-Auth and `$BASE`: [SKILL.md Configuration](./SKILL.md#configuration) (proxy → in-run gateway + access-token → public URL + PAT on 404; use the base where `GET $BASE/policy-overviews` returns HTTP 200). Curl examples use `${TOKEN:+-H "Authorization: Bearer $TOKEN"}`; leave `TOKEN` unset only when step 1 (proxy) works.
+Base URL, auth and the `TOKEN` conditional in the curl examples: [SKILL.md Configuration](./SKILL.md#configuration).
 
 ## How Policies Define Stage Sequences
 
@@ -80,14 +78,11 @@ The response includes a `stages` array:
 }
 ```
 
-**Important**: The bundle response does NOT include evidenceSet IDs. To get those, fetch the policy directly:
-```bash
-curl -s "$BASE/policies/$POLICY_ID" ${TOKEN:+-H "Authorization: Bearer $TOKEN"}
-```
+EvidenceSet IDs come from `GET /policies/{policyId}`, not from the bundle ([EVIDENCE-WORKFLOW.md](./EVIDENCE-WORKFLOW.md#discovering-evidenceset-ids)).
 
 ## Progressing Through Stages
 
-Stage **status** on the bundle (`currentStageInfo.status`) is `NotStarted`, `InProgress`, or `Done`. It is derived from results and approvals, not set with `PATCH .../stages/{stageId}`.
+Stage **status** on the bundle (`currentStageInfo.status`) is `NotStarted`, `InProgress`, or `Done`, derived from results and approvals.
 
 ### Assign a stage owner
 `PATCH /bundles/{bundleId}/stages/{stageId}` accepts **assignee** only:
@@ -110,43 +105,21 @@ curl -X PATCH "$BASE/bundles/$BUNDLE_ID" \
   -d '{"stage": "Validation & Testing"}'
 ```
 
-Re-fetch the bundle and confirm `stage` (name string) or `currentStageInfo.status` changed. Do not use `{"status": "Complete"}` on the stage subresource; that field is not in the API.
+Re-fetch the bundle and confirm `stage` (name string) or `currentStageInfo.status` changed.
 
 If the policy enforces gating and required questions are unanswered, advance steps may fail or leave the bundle non-compliant.
 
-### Typical Stage Progression
-
-1. **Model Initiation** — Business case, risk tier, scope, data compliance, registration
-2. **Development** — MLflow logging, data docs, methodology, code reproducibility, limitations
-3. **Validation & Testing** — Out-of-sample metrics, fairness, SHAP, findings, stress tests
-4. **Deployment Approval** — Findings resolved, committee approval, deployment plan, access controls
-5. **Ongoing Monitoring** — Performance review, drift checks, alerts, re-validation
-6. **Decommission** — Replacement plan, archive, endpoint removal, stakeholder notification
-
 ## Approval Gating
 
-Each stage has designated approvers (organizations, or users when the policy allows). Approval requires one of them to sign off, in the UI or through the public API (both specs):
-
-- `GET /bundles/{bundleId}/approvals` lists every approval with its `id` (the `approvalId`), `stageApprovalId`, `approvers[]` and `status`: `PendingSubmission`, `PendingReview`, `Approved`, `ConditionallyApproved`, `PendingExpiration`, `Expired`.
-- `POST /rpc/publish-approval-event` with `{"bundleId", "policyId", "projectId", "approvalId", "eventType"}` transitions it; `eventType` is one of `RequestSubmitted`, `RequestCancelled`, `RequestApproved`, `RequestConditionalApproved`, `RequestRejected`, `FindingsApproved`, `PolicyReactivated`, `RevalidationRequired`, `RevalidationExpired`, `PolicyVersionUpgraded`. The caller must be one of the approval's approvers.
-- `POST /rpc/update-approval` with `{"approvalId", "policyId", "approvers": [{"id", "name"}]}` changes who must approve.
-
-Full automation, including re-fetching the bundle to confirm the stage moved: [APPROVAL-GATE.md](./APPROVAL-GATE.md). The `stageApprovals` section of the bundle response also shows which organizations approve each stage, the current approval status, and approver IDs (useful for creating findings).
+Each stage has designated approvers (organizations, or users when the policy allows); one of them signs off in the UI or through `GET /bundles/{bundleId}/approvals`, `POST /rpc/publish-approval-event` and `POST /rpc/update-approval`, then the bundle is re-fetched to confirm the stage moved: [APPROVAL-GATE.md](./APPROVAL-GATE.md). The bundle's `stageApprovals` lists the approving organizations, the current approval status and approver IDs (used when creating findings).
 
 ## Checking Bundle Status
 
-At any point, inspect the current state:
+At any point, inspect the current state (fields: [Create the Bundle](#create-the-bundle)):
 ```bash
 curl -s "$BASE/bundles/$BUNDLE_ID" \
   ${TOKEN:+-H "Authorization: Bearer $TOKEN"}
 ```
-
-Look at:
-- `stage` — Current stage name
-- `state` — Bundle state (e.g., "Active")
-- `classificationValue` — Auto-detected risk tier
-- `attachments` — What evidence has been attached (count and details)
-- `stageApprovals` — Approval status per stage
 
 ## Listing All Bundles in a Project
 

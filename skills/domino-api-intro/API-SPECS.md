@@ -1,12 +1,11 @@
 # OpenAPI specs and route discovery
 
-Verify every route and body against these before writing an example. Do not guess
-routes from memory.
+Check that a route and its body exist in the spec for the target Domino version before
+calling it; do not guess routes from memory.
 
 ## Published Public API specs
 
-One per supported target. A route must exist in the spec for every Domino version a skill
-claims.
+One per supported target.
 
 | Target | OpenAPI JSON | Reference UI |
 |--------|--------------|--------------|
@@ -21,7 +20,7 @@ curl -s https://docs.domino.ai/api-specs/cloud/public-api.json \
   | jq '.paths["/api/jobs/v1/jobs"].post.requestBody.content["application/json"].schema'
 ```
 
-Differences between the two (October 2026): the Cloud spec adds
+Differences between the two: the Cloud spec adds
 `POST /api/jobs/v1/projects/{projectId}/job-defaults`, `/api/environments/v2/environments`,
 environment name/description `PUT`s, Model API collaborators/visibility under
 `/api/modelServing/beta`, app roles, and repository default-ref/readme routes. The 6.3 spec

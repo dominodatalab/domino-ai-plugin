@@ -1,8 +1,6 @@
 # Domino Datasets API
 
-Create and manage Datasets, snapshots, tags and grants with the Public API. Routes,
-bodies and response envelopes below are from both published specs (identical on 6.3 and
-Cloud). Product docs:
+Create and manage Datasets, snapshots, tags and grants with the Public API. Product docs:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets and the
 [domino-datasets](../domino-datasets/SKILL.md) skill.
 
@@ -26,8 +24,8 @@ GET /api/datasetrw/v2/datasets
 | `offset`, `limit` | Pagination (`limit` defaults to 10) |
 
 Response: `{"datasets": [{"dataset": {...}, "projectInfo": {...}}], "metadata": {"offset", "limit", "totalCount", ...}}`.
-Note the nested `dataset` key. `GET /api/datasetrw/v1/datasets` is marked deprecated in
-both specs ("Use getDatasetsV2"); use v2 with `projectIdsToInclude` instead.
+Note the nested `dataset` key. `GET /api/datasetrw/v1/datasets` is deprecated; use v2
+with `projectIdsToInclude` instead.
 
 ```python
 page = requests.get(f"{base_url}/api/datasetrw/v2/datasets", headers=headers,
@@ -75,10 +73,10 @@ DELETE /api/datasetrw/v1/datasets/{datasetId}
 
 `DELETE` needs PermanentDelete access and is a soft, cancellable delete: the dataset
 disappears from the v2 list at once, `GET` by id still returns it, and the internal
-lifecycle stays `DeletionInProgress` for some time (more than ten minutes).
-Snapshot files are read through the dataset files service; called from outside Domino, the
-`/datasetrw/...` routes in the spec answer 404 while the `/v4/datasetrw/...` forms work
-(non-public route; may change in a future Domino version), so prefer the mount path or python-domino for file access.
+lifecycle stays `DeletionInProgress` for a while.
+Snapshot file routes: the `/datasetrw/...` form in the spec returns 404; the working form is
+`/v4/datasetrw/...` (non-public route; may change in a future Domino version;
+[HOSTS.md](../domino-api-intro/HOSTS.md)), so prefer the mount path or python-domino for file access.
 
 ## Snapshots
 
@@ -96,7 +94,7 @@ the snapshot then goes to `failed`. File paths (`sub/b.txt`) and directory paths
 (`labels/`) both work and include only what you list. Only one snapshot copy runs at a
 time; a second POST while one is `pending` returns 400. Tags are added separately
 (below). Response: `{"snapshot": {"id", "datasetId", "createdAt", "creatorId", "status"}, "metadata": {...}}`
-(the schema's `description` and `lastMounted` were absent live) with `status` one of
+(`description` and `lastMounted` may be absent) with `status` one of
 `active`, `pending`, `copying`, `markForDeletion`, `deletionInProgress`, `deleted`,
 `failed`; poll `GET /api/datasetrw/v1/snapshots/{snapshotId}` until `active`. To create a
 new editable dataset from a snapshot, `POST /api/datasetrw/v1/datasets` with `name`,

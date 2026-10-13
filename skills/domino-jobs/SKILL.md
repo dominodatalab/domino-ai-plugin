@@ -10,7 +10,7 @@ Applies to Domino 6.3 and Domino Cloud.
 
 A Job runs one command to completion in its own container on a hardware tier, recording the Project files, environment revision, data mounts and inputs. Interactive work: [domino-workspaces](../domino-workspaces/SKILL.md); web forms that start Jobs: [domino-launchers](../domino-launchers/SKILL.md); batch scoring with a model: [domino-model-delivery](../domino-model-delivery/SKILL.md).
 
-Authentication ([domino-api-intro](../domino-api-intro/SKILL.md)): in a run `$DOMINO_API_PROXY` with no `Authorization` header; outside, `$DOMINO_API_HOST` with a PAT or service-account token.
+Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ## Start a Job
 
@@ -67,7 +67,7 @@ Both specs (beta).
 
 UI: **Jobs > Schedules > Schedule a Job**. API: `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version; no public route or SDK method), then GET, PUT (edit or pause via `isPaused`) and DELETE on `.../{scheduledJobKey}`. Body, firings and examples: [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md).
 
-**Schedule** is a repeat interval or a **Quartz CronTrigger** expression, not crontab: six fields plus an optional year, seconds first, `?` in exactly one day field, in `timezoneId` (`0 0 0 * * ?` daily at 00:00, `0 0 9 ? * MON` Mondays at 09:00). Layout and special characters: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#quartz-cron-expressions).
+**Schedule** is a repeat interval or a Quartz CronTrigger expression (six fields, seconds first; not crontab), evaluated in `timezoneId`; layout, examples and special characters: [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#quartz-cron-expressions).
 
 Pipelines: [domino-flows](../domino-flows/SKILL.md); Airflow or Kubeflow: [domino-airflow-kubeflow](../domino-airflow-kubeflow/SKILL.md).
 

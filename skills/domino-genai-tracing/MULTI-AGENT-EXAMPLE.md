@@ -77,7 +77,7 @@ TOOLS = [
 import os
 from openai import AsyncOpenAI
 
-MODEL = os.environ.get("AGENT_MODEL", "gpt-6.1-sol")   # example default; use one your provider serves
+MODEL = os.environ.get("AGENT_MODEL", "gpt-6.1-sol")
 SYSTEM_PROMPT = "You are a data assistant. Use the tools to answer questions about tables."
 
 client = AsyncOpenAI()      # OPENAI_API_KEY from a Domino environment variable
@@ -191,8 +191,6 @@ agent_turn (AGENT)
 └── AsyncCompletions (CHAT_MODEL, autologged)
 ```
 
-MLflow's OpenAI autologging names the span after the client class (`Completions` for a sync `OpenAI()` client, `AsyncCompletions` for `AsyncOpenAI()`) and types chat completions as `CHAT_MODEL`, not `LLM`.
-
 Inline evaluators do not run here; score production traces with a scheduled Job ([EVALUATORS.md](./EVALUATORS.md), "Production evaluation").
 
 ---
@@ -206,7 +204,7 @@ An incident-triage pipeline with four agents, evaluated under `DominoAgentContex
 3. **Resource**: matches responders by skills
 4. **Response**: drafts stakeholder communications
 
-**Where evaluator scores go.** The SDK writes every evaluator result as a tag on the **trace**, not on the span whose evaluator produced it. In a call tree of decorated functions the inner evaluators run first (when their spans end) and the outer one runs last, so a metric name used by two evaluators keeps only the last value (an inner `impact_score=7.0` is silently replaced by the outer `0.7`). Prefix each agent's metrics with the agent's name, as below, and keep the pipeline-level names distinct.
+Evaluator results are tags on the trace, and the outer evaluator overwrites same-named metrics ([EVALUATORS.md](./EVALUATORS.md#evaluator-signatures)), so each agent's metrics below carry the agent's name and the pipeline-level names are distinct.
 
 ### Project structure
 
@@ -231,7 +229,7 @@ incident-triage/
 
 ```yaml
 models:
-  primary: gpt-6.1-sol        # example model name; use one your provider serves
+  primary: gpt-6.1-sol
 
 agents:
   classifier:
@@ -528,15 +526,4 @@ Change `config.yaml` (model, temperatures), run the Job again, then select both 
 
 ### requirements.txt
 
-In the Domino Standard Environment only `openai` is missing; the tracing stack ships there (install nothing else, and not the `agents` extra, which would downgrade MLflow's sub-packages). For an environment not based on the DSE:
-
-```text
-dominodatalab[data]==2.2.0
-mlflow==3.3.2
-opentelemetry-sdk<=1.44.0
-opentelemetry-api<=1.44.0
-pandas<=2.3.2
-numpy<=2.5.2
-openai==3.29.0
-pyyaml==6.0.3
-```
+In the Domino Standard Environment only `openai` is missing; the tracing stack ships there (install nothing else, and not the `agents` extra, which would downgrade MLflow's sub-packages). For an environment not based on the DSE, use the pins in [TRACING-SETUP.md](./TRACING-SETUP.md#environment-requirements) plus `openai==3.29.0` and `pyyaml==6.0.3`.

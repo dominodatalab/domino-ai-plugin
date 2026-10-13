@@ -4,11 +4,8 @@ Use this when an existing Airflow deployment owns the schedule. Otherwise orches
 Domino: [domino-flows](../domino-flows/SKILL.md) for multi-step pipelines, a scheduled Job
 ([domino-jobs](../domino-jobs/SKILL.md)) for one recurring script.
 
-Sources: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Airflow tab),
-python-domino `domino/airflow/_operator.py`, `domino/authentication.py`, `domino/routes.py`,
-`setup.py`, `README.md` and `examples/example_airflow_dag.py` at `Release-2.2.0` / `master`
-(https://github.com/dominodatalab/python-domino), Airflow constraint files 3.3.2 and 2.11.2.
-Parameter names below are exact.
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (Airflow tab);
+python-domino 2.2.0 (https://github.com/dominodatalab/python-domino).
 
 ## Credentials on a worker
 
@@ -20,8 +17,7 @@ Outside Domino there is no API proxy and no access-token sidecar. The worker nee
 | `DOMINO_TOKEN_FILE` | path to a file whose first line is a Personal Access Token or service-account token created in Domino; the worker mounts it from Airflow's own secret mechanism, since Domino Project and user environment variables are not readable outside Domino |
 
 Airflow Variables are fine for the host; keep the token out of Variables unless the Variable is
-backed by a secrets backend. Legacy API keys (`DOMINO_USER_API_KEY`, `X-Domino-Api-Key`) are
-deprecated even though python-domino's `example_airflow_dag.py` still uses one.
+backed by a secrets backend.
 
 ## Recommended: a task on the Public Jobs API
 
@@ -67,16 +63,13 @@ rendered because `op_args` of a `@task` are templated. Polling, logs and result 
 
 ## python-domino operators
 
-The product page documents both integrations through python-domino, so the operators are the
-documented route; they come with the constraints below.
+The product page describes both integrations through python-domino; the operators come with the
+constraints below.
 
 ### Install
 
-`dominodatalab` 2.2.0 (`setup.py`) pins `packaging==23.2`, `python-dateutil~=2.8.2`,
-`typing-extensions~=4.13`, `beautifulsoup4~=4.11`, `polling2~=0.5.0`, `frozendict~=2.3`,
-`retry==0.9.2`. Airflow's constraint files pin `packaging==26.3` and `python-dateutil==2.9.0.post0`
-(3.3.2; `packaging==26.0` in 2.11.2); their `typing_extensions` 4.16.0 and 4.15.0 satisfy
-`~=4.13`, so `packaging` and `python-dateutil` are the conflicts. Consequences:
+`dominodatalab` 2.2.0 pins `packaging==23.2` and `python-dateutil~=2.8.2`; Airflow's constraint
+files pin newer versions of both. Consequences:
 
 - `pip install -c constraints-<version>.txt dominodatalab`, the install method Airflow documents
   and managed Airflow services enforce, does not resolve.
@@ -94,7 +87,7 @@ Both operators import `airflow.utils.decorators.apply_defaults`, a deprecated no
 that Airflow 3.0 removed, so `from domino.airflow import DominoOperator` raises `ImportError`
 on Airflow 3.
 
-### Auth precedence (`domino/authentication.py`)
+### Auth precedence
 
 `api_proxy` > `auth_token` > `domino_token_file` > `api_key` > env `DOMINO_API_PROXY` > env
 `DOMINO_TOKEN_FILE` > env `DOMINO_USER_API_KEY`. The host comes from `host` or env
@@ -109,8 +102,8 @@ from domino.airflow import DominoOperator
 ```
 
 Runs through `runs_start_blocking` on the **legacy v1 Runs API** (`/v1/projects/{owner}/{project}/runs`,
-`/v1/projects/{owner}/{project}/run/{id}/stdout`; not in the Public API, absent from the
-cluster's internal reference too; non-public route, may change in a future Domino version). python-domino's README:
+`/v1/projects/{owner}/{project}/run/{id}/stdout`; not in the Public API; non-public route, may
+change in a future Domino version). python-domino's README:
 "Use `job_start` for all new development. `runs_start` is retained for backwards compatibility."
 
 | Parameter | Type / default | Meaning |
@@ -130,12 +123,9 @@ cluster's internal reference too; non-public route, may change in a future Domin
 | `startup_delay` | `int`, `10` | seconds to sleep before starting |
 | `include_setup_log` | `bool`, `True` | prefix the replayed log with the Job's setup log |
 
-Behaviour (`execute`): builds `Domino(project, api_key, host, domino_token_file)` (which calls
-`/version`), validates `tier`, sleeps `startup_delay`, calls `runs_start_blocking(...)`, then
-`get_run_log(run_id, include_setup_log)` and `process_log(log)` into the task log. Returns the
-start response (a dict with `runId`) as the XCom value. `runs_start_blocking` waits for an
-output commit and then raises `RunFailedException` unless the run `status` is `Succeeded`;
-exceeding `max_poll_time` raises too. So this operator fails on any non-success.
+Returns the start response (a dict with `runId`) as the XCom value, replays the Job log into the
+task log, and fails on any non-success: `runs_start_blocking` raises `RunFailedException` unless
+the run `status` is `Succeeded`, and exceeding `max_poll_time` raises too.
 
 ### `DominoSparkOperator`
 
@@ -161,7 +151,7 @@ Same `project`, `host`, `api_key`, `domino_token_file`, `poll_freq`, `max_poll_t
 
 Behaviour: returns the final Job object (`id`, `statuses.executionStatus`, `statuses.isCompleted`,
 `commitDetails`, ...). **It raises `RunFailedException` only when `executionStatus` is `Failed`**
-(`domino.py`, `job_start_blocking`). The completed-status values are `Succeeded`, `Failed`,
+(`job_start_blocking`). The completed-status values are `Succeeded`, `Failed`,
 `Error` and `Stopped`, so a Job that ended `Error` (a setup failure, for example) or was stopped
 returns normally and the Airflow task succeeds. Subclass it:
 
@@ -233,6 +223,5 @@ when Airflow already owns the downstream load.
 Airflow can also run **after** a Domino scheduled Job finished elsewhere: a sensor-style task
 lists Jobs (`GET /api/jobs/beta/jobs?projectId=...&statusFilter=completed`), downloads the newest
 result file with the files route above, then delivers it (email, S3, a warehouse load). The
-batch-scoring page on docs.domino.ai names this as the way to automate result delivery; the
 scoring Job itself, its schedule and its result files:
 [domino-model-delivery](../domino-model-delivery/BATCH-SCORING.md).

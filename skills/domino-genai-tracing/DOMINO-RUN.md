@@ -93,8 +93,8 @@ def evaluation_run(**kwargs):
 
 ```yaml
 models:
-  primary: gpt-6.1-sol        # example model name; use one your provider serves
-  judge: gpt-6.1-sol          # example; keep equal to the judge model the evaluator uses
+  primary: gpt-6.1-sol
+  judge: gpt-6.1-sol          # keep equal to the judge model the evaluator uses
 
 agents:
   classifier:
@@ -143,8 +143,6 @@ with DominoAgentContext(agent_config_path="config.yaml", custom_summary_metrics=
 Run metrics: `mean_classification_confidence`, `min_classification_confidence`, `median_impact_score`, `stdev_response_quality`, `max_processing_time`. Without `custom_summary_metrics`, the SDK logs `mean_<metric>` for every metric it finds. Only numeric evaluator results are aggregated; string results are labels. Re-entering the same run with `run_id=` recomputes the aggregates already present on it.
 
 ## Complete example
-
-Model names are examples (`gpt-6.1-sol`); use one your provider serves.
 
 ```python
 import mlflow

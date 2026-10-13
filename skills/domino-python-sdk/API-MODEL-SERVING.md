@@ -14,9 +14,9 @@ Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 | Get, update, read versions, model APIs for a version | `/api/registeredmodels/v1/{modelName}/...` | Path key is the **model name**, not an id |
 | Versions (v2 read) | `/api/registeredmodels/v2/{modelName}/versions[/{version}]` | |
 
-Both families are in both specs; use v2 for discovery and writes, v1 for per-model reads.
-`POST /api/registeredmodels/v1/{modelName}/versions` is marked deprecated in both specs
-(since 6.2.1); do not use it for new automation.
+Use v2 for discovery and writes, v1 for per-model reads.
+`POST /api/registeredmodels/v1/{modelName}/versions` is deprecated; do not use it for new
+automation.
 
 ## Model Serving (`/api/modelServing/v1`)
 
@@ -45,13 +45,13 @@ separate resources with separate lifecycles; do not mix their ids.
 
 ## Lifecycle
 
-- A running Model API cannot be deleted (`500 ... is running`). Stop it first (`POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment`,
-  non-public route; may change in a future Domino version, or the UI), then `DELETE`; afterwards
-  `GET` returns 404 and the record is gone from the list.
+- A running Model API cannot be deleted (`500 ... is running`): stop it first, then
+  `DELETE` ([API-MODELS.md](./API-MODELS.md#get-update-delete); worked requests in
+  [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#stop-and-delete)).
 - A Model Deployment has `start` and `stop`; after `stop` or `DELETE`, `GET` the resource
   to confirm the state before issuing the next call.
-- Collaborator and visibility routes under `/api/modelServing/beta` exist only in the
-  Cloud spec.
+- Collaborator and visibility routes under `/api/modelServing/beta` exist only on Domino
+  Cloud.
 
 ## MLflow vs REST
 
@@ -67,7 +67,7 @@ separate resources with separate lifecycles; do not mix their ids.
 `GET/PATCH .../versions/{versionNumber}`, `.../start`, `.../stop`, `.../realTimeLogs`,
 `.../request-metrics`, `.../pod-resource-metrics`, `.../vllm-*-metrics`,
 `GET /api/gen-ai/beta/default-endpoint-environment`,
-`GET /api/gen-ai/beta/vanity-url-availability/{vanityUrl}` are in both specs. Invoke a
+`GET /api/gen-ai/beta/vanity-url-availability/{vanityUrl}`. Invoke a
 GenAI endpoint at the URL the endpoint's page shows, not at a management route. These
 are Domino-hosted LLM endpoints; the routes, bodies and calling pattern are in
 [domino-llm-access/HOST-AN-LLM-API.md](../domino-llm-access/HOST-AN-LLM-API.md).

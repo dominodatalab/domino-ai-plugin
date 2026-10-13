@@ -86,7 +86,7 @@ Flows versus an external orchestrator: a Flow runs inside Domino with typed arti
 
 ## Scheduling and automation
 
-The Flows pages document no scheduler of their own; the documented launch options are the CLI in a Workspace terminal or "as the start command for a Job". The pattern that follows from that: create a scheduled Job whose command is the `pyflyte run --remote ...` line, on an environment built from the Domino Standard Environment. Each scheduled execution registers and runs the flow. For programmatic access to executions, Domino publishes the Flyte native API spec at https://docs.domino.ai/api-specs/cloud/flyte-native-api.json (6.3: `/api-specs/6.3/flyte-native-api.json`) and the Flyte console at `<deployment URL>/flows/console/select-project`.
+Flows have no scheduler: create a scheduled Job whose command is the `pyflyte run --remote ...` line, on an environment built from the Domino Standard Environment. Each scheduled execution registers and runs the flow. For programmatic access to executions, Domino publishes the Flyte native API spec at https://docs.domino.ai/api-specs/cloud/flyte-native-api.json (6.3: `/api-specs/6.3/flyte-native-api.json`) and the Flyte console at `<deployment URL>/flows/console/select-project`.
 
 ## Documentation
 
