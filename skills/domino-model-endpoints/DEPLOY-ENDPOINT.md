@@ -157,14 +157,49 @@ A missing file means the Project commit predates it: sync or commit, pin the com
 
 JSON to Python: object to dict, array to list, string to str, integer to int, real to float, true/false to True/False, null to None. The return value is serialized back to JSON.
 
+## Access tokens
+
+Restricted endpoints (the default; `access.isPublic` is false) accept predictions only with an endpoint access token: HTTP Basic with the token as username and password for synchronous calls, `Authorization: Bearer <token>` for asynchronous ones. Your own Domino bearer token or Personal Access Token is rejected with 401 even on a Public endpoint, because visibility (who can see the endpoint) and prediction authorization (who can call it) are separate settings. Every endpoint gets one token when it is created. The public API lists token ids and metadata (`GET /api/modelServing/v1/modelApis/{modelApiId}` → `access.accessTokens[]`: `id`, `name`, `created`, `createdBy`, `lastGenerated`) and never a value.
+
+Use the token the user gives you. Otherwise create one with the web UI routes below (non-public route; may change in a future Domino version; route types in [domino-api-intro](../domino-api-intro/SKILL.md#route-types)), store it at once as a Domino environment variable, and name it so the user can find it under **Settings** > **Invocation**. The routes answer on the deployment URL and, inside a run, on `DOMINO_API_PROXY` and `DOMINO_API_HOST`, so the usual `base` and `headers` work. The value stays in memory: never print, log or echo it, and never put it in a reply or a file.
+
+| Action | Route |
+|--------|-------|
+| Create | `POST /models/{modelApiId}/access`, body `{}` with `Content-Type: application/json`; 200 with an HTML fragment (`<table id="accessTokensTable">`) listing every token of the endpoint, one row each: name, created, the 64-character alphanumeric value in the row's only `<code>` cell, and action links that carry the token id (`.../access/{tokenId}/name`, `/regenerate`, `/revoke`). Discard the fragment once the new value is parsed: it holds the other tokens' values too |
+| Rename | `PUT /models/{modelApiId}/access/{tokenId}/name`, body `{"name": "..."}` |
+| Revoke | `POST /models/{modelApiId}/access/{tokenId}/revoke`, no body |
+
+```python
+import re
+import requests
+
+api = f"{base}/api/modelServing/v1/modelApis/{model_api_id}"
+before = {t["id"] for t in requests.get(api, headers=headers).json()["access"]["accessTokens"]}
+fragment = requests.post(f"{base}/models/{model_api_id}/access", headers=headers, json={}).text    # non-public route
+token_id = next(t["id"] for t in requests.get(api, headers=headers).json()["access"]["accessTokens"] if t["id"] not in before)
+row = next(r for r in re.findall(r"<tr.*?</tr>", fragment, flags=re.S) if f"/access/{token_id}/" in r)
+token = re.search(r"<code[^>]*>\s*([^<\s]+)\s*</code>", row).group(1)                         # in memory only
+del fragment
+
+requests.post(f"{base}/v4/projects/{project_id}/environmentVariables", headers=headers,          # non-public route; may change in a future Domino version
+              json={"name": "MODEL_API_TOKEN", "value": token}).raise_for_status()
+del token
+names = [v["name"] for v in requests.get(f"{base}/v4/projects/{project_id}/environmentVariables", headers=headers).json()]
+assert "MODEL_API_TOKEN" in names                                   # confirm by name; that GET also returns values, so never print its body
+requests.put(f"{base}/models/{model_api_id}/access/{token_id}/name", headers=headers,
+             json={"name": "MODEL_API_TOKEN (agent-created)"}).raise_for_status()
+```
+
+`base` and `headers` are the setup block in [domino-api-intro](../domino-api-intro/SKILL.md#authentication). Choose a Project variable when the Project's Apps and Jobs share the endpoint, a user variable (`PUT /v4/users/environmentVariables`) when only the user's own executions call it; both routes and their rules are in [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store). Executions started afterwards read it with `os.environ["MODEL_API_TOKEN"]`; a caller outside Domino keeps its own copy. Tell the user the token's name and where it is stored, nothing more. Revoke a token you created only for a test.
+
 ## Call a synchronous endpoint
 
-Two inputs only the user can supply; do not try to derive them:
+Two inputs: the prediction URL and an access token.
 
-- **The prediction URL.** It is the deployment's external URL plus `/models/{modelId}/latest/model`, shown on the endpoint's **Overview** tab under "Calling your endpoint". Inside a run, `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...` (they return 404), and no injected variable holds the external URL, so the agent must be given it.
-- **The endpoint access token.** It is created and displayed only in the UI (**Settings** > **Invocation** > **Add Model Access Token**). No public or internal route creates or returns a token value: the API exposes token ids and timestamps only (`access.accessTokens[]`), and your own Domino bearer token or Personal Access Token is rejected with 401 even on a Public endpoint, because visibility (who can see it) and prediction authorization (who can call it) are separate settings.
+- **The prediction URL.** The deployment's external URL plus `/models/{modelId}/latest/model`, shown on the endpoint's **Overview** tab under "Calling your endpoint". No API field returns it. Outside Domino the external URL is the one you sign in at and send API calls to. Inside a run no injected variable holds it, and `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...` (404), so read it from a stored variable or ask the user.
+- **The access token.** The user's, or one you create and store ("Access tokens" above).
 
-Ask the user for both before promising a prediction, and suggest they store them as project or user environment variables (`DOMINO_URL`, `MODEL_ID`, `MODEL_ACCESS_TOKEN`) so later runs can read them. Alternatives: the user runs the call from the **Tester** tab, or sets the endpoint to **Unrestricted** under **Settings** > **Invocation**, after which only the URL is needed.
+Keep all three in Project or user environment variables (`DOMINO_URL`, `MODEL_ID`, `MODEL_API_TOKEN`) so later runs can read them. Alternatives: the user runs the call from the **Tester** tab, or sets the endpoint to **Unrestricted** under **Settings** > **Invocation**, after which only the URL is needed.
 
 Restricted endpoints: HTTP Basic with the endpoint access token as **both** username and password (not a Bearer header). Unrestricted endpoints: no credentials.
 
@@ -172,9 +207,9 @@ Restricted endpoints: HTTP Basic with the endpoint access token as **both** user
 import os
 import requests
 
-DOMINO_URL = os.environ["DOMINO_URL"]        # external deployment URL, supplied by the user (Overview tab); not injected by Domino
+DOMINO_URL = os.environ["DOMINO_URL"]        # external deployment URL (Overview tab); not injected by Domino
 MODEL_ID = os.environ["MODEL_ID"]            # from the Overview tab or the create response
-TOKEN = os.environ["MODEL_ACCESS_TOKEN"]      # supplied by the user from Settings > Invocation; keep it out of source and browser bundles
+TOKEN = os.environ["MODEL_API_TOKEN"]        # stored by you ("Access tokens") or by the user; keep it out of source and browser bundles
 
 resp = requests.post(
     f"{DOMINO_URL}/models/{MODEL_ID}/latest/model",
@@ -186,7 +221,7 @@ print(resp.json()["result"])
 ```
 
 ```bash
-curl -s -u "$MODEL_ACCESS_TOKEN:$MODEL_ACCESS_TOKEN" -H "Content-Type: application/json" \
+curl -s -u "$MODEL_API_TOKEN:$MODEL_API_TOKEN" -H "Content-Type: application/json" \
   -d '{"data": {"features": [[5.1, 3.5, 1.4, 0.2]]}}' "$DOMINO_URL/models/$MODEL_ID/latest/model"
 ```
 
@@ -246,7 +281,7 @@ Status values: the spec documents `Pending`, `Processing`, `Succeeded` and `Fail
 ## Access control
 
 - **Settings** > **Access and Sharing**: Public (anyone on the deployment can discover and view) or Private (collaborators only). Endpoint collaborators are Viewers, Editors or Owners; project Contributors can create endpoints and become their owner. On Domino Cloud the API additionally exposes a `Discoverable` visibility (discover but not invoke) and an `Operator` role through `/api/modelServing/beta/modelApis/{modelApiId}/visibility` and `.../collaborators`.
-- **Settings** > **Invocation**: Unrestricted (no token) or Restricted (token required). Generate, name, revoke and regenerate access tokens here.
+- **Settings** > **Invocation**: Unrestricted (no token) or Restricted (token required). Generate, name, revoke and regenerate access tokens here, or with the routes in "Access tokens" above.
 
 ## Remote data planes, volumes, spot instances
 

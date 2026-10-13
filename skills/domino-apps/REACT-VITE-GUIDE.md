@@ -136,9 +136,9 @@ Never read a token from `import.meta.env`: Vite inlines every `VITE_` variable i
 | Variable | Where to set it | Value |
 |---|---|---|
 | `MODEL_API_URL` | Project environment variables (project **Settings**, or the API in [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)) or user environment variables | The endpoint's URL from its overview page (the deployment's external URL; `$DOMINO_API_HOST` does not route `/models/`) |
-| `MODEL_API_TOKEN` | Same; never in the repository | A Model Access Token created on the endpoint under **Settings > Invocation > Add Model Access Token**, shown once; no API returns it |
+| `MODEL_API_TOKEN` | Same; never in the repository | A Model Access Token: the user's (created under **Settings > Invocation > Add Model Access Token**, shown once) or one the agent creates and stores ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`) |
 
-Both values have to come from a person with access to the endpoint's page; an agent cannot look them up.
+The URL has to come from a person with access to the endpoint's page; the token can be created by the agent.
 
 A changed variable takes effect on the next start of the App. `.env.example` documents the names; `.env` files stay out of git. For a local run, `node --env-file=.env server.js`.
 

@@ -11,7 +11,8 @@ monitoring: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
 
 Use the shared setup block (`base_url`, `headers`) from
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication). Invoking an endpoint
-uses that endpoint's own access token instead (below).
+uses that endpoint's own access token instead (below); to create one, see
+[Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`.
 
 ## Model APIs
 
@@ -72,7 +73,9 @@ model_api_id = model_api["id"]
 ```
 
 Omitting `hardwareTierId` uses the project default tier (not the deployment's
-`isDefaultForModelApi` tier). An access token is created automatically (id only, no value).
+`isDefaultForModelApi` tier). An access token is created automatically (id only in the
+response; its value is in the UI or in the fragment returned by the token create route,
+[Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens)).
 `activeVersion.deployment` is absent until the build finishes; poll until it is
 `{"status": "Running", "isPending": false}`.
 
@@ -97,7 +100,8 @@ DELETE /api/modelServing/v1/modelApis/{modelApiId}
 
 The GET response carries `access.accessTokens[]` (token ids and metadata, not the secret
 values) and, once deployed, `activeVersion.deployment.status`. It does not include the
-invocation URL; read that from the Model API's page in Domino.
+invocation URL, and no other route does: the URL is the deployment's external URL (the one
+you sign in at) plus `/models/{modelApiId}/latest/model`, as shown on the Model API's page.
 
 `DELETE` on a running Model API returns `500 Model API with id <id> is running`. The
 Public API has no stop route; stop it first with
@@ -204,8 +208,10 @@ List responses use `{"items": [...], "metadata": {"nextPageToken", ...}}`; page 
 
 ## Invoking a Model API
 
-Use the invocation URL shown on the Model API's page (not `$DOMINO_API_HOST`), with
-the endpoint's access token. Per
+Use the invocation URL shown on the Model API's page (the deployment's external URL plus
+`/models/{modelApiId}/latest/model`; not the in-run `$DOMINO_API_HOST`), with the
+endpoint's access token: the user's, or one you create and store
+([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens)). Per
 https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization:
 
 - Restricted **synchronous** endpoint: HTTP Basic, username and password both the token.

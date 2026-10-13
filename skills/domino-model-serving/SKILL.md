@@ -34,7 +34,7 @@ Management calls go to the base above under `/api/...`. Predictions go to the de
 
 1. Train and, optionally, register (`POST /api/registeredmodels/v2`, or the MLflow client).
 2. `POST /api/modelServing/v1/modelApis` with `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`, `environmentVariables`, `version{projectId, source, logHttpRequestResponse, monitoringEnabled}`; `source.type` is `File` (`file`, `function`) or `Registry` (`registeredModelName`, `registeredModelVersion`). Optional `hardwareTierId`, `replicas`.
-3. Poll the version: `GET .../modelApis/{modelApiId}/versions/{modelApiVersionId}` until `deployment.status` is `Running` and `isPending` is false (`deployment` is absent before the first deployment; treat absence as pending), then confirm `activeVersion.id` on the Model API. `Running` is not health: fetch `.../instanceLogs?maxResults=3000` (no `tail`), keep `model-` container lines, expect `WSGI app 0 (mountpoint='') ready` (`no app loaded. GAME OVER` is a crash loop), then one test prediction. Sync or commit before step 2 and pin `version.commitId`; the head lags uploads by seconds.
+3. Poll the version: `GET .../modelApis/{modelApiId}/versions/{modelApiVersionId}` until `deployment.status` is `Running` and `isPending` is false (absent `deployment` means pending), then confirm `activeVersion.id` on the Model API. `Running` is not health: fetch `.../instanceLogs?maxResults=3000` (no `tail`), keep `model-` container lines, expect `WSGI app 0 (mountpoint='') ready` (`no app loaded. GAME OVER` is a crash loop), then one test prediction. Sync or commit before step 2 and pin `version.commitId`; the head lags uploads by seconds.
 4. New code: `POST .../modelApis/{modelApiId}/versions` (same `version` fields plus `shouldDeploy: true`). Poll that version, not the Model API; the old one stays active until the new one runs.
 5. Change replicas, hardware tier, name or environment: `PUT .../modelApis/{modelApiId}` (`name`, `description`, `replicas`, `environmentId` required; send current values back, including `resourceQuotaId`). Scale changes need a restart: UI, or internal `stopModelDeployment` then `startModelDeployment` (LIFECYCLE.md).
 6. Retire: stop the running version first (UI **Versions** > **Actions**, or `POST /v4/models/{modelApiId}/{versionId}/stopModelDeployment` with `{}`; non-public route; may change in a future Domino version), then `DELETE .../modelApis/{modelApiId}`: 500 while a version runs; after success `GET` is 404 and the endpoint leaves all lists.
@@ -52,7 +52,7 @@ Logs: `GET .../versions/{modelApiVersionId}/buildLogs`, `exportLogs`, `instanceL
 
 ## Prediction auth
 
-Restricted **sync** endpoints require HTTP Basic with the endpoint access token as username and password. **Async** endpoints require `Authorization: Bearer <token>`. Unrestricted endpoints need neither. Tokens come from the endpoint's **Settings** > **Invocation**. Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization.
+Restricted **sync** endpoints require HTTP Basic with the endpoint access token as username and password. **Async** endpoints require `Authorization: Bearer <token>`. Unrestricted endpoints need neither. Tokens: the user's, or create one (`domino-model-endpoints` DEPLOY-ENDPOINT.md); never print it. Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization.
 
 ## Which path applies
 

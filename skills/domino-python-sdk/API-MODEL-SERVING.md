@@ -31,8 +31,9 @@ GET  /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/bu
 
 Read `activeVersion.deployment.status` and `activeVersion.deployment.isPending` to know
 when a version is serving; `deployment` is absent from the record until the first build
-finishes. The Model API record does not contain the invocation URL; copy it from the
-Model API's page in Domino. Async batch prediction uses
+finishes. The Model API record does not contain the invocation URL and no route returns
+it: it is the deployment's external URL plus `/models/{modelApiId}/latest/model`, as shown
+on the Model API's page. Async batch prediction uses
 `/api/modelApis/async/v1/{asyncModelId}` ([API-MODELS.md](./API-MODELS.md#invoking-a-model-api)).
 
 ## Model Deployments vs Model APIs

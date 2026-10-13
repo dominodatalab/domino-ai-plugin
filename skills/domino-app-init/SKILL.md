@@ -16,7 +16,7 @@ Collect these before writing files. Skip any the user has already given.
 
 1. **Framework**: `vite-react` (default), `streamlit`, `dash`, `flask`, `gradio` or `fastapi`.
 2. **Project name**: app folder name and `package.json` name (React only).
-3. **Model endpoint integration**: whether the app calls a Domino endpoint. If yes, the call goes through backend code and the user sets `MODEL_API_URL` and `MODEL_API_TOKEN` as Domino Project variables, never in the repository. Both values come from the user; where they are found: [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#calling-a-model-endpoint-from-any-framework).
+3. **Model endpoint integration**: whether the app calls a Domino endpoint. If yes, the call goes through backend code and the user sets `MODEL_API_URL` and `MODEL_API_TOKEN` as Domino Project variables, never in the repository. The URL comes from the user; the token is the user's or one you create and store ([domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#calling-a-model-endpoint-from-any-framework)).
 
 If the target directory already contains an app, stop and ask before overwriting anything.
 
@@ -126,7 +126,7 @@ Synchronous endpoints: HTTP Basic with the token as username and password; async
 
 Tell the user to:
 
-1. Set `MODEL_API_URL` and `MODEL_API_TOKEN` (if used) in the project's environment variables; both come from the endpoint's page (see Inputs).
+1. Set `MODEL_API_URL` and `MODEL_API_TOKEN` (if used) in the project's environment variables (see Inputs for where each comes from).
 2. Make sure the framework is in the App's environment (step 5), not only the Workspace.
 3. **Sync before publishing.** An App runs the project's committed files, not the Workspace's working copy. DFS project: **File Changes > Sync to Domino** (or the bundled MCP server's upload tool), then check `app.sh` and `app.py` under **Code**. Git-based: `git add`, `git commit`, `git push` from the Workspace terminal. Creating the version over the API right after an upload: pin `content.dfsCommitId` to the uploaded commit ([domino-apps/API-APPS.md](../domino-apps/API-APPS.md)).
 4. Optional start check in the Workspace, on another port (8888 is the IDE's) and in one command: the one-liner in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#streamlit). Keep 8888 in `app.sh` for the App container.
