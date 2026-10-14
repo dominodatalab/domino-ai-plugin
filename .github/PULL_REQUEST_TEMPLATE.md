@@ -86,12 +86,16 @@ Release mechanics:
 
 - [ ] `.claude-plugin/plugin.json` `version`: **unchanged** for a PR to `develop`; bumped to the next `YYYY.XYY.N` only in the `develop` → `main` release PR or on a `release-X.Y` branch (`N` never reused; on `release-X.Y` the version's line must equal the branch). CI enforces both directions. After a bump, `scripts/sync-manifests.py` updates the portable `plugin.json`.
 - [ ] README skill table and counts updated for any added, renamed or removed component.
-- [ ] Eval case added or updated under `evals/` for the skill(s) touched (once the eval framework exists; until then, describe the manual test below).
+- [ ] A `claude plugin eval` case added or updated under `evals/` for each skill touched.
+- [ ] New skill or write-path change: a live end-to-end round with `evals/e2e/` met the bar in AGENTS.md "Testing new and updated skills" (the orchestrator iterated on the skill with the Haiku tester; results under Testing).
 
 ### Testing
 
 <!-- What you ran and what you saw. For API payloads, which deployment version you tested
-     against. For triggering, which prompts activated the skill and which did not. -->
+     against. For triggering, which prompts activated the skill and which did not.
+     For a live end-to-end round: the orchestrator model, the build tested, each round's pass
+     rate per scenario and the no-plugin baseline, what changed in the skill between rounds,
+     the held-out prompt's result, cost, and that cleanup was verified. -->
 
 N/A
 

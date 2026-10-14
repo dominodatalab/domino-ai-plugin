@@ -200,6 +200,9 @@ memory. Scenario format, check types and cleanup: `evals/e2e/README.md`.
 - Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Under **Model attestation**,
   write the model identifier and tick neither box: the human who reviews and opens the PR
   ticks one. An agent never attests for a human.
+- A new skill or a write-path change ships only after its live end-to-end round meets the bar
+  ("Testing new and updated skills"). The orchestrator puts the round results under **Testing**:
+  model, build, pass rate per scenario and baseline, the held-out prompt, cost, cleanup.
 - Base branch: `develop` for content, `main` for the promotion PR and repo mechanics.
 - A new or renamed skill directory needs its own line in `.github/CODEOWNERS` in the same PR;
   `scripts/check-codeowners.py` fails CI otherwise.
