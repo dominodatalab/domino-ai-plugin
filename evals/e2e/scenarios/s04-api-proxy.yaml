@@ -1,0 +1,20 @@
+id: s04-api-proxy
+title: Call the Domino REST API from code through the API proxy
+journey: API from code
+project_type: git
+expected_skills: [domino-python-sdk, domino-api-intro]
+timeout_s: 900
+setup: []
+prompt: |
+  Write a Python script `domino_inventory.py` in this directory that uses the Domino REST API to
+  print (1) my Domino username and (2) every Dataset in this project with its ID. Run it and show
+  me the output.
+check:
+  - type: script_runs
+    cmd: 'python3 domino_inventory.py'
+    output_regex: ['{{username}}', '{{dataset_id}}']
+  - type: source_regex
+    glob: '*.py'
+    must_match: ['DOMINO_API_PROXY']
+    must_not_match: ['X-Domino-Api-Key', 'DOMINO_USER_API_KEY', '(?i)api[_-]?key']
+cleanup: []

@@ -1,0 +1,31 @@
+id: s11-hpc-availability
+title: Can my Slurm scripts run here? Check availability and name the prerequisites
+journey: HPC / Slurm
+project_type: git
+expected_skills: [domino-hpc-slurm]
+timeout_s: 900
+setup: []
+prompt: |
+  I have a pile of Slurm batch scripts (sbatch) from our old HPC cluster. Can I run them on this Domino
+  deployment? Please check what is actually available here rather than guessing, and tell me what I'd
+  need to get them running.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-hpc-slurm'
+    only_builds: [next]
+  - type: tool_io_regex          # asked the platform: submit-supported and/or data-plane discovery
+    input_regex: 'hpc/v1/jobs/submit-supported|dataplanes'
+    output_regex: '"supported"\s*:\s*false|supportsSlurm|isLocal'
+  - type: reply_regex            # honest verdict plus the admin prerequisites
+    patterns:
+      - '(?i)(not (currently )?(enabled|available|supported|installed|configured)|unavailable|no slurm|isn.t (enabled|available|supported|installed)|doesn.t (have|support)|supported.{0,15}false|cannot)'
+      - '(?i)data ?plane'
+      - '(?i)environment'
+      - '(?i)(hardware )?tier'
+      - '(?i)dataset'
+  - type: reply_not_regex        # must not claim Slurm works here
+    patterns:
+      - '(?i)\byes\b[^.\n]{0,40}\b(you can|it works|supported)\b'
+      - '(?i)slurm is (available|enabled|supported|ready) (here|on this)'
+  - type: nothing_started
+cleanup: []

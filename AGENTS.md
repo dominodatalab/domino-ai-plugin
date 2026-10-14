@@ -40,6 +40,7 @@ customer environments from a **public** repository. Three facts drive most rules
 | `.cursor-plugin/` | Cursor: `plugin.json` (identity fields copied by `scripts/sync-manifests.py`; Cursor's schema is closed, so only its own keys), `mcp.json` (`${CURSOR_PLUGIN_ROOT}` paths, `${env:NAME}` values Cursor asks for at install) and `marketplace.json` (needed to import the repo from GitHub) |
 | `gemini-extension.json` | Gemini CLI extension manifest: name, version and description copied by `scripts/sync-manifests.py`; `contextFileName` points at `rules/domino.md` (Gemini loads the whole file, YAML front matter included; a few tokens per session); `mcpServers` starts the bundled server via `${extensionPath}` and registers the docs server; `settings` declares the values the server needs outside a Workspace. Gemini CLI (0.63) passes a stdio MCP server a filtered copy of the environment: names matching TOKEN, SECRET, PASSWORD, PASSWD, KEY, AUTH, CREDENTIAL, CREDS, PRIVATE or CERT and values that look like known tokens are removed, and under `GITHUB_SHA` everything outside a small allowlist is; a declared setting is injected from Gemini's own store (the shell's value of that name is still dropped). It also rewrites `${name}` in skill and agent text with its built-ins, the declared settings and every key of a trusted workspace's `.env`, which is why lint rejects `${` in `SKILL.md` outside `scripts/gemini-substitution.allow` |
 | `assets/` | OpenAI listing icon |
+| `evals/` | `claude plugin eval` cases, one directory per case; `evals/e2e/` is the live end-to-end harness, not a case |
 | `scripts/check-version.sh` | The CI version gate; run it locally before opening a PR |
 | `scripts/build-openai.sh` | Builds the OpenAI ZIP; runs `sync-manifests.py --check` and `lint-skills.py` first |
 | `scripts/verify-update-flow.sh` | Reproduces how Claude installs and updates this plugin |
@@ -145,11 +146,63 @@ claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --ablation non
 Drop `--runs 1 --ablation none` for the default three runs plus the no-plugin baseline before
 trusting a change. When adding a skill, add a case whose prompt should trigger it.
 
+## Testing new and updated skills
+
+Three levels; run every one that applies.
+
+1. **Static checks, every change:** the commands above (`scripts/build-openai.sh`,
+   `scripts/check-version.sh origin/develop`, `scripts/check-codeowners.py`, `claude plugin validate`).
+2. **A `claude plugin eval` case for every skill** in `evals/<case>/`: a prompt that should trigger it,
+   with graders; run it as above.
+3. **A live end-to-end round for every new skill and every change to a write path** (anything that
+   starts, creates, uploads or deploys in Domino). Two roles:
+   - **Orchestrator:** a Fable-class or Astra-class model (CONTRIBUTING standard 8, since it writes
+     skill content). It writes or updates the skill, runs `evals/e2e/`, drives the tester, grades each
+     session by what happened in Domino (not by the text), fixes the skill and runs again, iterating with
+     the tester until the skill meets the bar below.
+   - **Tester:** Claude Haiku runs Claude Code with the plugin inside real Domino Workspaces. A weak model
+     exposes vague instructions that a strong model papers over.
+
+   **The bar**, on the final build: every scenario for the skill passes in every run (at least two runs
+   each), the no-plugin baseline fails the scenarios the skill exists for, no other scenario regresses,
+   and the static checks and the skill's `claude plugin eval` case pass.
+
+   Rules for the loop:
+   - write the scenarios and graders before the first run; change them later only to fix a harness bug,
+     and say so in the PR;
+   - include a no-plugin baseline (`none`) the first time a skill is tested;
+   - write prompts as a user would, never naming the skill or a route; the final round adds at least one
+     prompt the skill was not iterated against;
+   - record each skill-caused failure against the owning skill file, with transcript and API evidence,
+     before changing the skill;
+   - end with verified cleanup: Workspaces deleted, Projects archived, Datasets deleted, `dom connect`
+     stopped and its SSH host entries removed;
+   - report pass rates, turns and cost in the PR description, never in skills (CONTRIBUTING standard 12).
+
+```bash
+cd evals/e2e && cp config.example.yaml config.local.yaml   # host, auth, environment, tiers, builds, variants
+uv run e2e.py provision --lane dfs-0 --lane git-0          # one Project, Dataset and Workspace per lane; SSH via the Dom CLI
+uv run e2e.py prep                                         # plugin builds and remote scripts into every Workspace
+uv run e2e.py run --run-dir runs/<name> --scenario <id> --variant next --variant next-r2 --variant none
+uv run e2e.py report runs/<name>                           # runs/<name>/results.md
+uv run e2e.py teardown                                     # then verify the cleanup (README "Cleanup")
+uv run tools/dryrun_checks.py                              # offline check of scenarios and graders
+```
+
+Config keys: `domino.host` and `domino.auth`, `workspace.environment_id`, `hardware_tier` and `dom_cli`,
+`compute.job_tier` and `model_api_tier`, `claude.model` and `oauth_token_file`, `plugin.builds`,
+`variants` and `variant_build`, `remote.run_root`. The Claude OAuth token is read from
+`claude.oauth_token_file` and reaches the Workspace over SSH stdin only; the Domino token is minted in
+memory. Scenario format, check types and cleanup: `evals/e2e/README.md`.
+
 ## Pull requests
 
 - Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Under **Model attestation**,
   write the model identifier and tick neither box: the human who reviews and opens the PR
   ticks one. An agent never attests for a human.
+- A new skill or a write-path change ships only after its live end-to-end round meets the bar
+  ("Testing new and updated skills"). The orchestrator puts the round results under **Testing**:
+  model, build, pass rate per scenario and baseline, the held-out prompt, cost, cleanup.
 - Base branch: `develop` for content, `main` for the promotion PR and repo mechanics.
 - A new or renamed skill directory needs its own line in `.github/CODEOWNERS` in the same PR;
   `scripts/check-codeowners.py` fails CI otherwise.

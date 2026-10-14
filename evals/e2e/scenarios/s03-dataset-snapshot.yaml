@@ -1,0 +1,32 @@
+id: s03-dataset-snapshot
+title: Snapshot a Dataset, then read from the snapshot
+journey: data versioning
+project_type: dfs
+expected_skills: [domino-datasets]
+timeout_s: 1200
+setup:
+  - type: ws_shell
+    cmd: |
+      d="{{dataset_path}}"; mkdir -p "$d" && python3 - "$d/sales.csv" <<'PY'
+      import sys, random
+      random.seed(7)
+      with open(sys.argv[1], "w") as f:
+          f.write("order_id,region,amount\n")
+          for i in range(137):
+              f.write(f"{1000+i},{random.choice(['east','west','north','south'])},{random.randint(5,500)}\n")
+      PY
+prompt: |
+  The `{{dataset}}` Dataset in this project has a file `sales.csv`. I'm about to start cleaning it
+  in place, so first take a snapshot of the Dataset so today's version is preserved. Then read
+  `sales.csv` from that snapshot (not from the live Dataset) and tell me how many data rows it has
+  (excluding the header) and the snapshot's ID.
+check:
+  - type: snapshot_created
+    dataset: '{{dataset}}'
+  - type: tool_io_regex        # the rows must come from the snapshot, not the live file
+    input_regex: 'snapshot/\S+/file|/snapshots/\S+/'
+    output_regex: 'order_id|\b137\b|\b138\b'
+    output_not_regex: '\b404\b|Not Found|No such file'
+  - type: reply_regex
+    patterns: ['\b137\b']
+cleanup: []

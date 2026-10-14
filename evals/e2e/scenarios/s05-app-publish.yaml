@@ -1,0 +1,20 @@
+id: s05-app-publish
+title: Scaffold and publish a small Streamlit App
+journey: apps
+project_type: dfs
+expected_skills: [domino-apps, domino-app-init]
+timeout_s: 1800
+setup: []
+prompt: |
+  Create a minimal Streamlit app in this project that shows the title "E2E Hello {{run_tag}}" and a
+  slider, and publish it as a Domino App named `e2e-app-{{run_tag}}` on the `{{job_tier}}` hardware
+  tier so my teammates can open it. Make sure it actually starts, then give me its URL.
+check:
+  - type: app_running
+    name_regex: '{{run_tag}}'
+    wait_s: 600
+  - type: app_url_ok          # Running is not enough: an App on the wrong port is Running and answers 502
+    name_regex: '{{run_tag}}'
+cleanup:
+  - type: delete_apps
+    name_regex: '{{run_tag}}'

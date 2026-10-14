@@ -34,3 +34,12 @@ dist/
 
 # claude plugin eval output
 evals/results/
+
+# evals/e2e live harness: local config, plugin builds, run output, state and round reports stay local
+evals/e2e/config.*.yaml
+!evals/e2e/config.example.yaml
+evals/e2e/builds/
+evals/e2e/runs/
+evals/e2e/state/
+evals/e2e/DEFECTS*.md
+evals/e2e/REPORT.md

@@ -1,0 +1,40 @@
+id: s08-genai-tracing
+title: Add GenAI tracing to a small agent function
+journey: GenAI tracing
+project_type: git
+expected_skills: [domino-genai-tracing, domino-trace-setup]
+timeout_s: 1500
+setup:
+  - type: ws_file
+    path: '{{run_dir}}/agent.py'
+    content: |
+      """A tiny tool-using agent. No LLM: the 'model' is a rule, the tool is a lookup table."""
+
+      WEATHER = {"paris": "sunny, 21C", "london": "rain, 14C", "tokyo": "cloudy, 18C"}
+
+
+      def get_weather(city: str) -> str:
+          return WEATHER.get(city.lower(), "unknown")
+
+
+      def answer_question(question: str) -> str:
+          for city in WEATHER:
+              if city in question.lower():
+                  return f"The weather in {city.title()} is {get_weather(city)}."
+          return "I can only answer weather questions about Paris, London or Tokyo."
+
+
+      if __name__ == "__main__":
+          print(answer_question("What's the weather in Paris?"))
+prompt: |
+  `agent.py` in this directory has a small agent function, `answer_question`, that calls a tool.
+  Add Domino GenAI tracing to it so every call (including the tool call) is traced in Domino,
+  under an experiment named `agent-{{run_tag}}`. Then run it on three sample questions so I can see
+  the traces in Domino, and tell me where to find them.
+check:
+  - type: mlflow_traces
+    experiment_like: '%{{run_tag}}%'
+    min_traces: 1
+cleanup:
+  - type: mlflow_delete_experiments
+    experiment_like: '%{{run_tag}}%'

@@ -1,0 +1,58 @@
+# Live end-to-end harness config. Copy to config.local.yaml (git-ignored) and fill in for your deployment.
+# Everything deployment-specific lives here; scenarios/ and the code hold none of it.
+
+domino:
+  host: https://domino.example.com          # your Domino URL, no trailing slash
+  auth:
+    # pat: a Personal Access Token from the environment variable named in pat_env (never put the token here).
+    # keycloak_refresh: mint short-lived access tokens from the Domino CLI's offline token in token_file. This relies on
+    # the CLI's login internals (token file, Keycloak client), not a documented interface, and may change; prefer pat.
+    mode: pat
+    pat_env: DOMINO_TOKEN
+    token_file: ~/.dominoconfig/token.file
+    realm: DominoRealm
+    client_id: cli-client
+
+workspace:
+  environment_id: "<id of an environment with Claude Code, uv, git, python3 and sshd>"
+  hardware_tier: small-k8s                  # Workspace tier id; Claude Code and the MCP server fit in 4 GiB
+  tools: [vscode]
+  ssh_user: ubuntu                          # the Workspace's Linux user (dom connect -l)
+  dom_cli: dom                              # path to the Dom CLI (Workspace SSH)
+  ssh_port_base: 2400                       # local dom connect ports: base, base+10, ... one per Workspace
+  lanes_per_type: 3                         # Projects + Workspaces per project type; variant i runs in lane <type>-<i>
+  start_timeout_s: 900
+
+projects:
+  name_prefix: e2e-plugin                   # Projects are named <prefix>-<type>-<i>-<stamp>
+  git_repo:                                 # any public repository for the Git-based Projects (read-only use)
+    uri: https://github.com/octocat/Hello-World
+    service_provider: github
+  datasets: [e2e-data]                      # created in each Project before its Workspace starts
+
+compute:
+  job_tier: small-k8s                       # tier id the prompts name for Jobs and Apps
+  model_api_tier: "<Model API hardware tier id>"   # tier id the prompts name for Model APIs
+  job_timeout_s: 600
+
+claude:
+  model: claude-haiku-5-5                   # the weak model under test
+  max_turns: 40
+  run_timeout_s: 1500                       # wall clock per session (scenarios may override)
+  oauth_token_file: ~/.config/domino-e2e/claude-oauth-token   # from `claude setup-token`; mode 600; sent over SSH stdin only
+  extra_env:                                # set on the remote claude process; never secrets
+    CLAUDE_CODE_SUBAGENT_MODEL: claude-haiku-5-5
+    DISABLE_AUTOUPDATER: "1"
+
+plugin:
+  # Plugin trees prepared locally (a clone at the commit under test) and copied into every Workspace by `prep`.
+  builds:
+    next: builds/next                       # e.g. git clone ... && git -C builds/next checkout <branch or commit>
+    main: builds/main                       # the released baseline
+  variants: [next, main, none]              # "none" runs without --plugin-dir; variant i runs in lane <type>-<i>
+  variant_build: {}                         # repeat runs of one build, e.g. {next-r2: next} with variants [next, next-r2, none]
+
+remote:
+  root: /tmp/e2e                            # outside the Project mounts, so nothing syncs back
+  run_root: {git: /mnt/code/e2e-runs, dfs: /mnt/e2e-runs}   # each session gets a fresh working directory under here
+  reset_between_runs: true                  # drop user-installed packages, leftover processes and new Project-root files

@@ -54,7 +54,7 @@ domino-ai-plugin/
 ├── agents/                      # Subagents: thin routers to skills (Claude Code; Cursor reads them too)
 ├── output-styles/               # Custom output styles (Claude Code only)
 ├── hooks/                       # Hook documentation only; no hooks.json is shipped
-├── evals/                       # claude plugin eval cases
+├── evals/                       # claude plugin eval cases; evals/e2e/ is the live end-to-end harness
 └── scripts/                     # Build, lint, sync, and version checks
 ```
 
@@ -414,6 +414,26 @@ skills from `scripts/removed-skills.txt` fail CI; "today", observed timings, sta
 "smoke test" and spec attestations print a warning for a human to judge). Each message names
 the rule, the file and line, and the standard.
 
+### 14. Test new and updated skills at three levels
+
+A skill can pass every static check and still lead an agent astray in a real Workspace, so testing
+has three levels (AGENTS.md "Testing new and updated skills" has the commands):
+
+1. Static checks on every change (`scripts/build-openai.sh`, `scripts/check-version.sh`,
+   `scripts/check-codeowners.py`, `claude plugin validate`).
+2. A `claude plugin eval` case for every skill, whose prompt should trigger it.
+3. For every new skill and every change to a write path (anything that starts, creates, uploads or
+   deploys in Domino), a live end-to-end round with `evals/e2e/`. The orchestrator, a Fable-class or
+   Astra-class model (standard 8), writes or updates the skill and iterates on it with the tester, Claude
+   Haiku running Claude Code with the plugin inside real Domino Workspaces: run, grade each session by
+   what happened in Domino, fix the skill, run again. It stops when the skill meets the bar: on the final
+   build every scenario for the skill passes in every run (at least two each), the no-plugin baseline
+   fails the scenarios the skill exists for, nothing else regresses, and levels 1 and 2 pass. Scenarios
+   and graders are written before the first run and change only to fix a harness bug; prompts read as a
+   user's and never name the skill; the final round adds a prompt the skill was not iterated against;
+   every scratch resource is verified cleaned up; pass rates, turns and cost go in the PR description,
+   never in the skill (standard 12). Method and configuration: `evals/e2e/README.md`.
+
 ## Release branches, tags and backports
 
 ### Where PRs go
@@ -597,6 +617,9 @@ Before submitting:
 4. Smoke-test every API payload documented in a skill against a live Domino
    instance and record the result in the PR description (see
    [Skill Authoring Standards #5](#5-smoke-test-payloads-against-the-live-api))
+5. For a new skill or a change to a write path, run a live end-to-end round with `evals/e2e/` and
+   report its results in the PR description (see
+   [Skill Authoring Standards #14](#14-test-new-and-updated-skills-at-three-levels))
 
 
 ## Pull Request Process

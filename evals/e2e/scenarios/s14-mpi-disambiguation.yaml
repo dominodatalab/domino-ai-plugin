@@ -1,0 +1,26 @@
+id: s14-mpi-disambiguation
+title: An mpirun job across 4 GPU nodes goes to an MPI cluster, not Slurm
+journey: HPC / distributed computing
+project_type: git
+expected_skills: [domino-distributed-computing]
+timeout_s: 900
+setup:
+  - type: ws_file
+    path: '{{run_dir}}/train.py'
+    content: |
+      # distributed training entry point, launched with: mpirun -np 4 python train.py
+      print("training")
+prompt: |
+  I have an MPI training script, train.py, that I normally launch with mpirun across 4 GPU nodes. How do I
+  run it that way on Domino? Prepare what's needed and tell me the exact steps, but don't launch anything
+  yet; I want to review first.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-distributed-computing'
+    only_builds: [next]
+  - type: reply_regex
+    patterns: ['(?i)\bMPI\b[^.\n]{0,60}\bcluster|cluster[^.\n]{0,60}\bMPI\b']
+  - type: reply_not_regex        # Slurm is not the recommended path for this
+    patterns: ['(?i)\bsbatch\b', '/api/hpc/v1', '(?i)(use|via|with|through) slurm']
+  - type: nothing_started
+cleanup: []

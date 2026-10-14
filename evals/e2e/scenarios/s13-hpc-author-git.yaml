@@ -1,0 +1,32 @@
+id: s13-hpc-author-git
+title: Author an sbatch array script whose results land on the shared Dataset (git Project)
+journey: HPC / Slurm
+project_type: git
+expected_skills: [domino-hpc-slurm]
+timeout_s: 900
+setup:
+  - type: ws_shell
+    cmd: "mkdir -p {{run_dir}} && for i in $(seq 1 10); do printf '0.%02d %d\\n' $i $((i+2)); done > {{run_dir}}/params.txt"
+prompt: |
+  Write me an sbatch array script for a 10-point parameter sweep over params.txt (one "learning_rate depth"
+  pair per line), and make sure the results end up somewhere I can read them afterwards from my Workspace.
+  Save it as sweep.sbatch in this directory. Don't submit anything.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-hpc-slurm'
+    only_builds: [next]
+  - type: script_lint
+    path: '{{run_dir}}/sweep.sbatch'
+    require:
+      array: '--array'
+      task_id: 'SLURM_ARRAY_TASK_ID'
+      umask: '^\s*umask\s+0?0?[27]7\b'
+    require_in_body:
+      dataset_path: '/mnt/data/'
+      redirect_in_body: '>|\btee\b'
+    dataset_exists: true          # the Dataset named in the script exists in the Project (no <dataset> placeholder)
+    template_name: my-dataset     # the skill's example name; using it when no such Dataset exists means a copied template
+    forbid:
+      workspace_paths: '/mnt/code|{{run_root}}|/mnt/artifacts|\$HOME|/home/'
+  - type: nothing_started
+cleanup: []

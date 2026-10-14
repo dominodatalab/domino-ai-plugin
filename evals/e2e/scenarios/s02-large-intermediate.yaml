@@ -1,0 +1,22 @@
+id: s02-large-intermediate
+title: Write a large intermediate file where it persists and will not fill the execution volume
+journey: data placement
+project_type: git
+expected_skills: [domino-datasets]
+timeout_s: 1200
+setup: []
+prompt: |
+  I'm going to generate a large intermediate file of random features: about 300 MB for this test,
+  but it will grow to tens of GB later. I want to reuse it from later Jobs and Workspace sessions
+  in this project. Write and run a script here that generates a 300 MB float32 NumPy array and
+  saves it as `features_{{run_tag}}.npy` in the right place on Domino, so it is still there after
+  this Workspace stops and doesn't fill up the Workspace's disk. Tell me the full path you used.
+check:
+  - type: ws_file
+    name_glob: 'features_{{run_tag}}*.npy'
+    must_be_under: ['{{datasets_dir}}', '/domino/datasets', '/mnt/data', '/mnt/netapp-volumes', '/domino/netapp-volumes']
+    must_not_be_under: ['/tmp', '{{home}}', '/mnt/code', '/mnt/artifacts', '{{run_dir}}']
+    min_bytes: 250000000
+cleanup:
+  - type: ws_shell
+    cmd: "find /tmp {{home}} /mnt /domino/datasets -xdev -name 'features_{{run_tag}}*' -delete 2>/dev/null; find /mnt/data /domino/datasets -name 'features_{{run_tag}}*' -delete 2>/dev/null; true"
