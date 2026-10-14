@@ -7,7 +7,7 @@ Two rules shape every script here:
 - Domino sets `--output` and `--error` on every job to collect the logs into the Job record, so a `#SBATCH --output=` line has no effect. To keep your own copy, redirect inside the script to the shared Dataset. Any other path fails: workers cannot write to the Workspace file system.
 - Workers are shared between users and all Domino users are in one Unix group there. `umask 077` at the top of the script keeps output private.
 
-The Dataset path below is `/domino/datasets/local/<dataset>` (DFS Project); in a Git-based Project it is `/mnt/data/<dataset>` ([domino-datasets](../domino-datasets/SKILL.md#paths)). Zero nodes in `sinfo` and `PD` in `squeue` on a fresh cluster are normal: Domino provisions workers when jobs enter the queue.
+The Dataset path below is `/domino/datasets/local/<dataset>` (DFS Project); in a Git-based Project it is `/mnt/data/<dataset>` ([domino-datasets](../domino-datasets/SKILL.md#paths)). Replace `<dataset>` with a real Dataset of the Project: `ls $DOMINO_DATASETS_DIR` lists them (`/domino/datasets`, with the Project's own under `local/`, in a DFS Project; `/mnt/data` in a Git-based one). Zero nodes in `sinfo` and `PD` in `squeue` on a fresh cluster are normal: Domino provisions workers when jobs enter the queue.
 
 ## Array job with one output file per task
 
