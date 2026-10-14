@@ -198,7 +198,7 @@ a case for the new behaviour.
 
 ## Cleanup
 
-`teardown` stops and deletes each lane's Workspace (retrying the delete, which often answers 500 right after a stop),
+`teardown` stops and deletes each lane's Workspace (retrying the delete, which can answer 500 right after a stop),
 deletes its Datasets, archives its Project, kills its `dom connect` and removes its `Host` entry from
 `~/.domino/ssh/config`. Verify afterwards: each Workspace reads `deleted: true`, each Project returns 404, no
 Dataset remains, no `dom connect` process is left, and `~/.domino/ssh/config` holds only entries that were there
@@ -212,5 +212,6 @@ before. Scenario cleanups archive Apps and Model APIs; a Model API's deployment 
 - Claude Code blocks a standalone `sleep`; waiting belongs in a single command or in a tool that waits server-side.
 - A Workspace image can preinstall a Domino plugin under `~/.claude`; the fresh `CLAUDE_CONFIG_DIR` keeps it out of
   every session, and `no_domino_skills_visible` proves it for the baseline.
-- No API returns a Model API access token, so an agent cannot make a prediction on its own; `s07` grades a healthy
-  deployment and treats asking the user for the URL and token as correct.
+- A Model API prediction needs an access token. The skills create one by API (`domino-model-endpoints`, "Access
+  tokens"); `s07` still grades a healthy deployment, records the prediction as optional, and treats asking the user
+  for the URL and token as correct.

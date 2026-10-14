@@ -12,8 +12,9 @@ prompt: |
   hardware tier. Wait until it is running, then call it with the features [5.1, 3.5, 1.4, 0.2]
   and show me the prediction.
 check:
-  # A prediction needs an endpoint access token, which only the UI can create (no API returns or mints one),
-  # so the harness grades the deployment itself and records the prediction attempt as optional.
+  # A prediction needs an endpoint access token. The skills create one by API (domino-model-endpoints, "Access
+  # tokens"), but this scenario still grades the deployment itself and records the prediction as optional, and
+  # asking the user for the endpoint URL and token also passes.
   - type: model_api_healthy
     name_regex: '{{run_tag}}'
     wait_s: 900

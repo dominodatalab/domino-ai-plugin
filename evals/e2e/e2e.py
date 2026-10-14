@@ -217,7 +217,7 @@ def cmd_prep(cfg, args):
         log(f"{key}:\n{out}")
         # Where an image could carry Domino skills or plugins that would leak into a no-plugin run. The runner sets a
         # fresh CLAUDE_CONFIG_DIR per run, so only managed settings and Project-level .claude dirs could still apply.
-        rc, inv = r.sh("for d in $HOME/.claude/skills $HOME/.claude/plugins /mnt/artifacts/.domino/.coding-assistants/.claude/skills "
+        rc, inv = r.sh("for d in $HOME/.claude/skills $HOME/.claude/plugins "
                        "/etc/claude-code /mnt/.claude /mnt/code/.claude; do [ -e \"$d\" ] && echo \"present: $d\"; done; "
                        "find / -xdev \\( -path /proc -o -path /tmp/e2e -o -path /sys \\) -prune -o -name SKILL.md -print 2>/dev/null "
                        "| grep -i domino | grep -v '^/tmp/e2e' | head -5; echo inventory-done", timeout=300)
@@ -270,7 +270,7 @@ def cmd_teardown(cfg, args):
             if s in (None, "Stopped", "Completed", "Failed", "Succeeded"):
                 break
             time.sleep(10)
-        for _ in range(8):  # delete right after stop often returns 500 "try again"
+        for _ in range(8):  # delete right after stop can return 500 "try again"
             code, _ = d.request("DELETE", f"/v4/workspace/project/{pid}/workspace/{wid}", ok=None, raw=True)
             if code == 200:
                 break

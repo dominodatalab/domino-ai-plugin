@@ -5,7 +5,8 @@ domino:
   host: https://domino.example.com          # your Domino URL, no trailing slash
   auth:
     # pat: a Personal Access Token from the environment variable named in pat_env (never put the token here).
-    # keycloak_refresh: mint short-lived access tokens from the Domino CLI's offline token in token_file.
+    # keycloak_refresh: mint short-lived access tokens from the Domino CLI's offline token in token_file. This relies on
+    # the CLI's login internals (token file, Keycloak client), not a documented interface, and may change; prefer pat.
     mode: pat
     pat_env: DOMINO_TOKEN
     token_file: ~/.dominoconfig/token.file
@@ -31,7 +32,7 @@ projects:
 
 compute:
   job_tier: small-k8s                       # tier id the prompts name for Jobs and Apps
-  model_api_tier: small-model-api           # tier id the prompts name for Model APIs
+  model_api_tier: "<Model API hardware tier id>"   # tier id the prompts name for Model APIs
   job_timeout_s: 600
 
 claude:

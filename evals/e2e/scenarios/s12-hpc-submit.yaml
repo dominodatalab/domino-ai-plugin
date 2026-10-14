@@ -1,5 +1,5 @@
 id: s12-hpc-submit
-title: Submit an sbatch script as an HPC Job by API (no Slurm data plane on this deployment)
+title: Submit an sbatch script as an HPC Job by API (on a deployment without a Slurm data plane)
 journey: HPC / Slurm
 project_type: dfs
 expected_skills: [domino-hpc-slurm]
