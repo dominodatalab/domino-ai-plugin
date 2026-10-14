@@ -3,8 +3,9 @@
 This harness runs Claude Code with a weak model (Claude Haiku, the tester) **inside real Domino Workspaces**
 and grades each session by what happened in Domino. A strong-model agent (Fable-class or Astra-class), separate
 from the skill's author, orchestrates a round: it runs the commands below, reads the results, and hands each
-skill defect to the author, who fixes the skill (CONTRIBUTING standard 8). Grading looks at the Job that ran and what it printed, the snapshot that exists, the App
-that answers, the healthy Model API, the HPC Job that was (or was not) created. The transcript serves only as
+skill defect to the author, who fixes the skill (CONTRIBUTING standard 8). Grading looks at the Job that ran
+and what it printed, the snapshot that exists, the App that answers, the healthy Model API, the HPC Job that was
+(or was not) created. The transcript serves only as
 evidence of process: which skill loaded, whether a script was uploaded before a start, the exact request body.
 It complements the static checks and the `claude plugin eval` cases in `evals/`; see AGENTS.md "Testing new and
 updated skills" for when each level applies.
