@@ -423,8 +423,11 @@ has three levels (AGENTS.md "Testing new and updated skills" has the commands):
    `scripts/check-codeowners.py`, `claude plugin validate`).
 2. A `claude plugin eval` case for every skill, whose prompt should trigger it.
 3. For every new skill and every change to a write path (anything that starts, creates, uploads or
-   deploys in Domino), a live end-to-end round with `evals/e2e/`: Claude Haiku runs inside real Domino
-   Workspaces and each session is graded by what happened in Domino. Include a no-plugin baseline the
+   deploys in Domino), a live end-to-end round with `evals/e2e/`, with three separate agents: the
+   author (a Fable-class or Astra-class model, standard 8) writes and fixes the skill; an orchestrator (a
+   strong Fable-class or Astra-class model, never the author's session) runs the harness, drives the
+   tester, grades each session by what happened in Domino and files defects, never editing skills; the
+   tester, Claude Haiku, runs Claude Code with the plugin inside real Domino Workspaces. Include a no-plugin baseline the
    first time, write prompts as a user would without naming the skill, run each scenario at least twice,
    record each skill-caused failure against the owning file for the skill's author to fix (standard 8),
    re-run until the runs pass, verify that every scratch resource was cleaned up, and put pass rates,

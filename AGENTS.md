@@ -155,14 +155,21 @@ Three levels; run every one that applies.
 2. **A `claude plugin eval` case for every skill** in `evals/<case>/`: a prompt that should trigger it,
    with graders; run it as above.
 3. **A live end-to-end round for every new skill and every change to a write path** (anything that
-   starts, creates, uploads or deploys in Domino). `evals/e2e/` runs Claude Haiku with the plugin inside
-   real Domino Workspaces and grades outcomes in Domino, not text. A round:
+   starts, creates, uploads or deploys in Domino). Three roles, each a separate agent:
+   - **Author:** a Fable-class or Astra-class model writes the skill and fixes its defects (CONTRIBUTING
+     standard 8).
+   - **Orchestrator:** a strong model (Fable-class or Astra-class), never the author's session, runs
+     `evals/e2e/`: it starts the Workspaces, drives the tester, grades each session by what happened in
+     Domino (not by the text), and files defects. It never edits skills.
+   - **Tester:** Claude Haiku runs Claude Code with the plugin inside real Domino Workspaces. A weak model
+     exposes vague instructions that a strong model papers over.
+
+   A round:
    - includes a no-plugin baseline (`none`) the first time a skill is tested;
    - uses prompts a user would write, which never name the skill or a route;
    - runs each discriminating scenario at least twice;
    - records each skill-caused failure against the owning skill file, with transcript and API evidence
-     and a proposed change, for the skill's author to fix (CONTRIBUTING standard 8); the harness never
-     edits skills;
+     and a proposed change, which the orchestrator hands to the author;
    - re-runs the failed scenarios on the fixed build until they pass;
    - ends with verified cleanup: Workspaces deleted, Projects archived, Datasets deleted, `dom connect`
      stopped and its SSH host entries removed;
