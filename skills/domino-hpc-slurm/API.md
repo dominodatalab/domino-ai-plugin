@@ -45,21 +45,30 @@ slurm_only = [t for t in tiers if t["computeClusterRestrictions"]["restrictToSlu
 # 4. Can this project submit HPC Jobs to that plane through the API?
 ok = requests.get(f"{base}/api/hpc/v1/jobs/submit-supported",
                   params={"projectId": project_id, "dataPlaneId": slurm_planes[0]["id"]}, headers=headers).json()
-#    {"supported": true|false}; optional partition= checks one partition. false means the plane cannot take an API
-#    submission from this user and project (no Slurm on the plane is one cause). An unknown dataPlaneId is a 500.
+#    {"supported": true|false}; optional partition= checks one partition. Both projectId and dataPlaneId are required
+#    (400 without). false means the plane cannot take an API submission from this user and project (no Slurm on the
+#    plane is one cause): stop and report it, do not start. An unknown dataPlaneId is a 500.
 ```
 
 `GET /api/hardwaretiers/v1/hardwaretiers` takes `offset`, `limit` and `includeArchived`; `GET /api/environments/beta/environments` takes `offset` and `limit`. `GET /v4/hardwareTier/withCapacity/{hardwareTierId}?projectId=` (non-public route; may change in a future Domino version) returns the tier together with its `dataPlane` object and current capacity.
 
 ## Start, poll, read logs, cancel
 
+Check first, then start. `GET /api/hpc/v1/jobs/submit-supported?projectId=&dataPlaneId=` answering `{"supported": false}` means HPC submission is unavailable on that data plane for this user and project (prerequisites in [SKILL.md](./SKILL.md#prerequisites)): stop and report it. A start on such a plane fails with a 500 whose message begins `(503) Unexpected response code`, creates nothing and fails the same way on retry.
+
 `POST /api/hpc/v1/jobs` needs `projectId`, `filePath` and `dataPlaneId`; `title`, `mainRepoGitRef` and `config` are optional. The response is 202 with no body.
 
 ```python
+plane_id = slurm_planes[0]["id"]                  # from the discovery step
+ok = requests.get(f"{base}/api/hpc/v1/jobs/submit-supported",
+                  params={"projectId": project_id, "dataPlaneId": plane_id}, headers=headers).json()["supported"]
+if not ok:
+    raise SystemExit(f"HPC submission is unavailable on data plane {plane_id}")   # do not retry the start
+
 body = {
     "projectId": project_id,
     "filePath": "hpc/sweep.sh",                  # relative to the Project root; runs from the latest commit
-    "dataPlaneId": slurm_planes[0]["id"],
+    "dataPlaneId": plane_id,
     "title": "parameter sweep",
     # "mainRepoGitRef": {"refType": "branches", "value": "main"},   # Git-based Projects: which ref to run from
     "config": {                                   # all optional; Slurm-native units
@@ -114,12 +123,28 @@ Errors come back as `{"requestId", "errors": ["..."]}`.
 |---|---|
 | Start with a `filePath` that is not in the Project's latest commit (or the given `mainRepoGitRef`) | 403, `Not authorized: File <path>, commitId ..., projectId: ... are not valid`. Upload or commit the script first, as for a standard Job ([domino-jobs](../domino-jobs/SKILL.md#troubleshooting)). Nothing is created. |
 | Details, logs or cancel with an unknown `jobId` | an error envelope whose message says `(404) ... Could not find HPC job with id: ...`; the outer HTTP status may be 500, so check the message. |
+| Start on a data plane without Slurm (`submit-supported` is `false` there) | 500, `(503) Unexpected response code. Content : HttpEntity.Strict(application/json, ...)`. Not transient; nothing is created. Use a Slurm-enabled plane. |
+| `submit-supported` without `dataPlaneId` | 400, `Missing required query string parameter dataPlaneId`. |
 | `submit-supported` with an unknown `dataPlaneId` | 500, `Unable to process request`. |
 | Start or `submit-supported` without `StartJob` and `UseGlobalCompute` | 403. |
 
 ## Attach a Slurm cluster to a Workspace
 
-The Workspace create and update bodies take `computeClusterConfig` ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); `POST /v4/workspace/project/{projectId}/workspace`, non-public route; may change in a future Domino version). For Slurm:
+The Workspace create and update bodies take `computeClusterConfig` ([domino-workspaces API.md](../domino-workspaces/API.md#attach-a-cluster); `POST /v4/workspace/project/{projectId}/workspace`, non-public route; may change in a future Domino version).
+
+The create route does not check the data plane. With `clusterType` `"Slurm"` and a tier on a plane that has no Slurm it still answers 200 with state `Created` and `configTemplate.computeClusterResponseProps.clusterType` `"Slurm"`, and the session then never starts: it stays `Pending` or `Initializing` while the execution events repeat `FailedMount: MountVolume.SetUp failed for volume "slurm-jwt-secret-vol": secret "execution-<id>-slurm-jwt-secret" not found`. The UI disables the Slurm option in that case; by API, check the tier's data plane first and never create the Workspace on a plane without Slurm:
+
+```python
+tier_id = "<worker hardware tier id>"
+t = requests.get(f"{base}/v4/hardwareTier/withCapacity/{tier_id}", params={"projectId": project_id}, headers=headers).json()
+#   non-public route; may change in a future Domino version. Returns hardwareTier, capacity and the tier's dataPlane.
+if not t["dataPlane"]["status"].get("supportsSlurm"):
+    raise SystemExit(f"data plane {t['dataPlane']['name']} has no Slurm; pick a tier on a Slurm-enabled plane")
+# Equivalent: the plane from GET /v4/dataplanes/dataplanes (status.supportsSlurm), or, for API submission,
+# GET /api/hpc/v1/jobs/submit-supported?projectId=&dataPlaneId= returning {"supported": true}.
+```
+
+Then the cluster body, with the Workspace's own `hardwareTierId` on the same data plane:
 
 ```python
 body["computeClusterConfig"] = {
@@ -128,10 +153,10 @@ body["computeClusterConfig"] = {
     "computeEnvironmentRevisionSpec": "ActiveRevision",
     "workerCount": 1,
     "maxWorkerCount": 8,                                   # the UI's Max Number of Workers: the partition scales up to it
-    "workerHardwareTierId": {"value": on_plane[0]["id"]},  # a tier on the Slurm-enabled data plane
+    "workerHardwareTierId": {"value": tier_id},             # the tier checked above
 }
 ```
 
-There is no master tier for Slurm. `GET /v4/workspace/{projectId}/Slurm/defaultComputeClusterSettings` (non-public route; may change in a future Domino version) returns the defaults the UI would use (`clusterType`, `workerCount`, `workerHardwareTierId`, `maxUserExecutionSlots`). The Workspace's own `environmentId` is the Slurm client environment and its `hardwareTierId` a tier on the same data plane; the UI disables the Slurm option for any other combination ([SKILL.md](./SKILL.md#troubleshooting)).
+There is no master tier for Slurm. `GET /v4/workspace/{projectId}/Slurm/defaultComputeClusterSettings` (non-public route; may change in a future Domino version) returns the defaults the UI would use (`clusterType`, `workerCount`, `workerHardwareTierId`, `maxUserExecutionSlots`). The Workspace's own `environmentId` is the Slurm client environment and its `hardwareTierId` a tier on the same Slurm-enabled data plane as `workerHardwareTierId`. A Workspace already stuck as described above: stop it if `isStoppable` is true, then delete it ([domino-workspaces API.md](../domino-workspaces/API.md#update-stop-resume-delete)) and recreate it on a Slurm-enabled plane.
 
 The `slurm` value in `ClusterTypeV1`, the enum behind `computeCluster.clusterType` on `POST /api/jobs/v1/jobs`, is not a supported path: a standard Job cannot carry a Slurm cluster. Submit through `/api/hpc/v1/jobs` instead.
