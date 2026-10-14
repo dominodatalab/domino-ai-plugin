@@ -7,7 +7,7 @@ Two rules shape every script here:
 - Domino sets `--output` and `--error` on every job to collect the logs into the Job record, so a `#SBATCH --output=` line has no effect. To keep your own copy, redirect inside the script to the shared Dataset. Any other path fails: workers cannot write to the Workspace file system.
 - Workers are shared between users and all Domino users are in one Unix group there. `umask 077` at the top of the script keeps output private.
 
-The Dataset path below is `/domino/datasets/local/<dataset>` (DFS Project); in a Git-based Project it is `/mnt/data/<dataset>` ([domino-datasets](../domino-datasets/SKILL.md#paths)). Replace `<dataset>` with a real Dataset of the Project: `ls $DOMINO_DATASETS_DIR` lists them (`/domino/datasets`, with the Project's own under `local/`, in a DFS Project; `/mnt/data` in a Git-based one). Zero nodes in `sinfo` and `PD` in `squeue` on a fresh cluster are normal: Domino provisions workers when jobs enter the queue.
+The scripts below use a Dataset named `my-dataset`, at `/domino/datasets/local/my-dataset` in a DFS Project and `/mnt/data/my-dataset` in a Git-based one ([domino-datasets](../domino-datasets/SKILL.md#paths)). Write the real name of a Dataset of the Project instead: `ls $DOMINO_DATASETS_DIR` lists them (`/domino/datasets`, with the Project's own under `local/`, in a DFS Project; `/mnt/data` in a Git-based one). With several Datasets, use the one that holds the inputs or the Project's default (named after the Project), and say which you chose. Never leave `<...>` in a script: unquoted angle brackets are shell redirections, so the file does not parse. Zero nodes in `sinfo` and `PD` in `squeue` on a fresh cluster are normal: Domino provisions workers when jobs enter the queue.
 
 ## Array job with one output file per task
 
@@ -19,7 +19,7 @@ The Dataset path below is `/domino/datasets/local/<dataset>` (DFS Project); in a
 #SBATCH --ntasks=1
 
 umask 077
-OUTDIR=/domino/datasets/local/<dataset>
+OUTDIR=/domino/datasets/local/my-dataset
 OUTFILE="$OUTDIR/output_task_$SLURM_ARRAY_TASK_ID.txt"
 
 {
@@ -46,7 +46,7 @@ sbatch sample-job.sh            # Submitted batch job 1
 squeue                          # 1_[1-3] ... PD (PartitionConfig) while workers come up, then R
 sinfo                           # nodes appear as the partition scales
 sacct -j 1                      # accounting once the tasks finish
-ls /domino/datasets/local/<dataset>/
+ls /domino/datasets/local/my-dataset/
 ```
 
 Short jobs can finish before `squeue` shows them running; append `sleep 180` to watch the lifecycle, or submit several times to see jobs queue and dispatch as workers arrive.
@@ -62,7 +62,7 @@ Short jobs can finish before `squeue` shows them running; append `sleep 180` to 
 #SBATCH --time=00:30:00
 
 umask 077
-DATA=/domino/datasets/local/<dataset>
+DATA=/domino/datasets/local/my-dataset
 read -r LR DEPTH < <(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$DATA/params.txt")   # one "lr depth" line per task
 python3 "$DATA/code/train.py" --lr "$LR" --depth "$DEPTH" \
     --out "$DATA/results/run_$SLURM_ARRAY_TASK_ID" > "$DATA/results/run_$SLURM_ARRAY_TASK_ID.log" 2>&1
@@ -83,7 +83,7 @@ Put the code and the inputs in the Dataset as well: the script runs on a worker,
 
 umask 077
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-./simulate --threads "$SLURM_CPUS_PER_TASK" > /domino/datasets/local/<dataset>/smp.log 2>&1
+./simulate --threads "$SLURM_CPUS_PER_TASK" > /domino/datasets/local/my-dataset/smp.log 2>&1
 ```
 
 `--cpus-per-task` sets cores per task, `--mem` memory per node. The request has to fit inside one worker of the **Worker Hardware Tier** chosen for the cluster; a request larger than the tier never dispatches.
@@ -101,8 +101,8 @@ Run the cluster with a GPU worker tier, then request the GPUs in Slurm terms:
 #SBATCH --time=04:00:00
 
 umask 077
-nvidia-smi > /domino/datasets/local/<dataset>/gpu-train.log 2>&1
-python3 /domino/datasets/local/<dataset>/code/train.py >> /domino/datasets/local/<dataset>/gpu-train.log 2>&1
+nvidia-smi > /domino/datasets/local/my-dataset/gpu-train.log 2>&1
+python3 /domino/datasets/local/my-dataset/code/train.py >> /domino/datasets/local/my-dataset/gpu-train.log 2>&1
 ```
 
 Through the API the same request is `"config": {"gpu": 1, "cpu": 4, "memory": "32Gi", "walltime": "04:00:00"}` on `POST /api/hpc/v1/jobs`.
@@ -128,11 +128,12 @@ sbatch --job-name=hello_job --time=00:01:00 --cpus-per-task=1 --mem=256M job.sh
 ## Watching and cleaning up
 
 ```bash
+JOBID=42                                 # from "Submitted batch job 42"
 squeue --me                              # your queued and running jobs
-scontrol show job <id>                   # the full record while queued or running
-sacct -j <id> --format=JobID,State,Elapsed,MaxRSS,AllocCPUS
+scontrol show job "$JOBID"               # the full record while queued or running
+sacct -j "$JOBID" --format=JobID,State,Elapsed,MaxRSS,AllocCPUS
 sacct --starttime=today                  # your jobs since midnight; broad queries such as sacct -a load the Slurm REST service
-scancel <id>                             # one job
+scancel "$JOBID"                         # one job
 ```
 
 Stopping the Workspace releases the worker nodes; the accounting record and the Project's **HPC** tab keep the job history.

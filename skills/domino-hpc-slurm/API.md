@@ -135,7 +135,7 @@ The Workspace create and update bodies take `computeClusterConfig` ([domino-work
 The create route does not check the data plane. With `clusterType` `"Slurm"` and a tier on a plane that has no Slurm it still answers 200 with state `Created` and `configTemplate.computeClusterResponseProps.clusterType` `"Slurm"`, and the session then never starts: it stays `Pending` or `Initializing` while the execution events repeat `FailedMount: MountVolume.SetUp failed for volume "slurm-jwt-secret-vol": secret "execution-<id>-slurm-jwt-secret" not found`. The UI disables the Slurm option in that case; by API, check the tier's data plane first and never create the Workspace on a plane without Slurm:
 
 ```python
-tier_id = "<worker hardware tier id>"
+tier_id = on_plane[0]["id"]                        # a tier on the Slurm-enabled plane, from the discovery step
 t = requests.get(f"{base}/v4/hardwareTier/withCapacity/{tier_id}", params={"projectId": project_id}, headers=headers).json()
 #   non-public route; may change in a future Domino version. Returns hardwareTier, capacity and the tier's dataPlane.
 if not t["dataPlane"]["status"].get("supportsSlurm"):
