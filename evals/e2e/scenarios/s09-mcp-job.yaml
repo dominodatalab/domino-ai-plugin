@@ -1,0 +1,20 @@
+id: s09-mcp-job
+title: Start a Job through the bundled Domino MCP server
+journey: MCP server
+project_type: dfs
+expected_skills: [domino-modeling-assistant]
+timeout_s: 1200
+setup: []
+prompt: |
+  Use the Domino MCP server tools you have (not curl or the REST API directly) to run a Domino Job
+  in this project with the command `python -c "print(6*7)"`. Wait until it finishes, then tell me
+  the Job's final status and what it printed.
+check:
+  - type: job_succeeded
+    finished_before_reply: true   # otherwise the model cannot have reported the Job's own output
+    stdout_regex: '(?m)^\s*42\s*$'
+  - type: tool_used
+    name_regex: '^mcp__.*domino_server__run_domino_job$'
+  - type: reply_regex          # the user asked to wait and report the final status and output
+    patterns: ['\b42\b', '(?i)succeeded']
+cleanup: []

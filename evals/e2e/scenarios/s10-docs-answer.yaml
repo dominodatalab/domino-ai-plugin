@@ -1,0 +1,15 @@
+id: s10-docs-answer
+title: Answer a Domino question from the docs
+journey: docs lookup
+project_type: git
+expected_skills: [domino-apps]
+timeout_s: 600
+setup: []
+prompt: |
+  Before I build anything: on Domino, which port does a web App have to listen on, and which host
+  or interface must it bind to? Look it up in the Domino documentation rather than answering from
+  memory, and cite the page you used.
+check:
+  - type: reply_regex
+    patterns: ['\b8888\b', '0\.0\.0\.0']
+cleanup: []

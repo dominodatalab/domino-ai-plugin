@@ -1,0 +1,19 @@
+id: s01-job-stdout
+title: Run a Python script as a Job, wait, report its stdout
+journey: jobs
+project_type: dfs
+expected_skills: [domino-jobs]
+timeout_s: 1500
+setup: []
+prompt: |
+  Write a small Python script that computes the sum of the squares of the integers from 1 to 1000
+  and prints it as `RESULT=<number>`. Run it as a Domino Job in this project (not here in the
+  Workspace) on the `{{job_tier}}` hardware tier, wait for the Job to finish, and tell me exactly
+  what it printed.
+check:
+  - type: job_succeeded
+    finished_before_reply: true   # otherwise the model cannot have reported the Job's own output
+    stdout_regex: 'RESULT=333833500'
+  - type: reply_regex
+    patterns: ['333833500']
+cleanup: []

@@ -1,0 +1,30 @@
+id: s07-model-api
+title: Publish a tiny model as a Model API endpoint and call it
+journey: model serving
+project_type: dfs
+expected_skills: [domino-model-endpoints, domino-model-serving]
+timeout_s: 2400
+setup: []
+prompt: |
+  Train a tiny scikit-learn classifier on the iris dataset, save it, and write a prediction
+  function that takes one argument, `features` (a list of 4 floats), and returns the predicted
+  class. Deploy it as a Domino Model API (endpoint) named `iris-{{run_tag}}` on the `{{model_api_tier}}`
+  hardware tier. Wait until it is running, then call it with the features [5.1, 3.5, 1.4, 0.2]
+  and show me the prediction.
+check:
+  # A prediction needs an endpoint access token, which only the UI can create (no API returns or mints one),
+  # so the harness grades the deployment itself and records the prediction attempt as optional.
+  - type: model_api_healthy
+    name_regex: '{{run_tag}}'
+    wait_s: 900
+  - type: model_api_predicts
+    name_regex: '{{run_tag}}'
+    payload: {data: {features: [5.1, 3.5, 1.4, 0.2]}}
+    wait_s: 60
+    required: false
+  - type: reply_regex          # recorded only: asking the user for the endpoint URL and access token is correct
+    patterns: ['(?i)token', '(?i)(url|address|endpoint)']
+    required: false
+cleanup:
+  - type: delete_model_apis
+    name_regex: '{{run_tag}}'

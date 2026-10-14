@@ -54,7 +54,7 @@ domino-ai-plugin/
 ├── agents/                      # Subagents: thin routers to skills (Claude Code; Cursor reads them too)
 ├── output-styles/               # Custom output styles (Claude Code only)
 ├── hooks/                       # Hook documentation only; no hooks.json is shipped
-├── evals/                       # claude plugin eval cases
+├── evals/                       # claude plugin eval cases; evals/e2e/ is the live end-to-end harness
 └── scripts/                     # Build, lint, sync, and version checks
 ```
 
@@ -414,6 +414,23 @@ skills from `scripts/removed-skills.txt` fail CI; "today", observed timings, sta
 "smoke test" and spec attestations print a warning for a human to judge). Each message names
 the rule, the file and line, and the standard.
 
+### 14. Test new and updated skills at three levels
+
+A skill can pass every static check and still lead an agent astray in a real Workspace, so testing
+has three levels (AGENTS.md "Testing new and updated skills" has the commands):
+
+1. Static checks on every change (`scripts/build-openai.sh`, `scripts/check-version.sh`,
+   `scripts/check-codeowners.py`, `claude plugin validate`).
+2. A `claude plugin eval` case for every skill, whose prompt should trigger it.
+3. For every new skill and every change to a write path (anything that starts, creates, uploads or
+   deploys in Domino), a live end-to-end round with `evals/e2e/`: Claude Haiku runs inside real Domino
+   Workspaces and each session is graded by what happened in Domino. Include a no-plugin baseline the
+   first time, write prompts as a user would without naming the skill, run each scenario at least twice,
+   record each skill-caused failure against the owning file for the skill's author to fix (standard 8),
+   re-run until the runs pass, verify that every scratch resource was cleaned up, and put pass rates,
+   turns and cost in the PR description, never in the skill (standard 12). Method and configuration:
+   `evals/e2e/README.md`.
+
 ## Release branches, tags and backports
 
 ### Where PRs go
@@ -597,6 +614,9 @@ Before submitting:
 4. Smoke-test every API payload documented in a skill against a live Domino
    instance and record the result in the PR description (see
    [Skill Authoring Standards #5](#5-smoke-test-payloads-against-the-live-api))
+5. For a new skill or a change to a write path, run a live end-to-end round with `evals/e2e/` and
+   report its results in the PR description (see
+   [Skill Authoring Standards #14](#14-test-new-and-updated-skills-at-three-levels))
 
 
 ## Pull Request Process

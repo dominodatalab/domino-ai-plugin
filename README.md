@@ -619,6 +619,10 @@ claude plugin eval . --scaffold --allow-tools Write Edit --no-publish           
 `--scaffold` runs each case's `fixture.sh`, which writes the files the prompt refers to. Results
 go to `evals/results/`, which is git-ignored. `evals/` is not part of the OpenAI package.
 
+`evals/e2e/` is a separate harness, not an eval case: it runs a weak model with the plugin inside real
+Domino Workspaces and grades what happened in Domino. See [evals/e2e/README.md](evals/e2e/README.md)
+and AGENTS.md "Testing new and updated skills".
+
 ---
 
 ## Troubleshooting

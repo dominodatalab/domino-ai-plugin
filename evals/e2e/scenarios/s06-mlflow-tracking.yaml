@@ -1,0 +1,19 @@
+id: s06-mlflow-tracking
+title: Train a tiny sklearn model with MLflow tracking in the experiment manager
+journey: experiment tracking
+project_type: git
+expected_skills: [domino-experiment-tracking, domino-experiment-setup]
+timeout_s: 1200
+setup: []
+prompt: |
+  Train a small scikit-learn logistic regression on the iris dataset here in the Workspace and
+  track it in Domino's experiment manager: experiment name `iris-{{run_tag}}`, log the
+  hyperparameters, and log the test accuracy as a metric named `accuracy`. Tell me the run ID.
+check:
+  - type: mlflow_runs
+    experiment_like: '%{{run_tag}}%'
+    metric: accuracy
+    min_value: 0.5
+cleanup:
+  - type: mlflow_delete_experiments
+    experiment_like: '%{{run_tag}}%'
