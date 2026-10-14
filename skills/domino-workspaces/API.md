@@ -86,7 +86,7 @@ body["computeClusterConfig"] = {
 }
 ```
 
-The response's `configTemplate.computeClusterResponseProps` echoes the cluster; `GET .../{clusterType}/defaultComputeClusterSettings` returns the defaults the UI would use. For `Slurm` the cluster environment is the Slurm worker environment, `maxWorkerCount` is the partition ceiling and the Workspace itself runs the Slurm client environment on a tier of the Slurm-enabled data plane ([domino-hpc-slurm](../domino-hpc-slurm/SKILL.md)).
+The response's `configTemplate.computeClusterResponseProps` echoes the cluster; `GET .../{clusterType}/defaultComputeClusterSettings` returns the defaults the UI would use. For `Slurm` the cluster environment is the Slurm worker environment, `maxWorkerCount` is the partition ceiling and the Workspace itself runs the Slurm client environment on a tier of the Slurm-enabled data plane. The route accepts a tier on a plane without Slurm and the session then never starts, so check `status.supportsSlurm` first ([domino-hpc-slurm API.md](../domino-hpc-slurm/API.md#attach-a-slurm-cluster-to-a-workspace)).
 
 ## Not in any API
 
