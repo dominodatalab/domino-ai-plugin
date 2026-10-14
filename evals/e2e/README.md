@@ -1,12 +1,12 @@
 # Live end-to-end evals
 
 This harness runs Claude Code with a weak model (Claude Haiku, the tester) **inside real Domino Workspaces**
-and grades each session by what happened in Domino. A strong-model agent (Fable-class or Astra-class), separate
-from the skill's author, orchestrates a round: it runs the commands below, reads the results, and hands each
-skill defect to the author, who fixes the skill (CONTRIBUTING standard 8). Grading looks at the Job that ran
-and what it printed, the snapshot that exists, the App that answers, the healthy Model API, the HPC Job that was
-(or was not) created. The transcript serves only as
-evidence of process: which skill loaded, whether a script was uploaded before a start, the exact request body.
+and grades each session by what happened in Domino. A Fable-class or Astra-class model, the orchestrator, runs
+it: it writes or updates the skill, runs the commands below, reads the results, fixes the skill and runs again
+until the skill meets the bar in AGENTS.md "Testing new and updated skills" (CONTRIBUTING standards 8 and 14).
+Grading looks at the Job that ran and what it printed, the snapshot that exists, the App that answers, the
+healthy Model API, the HPC Job that was (or was not) created. The transcript serves only as evidence of process:
+which skill loaded, whether a script was uploaded before a start, the exact request body.
 It complements the static checks and the `claude plugin eval` cases in `evals/`; see AGENTS.md "Testing new and
 updated skills" for when each level applies.
 
@@ -186,10 +186,13 @@ a case for the new behaviour.
 - **Baseline:** include a `none` variant (no plugin) the first time a skill is tested, to show what the plugin adds.
 - **Stability:** run each discriminating scenario at least twice on the build under test (`next`, `next-r2`); one
   run can flip.
+- **Frozen checks:** write the scenarios and checks before the first run. Change them later only for a harness
+  problem (a wrong check, a bad setup), re-grade with `tools/regrade.py`, and say so in the PR.
 - **Defects:** record each failure caused by a skill against the owning file, with transcript quotes and API
-  evidence, and a proposed change. The skill's author fixes it (CONTRIBUTING standard 8); the harness never edits
-  skills. Harness problems (a wrong check, a bad setup) are fixed here and re-graded with `tools/regrade.py`.
-- **Re-run** the failed scenarios, plus a short regression pass, on the fixed build until they pass.
+  evidence, before changing the skill. The orchestrator then fixes the skill; this harness's code never edits
+  skills.
+- **Iterate** on the fixed build, re-running the failed scenarios plus a short regression pass, until the skill
+  meets the bar. The final round adds at least one prompt the skill was not iterated against.
 - **Report** pass rates, turns, Claude Code's reported cost and the defects in the PR description, never in skills
   (CONTRIBUTING standard 12).
 

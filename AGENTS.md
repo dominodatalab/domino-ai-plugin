@@ -155,25 +155,29 @@ Three levels; run every one that applies.
 2. **A `claude plugin eval` case for every skill** in `evals/<case>/`: a prompt that should trigger it,
    with graders; run it as above.
 3. **A live end-to-end round for every new skill and every change to a write path** (anything that
-   starts, creates, uploads or deploys in Domino). Three roles, each a separate agent:
-   - **Author:** a Fable-class or Astra-class model writes the skill and fixes its defects (CONTRIBUTING
-     standard 8).
-   - **Orchestrator:** a strong model (Fable-class or Astra-class), never the author's session, runs
-     `evals/e2e/`: it starts the Workspaces, drives the tester, grades each session by what happened in
-     Domino (not by the text), and files defects. It never edits skills.
+   starts, creates, uploads or deploys in Domino). Two roles:
+   - **Orchestrator:** a Fable-class or Astra-class model (CONTRIBUTING standard 8, since it writes
+     skill content). It writes or updates the skill, runs `evals/e2e/`, drives the tester, grades each
+     session by what happened in Domino (not by the text), fixes the skill and runs again, iterating with
+     the tester until the skill meets the bar below.
    - **Tester:** Claude Haiku runs Claude Code with the plugin inside real Domino Workspaces. A weak model
      exposes vague instructions that a strong model papers over.
 
-   A round:
-   - includes a no-plugin baseline (`none`) the first time a skill is tested;
-   - uses prompts a user would write, which never name the skill or a route;
-   - runs each discriminating scenario at least twice;
-   - records each skill-caused failure against the owning skill file, with transcript and API evidence
-     and a proposed change, which the orchestrator hands to the author;
-   - re-runs the failed scenarios on the fixed build until they pass;
-   - ends with verified cleanup: Workspaces deleted, Projects archived, Datasets deleted, `dom connect`
+   **The bar**, on the final build: every scenario for the skill passes in every run (at least two runs
+   each), the no-plugin baseline fails the scenarios the skill exists for, no other scenario regresses,
+   and the static checks and the skill's `claude plugin eval` case pass.
+
+   Rules for the loop:
+   - write the scenarios and graders before the first run; change them later only to fix a harness bug,
+     and say so in the PR;
+   - include a no-plugin baseline (`none`) the first time a skill is tested;
+   - write prompts as a user would, never naming the skill or a route; the final round adds at least one
+     prompt the skill was not iterated against;
+   - record each skill-caused failure against the owning skill file, with transcript and API evidence,
+     before changing the skill;
+   - end with verified cleanup: Workspaces deleted, Projects archived, Datasets deleted, `dom connect`
      stopped and its SSH host entries removed;
-   - reports pass rates, turns and cost in the PR description, never in skills (CONTRIBUTING standard 12).
+   - report pass rates, turns and cost in the PR description, never in skills (CONTRIBUTING standard 12).
 
 ```bash
 cd evals/e2e && cp config.example.yaml config.local.yaml   # host, auth, environment, tiers, builds, variants

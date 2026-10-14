@@ -423,16 +423,16 @@ has three levels (AGENTS.md "Testing new and updated skills" has the commands):
    `scripts/check-codeowners.py`, `claude plugin validate`).
 2. A `claude plugin eval` case for every skill, whose prompt should trigger it.
 3. For every new skill and every change to a write path (anything that starts, creates, uploads or
-   deploys in Domino), a live end-to-end round with `evals/e2e/`, with three separate agents: the
-   author (a Fable-class or Astra-class model, standard 8) writes and fixes the skill; an orchestrator (a
-   strong Fable-class or Astra-class model, never the author's session) runs the harness, drives the
-   tester, grades each session by what happened in Domino and files defects, never editing skills; the
-   tester, Claude Haiku, runs Claude Code with the plugin inside real Domino Workspaces. Include a no-plugin baseline the
-   first time, write prompts as a user would without naming the skill, run each scenario at least twice,
-   record each skill-caused failure against the owning file for the skill's author to fix (standard 8),
-   re-run until the runs pass, verify that every scratch resource was cleaned up, and put pass rates,
-   turns and cost in the PR description, never in the skill (standard 12). Method and configuration:
-   `evals/e2e/README.md`.
+   deploys in Domino), a live end-to-end round with `evals/e2e/`. The orchestrator, a Fable-class or
+   Astra-class model (standard 8), writes or updates the skill and iterates on it with the tester, Claude
+   Haiku running Claude Code with the plugin inside real Domino Workspaces: run, grade each session by
+   what happened in Domino, fix the skill, run again. It stops when the skill meets the bar: on the final
+   build every scenario for the skill passes in every run (at least two each), the no-plugin baseline
+   fails the scenarios the skill exists for, nothing else regresses, and levels 1 and 2 pass. Scenarios
+   and graders are written before the first run and change only to fix a harness bug; prompts read as a
+   user's and never name the skill; the final round adds a prompt the skill was not iterated against;
+   every scratch resource is verified cleaned up; pass rates, turns and cost go in the PR description,
+   never in the skill (standard 12). Method and configuration: `evals/e2e/README.md`.
 
 ## Release branches, tags and backports
 
