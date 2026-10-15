@@ -9,7 +9,7 @@ always-on guidance and the same Domino MCP server.
 
 > **Moved from `dominodatalab/domino-claude-plugin`.** That repository is deprecated and receives
 > no new releases; this one replaces it. To switch an existing install, see
-> [Updating (Claude Code)](#updating-claude-code), including the Domino Workspace steps.
+> [Updating (Claude Code)](#updating-claude-code).
 
 ## Overview
 
@@ -53,8 +53,7 @@ the Codex variant. CI enforces this; see [Skill rules](#skill-rules).
 
 - **Claude Code CLI** v2.1.133 or later (`claude --version` to check). Plugins exist since 2.0.12,
   but the subagents need the `skills:` preload (2.0.43) and plugin skills reachable from a
-  subagent through the Skill tool (2.1.133). Tested on 2.1.300; the Claude Code 2.1.235 in the
-  Domino Workspace image also loads it.
+  subagent through the Skill tool (2.1.133). Tested on 2.1.300.
 - Access to a Domino Data Lab instance
 - A Domino [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)
   or service account token, only for the bundled MCP server when it runs outside a Domino Workspace
@@ -212,23 +211,16 @@ When team members trust the repository folder, Claude Code will prompt them to i
   unrelated histories, so `git pull` alone can't switch a clone; the fetch and `checkout -B` above
   can.
 
-- **Domino Workspace:** a new Workspace starts with the plugin its image ships, which can still be
-  the deprecated `domino-claude-plugin` (`claude plugin list` shows
-  `domino-claude-plugin@domino-marketplace`, version `1.0.0`). Domino 6.3 can refresh the clone at
-  launch, but only from the clone's `origin`; on Domino Cloud nothing refreshes it until the image
-  does. To update now, point the image's clone at this repository, check out the release and start
-  a new session:
+- **Migrate a clone of `domino-claude-plugin`, or update any clone by hand:** point it at this
+  repository, check out the latest release and start a new session:
 
   ```bash
-  P=~/.claude/marketplaces/domino/plugins/domino-claude-plugin
+  P=~/.claude/marketplaces/domino/plugins/domino-claude-plugin   # or the path of your clone
   git -C $P remote set-url origin https://github.com/dominodatalab/domino-ai-plugin.git
   git -C $P fetch origin main
   git -C $P checkout -B main origin/main
+  grep '"version"' $P/.claude-plugin/plugin.json                 # the version now loaded
   ```
-
-  `claude plugin list` keeps showing the image's entry (`1.0.0`); `grep '"version"'
-  $P/.claude-plugin/plugin.json` shows the version Claude Code loads. The change persists in that
-  Workspace across restarts; a new Workspace starts from its image again.
 
 - **Anthropic marketplace:** `claude plugin update dominodatalab@claude-plugins-official`, then
   restart. That entry follows whatever commit Anthropic pins, which still points at the deprecated
