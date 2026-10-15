@@ -673,5 +673,5 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## Support
 
-- For Domino platform issues: [Domino Support](https://support.dominodatalab.com/)
+- For Domino platform issues: [Domino Support](https://support.domino.ai/)
 - For plugin issues: [GitHub Issues](https://github.com/dominodatalab/domino-ai-plugin/issues)

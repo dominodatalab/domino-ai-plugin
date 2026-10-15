@@ -32,7 +32,7 @@
         "category": "Developer Tools",
         "capabilities": [],
         "websiteURL": "https://www.domino.ai",
-        "supportURL": "https://support.dominodatalab.com/",
+        "supportURL": "https://support.domino.ai/",
         "privacyPolicyURL": "https://domino.ai/legal/privacy-policy",
         "defaultPrompt": [
           "Help me deploy a Streamlit dashboard to Domino.",
