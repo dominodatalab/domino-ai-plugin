@@ -18,7 +18,7 @@ use axum::{
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
-use domino::{ApiError, DominoApi, Identity};
+use domino::{ApiError, DominoApi, Identity, NameSource, viewer_name};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -95,13 +95,7 @@ struct IndexPage<'a> {
 #[derive(Serialize)]
 struct WhoAmI {
     username: Option<String>,
-}
-
-/// The viewer, as authenticated by Domino's proxy (`Anonymous` when anonymous access is on).
-fn viewer(headers: &HeaderMap) -> Option<&str> {
-    headers
-        .get("domino-username")
-        .and_then(|value| value.to_str().ok())
+    source: Option<NameSource>,
 }
 
 /// The App's routes. Paths start with `/` here; the browser reaches them through relative URLs.
@@ -135,9 +129,10 @@ pub fn app(state: AppState) -> Router {
 }
 
 async fn index(headers: HeaderMap) -> Response {
+    let name = viewer_name(&headers).map(|(name, _)| name);
     let page = IndexPage {
         title: "Domino Rust App",
-        username: viewer(&headers).unwrap_or("Anonymous"),
+        username: name.as_deref().unwrap_or("Anonymous"),
     };
     match page.render() {
         Ok(html) => Html(html).into_response(),
@@ -152,9 +147,12 @@ async fn healthz() -> Json<Value> {
     Json(json!({ "status": "ok" }))
 }
 
+/// The viewer's name and where it came from (`header` or `token_claim`).
 async fn whoami(headers: HeaderMap) -> Json<WhoAmI> {
+    let viewer = viewer_name(&headers);
     Json(WhoAmI {
-        username: viewer(&headers).map(str::to_owned),
+        source: viewer.as_ref().map(|(_, source)| *source),
+        username: viewer.map(|(name, _)| name),
     })
 }
 
@@ -403,11 +401,27 @@ mod tests {
             .body(Body::empty())
             .unwrap();
         let body: Value = serde_json::from_str(&body_text(send(request).await).await).unwrap();
-        assert_eq!(body, json!({ "username": "jane.doe" }));
+        assert_eq!(body, json!({ "username": "jane.doe", "source": "header" }));
 
         let request = Request::get("/api/whoami").body(Body::empty()).unwrap();
         let body: Value = serde_json::from_str(&body_text(send(request).await).await).unwrap();
-        assert_eq!(body, json!({ "username": null }));
+        assert_eq!(body, json!({ "username": null, "source": null }));
+    }
+
+    #[tokio::test]
+    async fn whoami_falls_back_to_the_forwarded_token() {
+        use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+        // Apps with extended identity propagation can receive the token without `domino-username`.
+        let claims = URL_SAFE_NO_PAD.encode(r#"{"preferred_username":"jane.doe"}"#);
+        let request = Request::get("/api/whoami")
+            .header(header::AUTHORIZATION, format!("Bearer e30.{claims}.sig"))
+            .body(Body::empty())
+            .unwrap();
+        let body: Value = serde_json::from_str(&body_text(send(request).await).await).unwrap();
+        assert_eq!(
+            body,
+            json!({ "username": "jane.doe", "source": "token_claim" })
+        );
     }
 
     #[tokio::test]

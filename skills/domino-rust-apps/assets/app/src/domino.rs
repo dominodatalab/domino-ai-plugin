@@ -10,8 +10,38 @@
 //! The App chooses per call. Tokens are never logged.
 
 use axum::http::{HeaderMap, StatusCode, header::AUTHORIZATION};
-use serde::Deserialize;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+/// Where the viewer's name came from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NameSource {
+    /// The `domino-username` header set by Domino's proxy.
+    Header,
+    /// The `preferred_username` claim of the forwarded token, read without verifying its signature.
+    TokenClaim,
+}
+
+/// The viewer's Domino username: the `domino-username` header, or, where that header is absent (Apps
+/// with extended identity propagation), the `preferred_username` claim of the forwarded token. The
+/// claim is not verified here, so use it for display; for decisions, call the Domino API as the
+/// viewer, which checks the token.
+#[must_use]
+pub fn viewer_name(headers: &HeaderMap) -> Option<(String, NameSource)> {
+    if let Some(name) = headers
+        .get("domino-username")
+        .and_then(|value| value.to_str().ok())
+    {
+        return Some((name.to_owned(), NameSource::Header));
+    }
+    let payload = bearer(headers)?.split('.').nth(1)?;
+    let bytes = URL_SAFE_NO_PAD.decode(payload.trim_end_matches('=')).ok()?;
+    let claims: Value = serde_json::from_slice(&bytes).ok()?;
+    let name = claims.get("preferred_username")?.as_str()?;
+    Some((name.to_owned(), NameSource::TokenClaim))
+}
 
 /// Whose permissions a Domino API call uses.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]

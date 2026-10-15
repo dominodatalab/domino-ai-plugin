@@ -22,5 +22,6 @@ mv "$dist/$bin.tmp" "$dist/$bin"
   rustc --version
   git rev-parse HEAD 2>/dev/null || echo "no-git"
   echo "RUSTFLAGS=${RUSTFLAGS:-}"
+  echo "arch=$(uname -m)"
 } > "$dist/$bin.stamp"
 echo "built $dist/$bin ($(du -h "$dist/$bin" | cut -f1)); stamp $(head -n1 "$dist/$bin.stamp")"

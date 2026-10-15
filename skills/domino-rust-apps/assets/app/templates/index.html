@@ -6,6 +6,8 @@
   <script>if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/" + location.search + location.hash);</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }}</title>
+  <!-- Domino's proxy inserts a root-absolute /favicon.ico link that 404s on the Apps host; this relative one replaces it. -->
+  <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
   <link rel="stylesheet" href="static/app.css">
 </head>
 <body>

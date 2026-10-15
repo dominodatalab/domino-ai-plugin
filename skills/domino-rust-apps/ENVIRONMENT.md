@@ -112,7 +112,7 @@ No trailing slash on `RUSTUP_DIST_SERVER`; the mirror must use HTTPS. Download t
 
 ### TLS inspection and HTTP proxies
 
-Organizations may add their own root certificates to the system trust store and send outbound traffic through a TLS-inspecting corporate proxy. curl, git, rustup and Cargo read the system store and `HTTPS_PROXY`/`NO_PROXY`, so they work unchanged; when they report certificate errors, the store lacks the organization's root certificate: tell the user, whose administrator manages it, rather than turning off verification. `NO_PROXY` must keep in-cluster addresses (`localhost`, `127.0.0.1`, the hosts in `DOMINO_API_HOST` and `DOMINO_API_PROXY`) off the proxy. For git dependencies set `CARGO_NET_GIT_FETCH_WITH_CLI=true`, so git's own proxy and certificate settings apply.
+Organizations may add their own root certificates to the system trust store and send outbound traffic through a TLS-inspecting corporate proxy. curl, git, rustup and Cargo read the system store and `HTTPS_PROXY`/`NO_PROXY`, so they work unchanged. Where a tool still reports certificate errors, point it at a complete PEM bundle that includes the organization's root (`CARGO_HTTP_CAINFO`, `GIT_SSL_CAINFO`, `SSL_CERT_FILE` for rustup) rather than turning verification off. `NO_PROXY` must keep in-cluster addresses (`localhost`, `127.0.0.1`, the hosts in `DOMINO_API_HOST` and `DOMINO_API_PROXY`) off the proxy. For git dependencies set `CARGO_NET_GIT_FETCH_WITH_CLI=true`, so git's own proxy and certificate settings apply.
 
 ### No mirror: vendor the dependencies
 

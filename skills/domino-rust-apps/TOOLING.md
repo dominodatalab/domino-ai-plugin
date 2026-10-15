@@ -53,7 +53,7 @@ Both help only when profiling shows the App's CPU time in your Rust code (parsin
 
 ### target-cpu
 
-By default Rust compiles for baseline x86-64, which every node runs. `-C target-cpu` adds newer instructions, and a binary that uses one the App's CPU lacks dies at start with `Illegal instruction` (exit code 132), often before `main` runs. The Workspace or Job that builds and the App that runs can land on different instance types, within one hardware tier or across tiers.
+By default Rust compiles for the baseline of the build node's architecture (x86-64 or aarch64), which every node of that architecture runs. `-C target-cpu` adds newer instructions, and a binary that uses one the App's CPU lacks dies at start with `Illegal instruction` (exit code 132), often before `main` runs. Administrators map hardware tiers to node pools, so tiers can differ in architecture (amd64 or arm64) and in CPU generation, and one tier can mix instance types; the Workspace or Job that builds and the App that runs may land on different ones.
 
 - Never use `native`: it targets the build node's CPU, not the App's.
 - Never use `x86-64-v4` (AVX-512): AMD Zen 3 and older nodes, common in GPU node pools, lack it.

@@ -32,13 +32,13 @@ The App is served under a prefix such as `/apps/<id>/`, and the server receives 
 
 Keep HTML pages one level deep and pass identifiers as query strings (`item?id=42`), so the same relative links work from every page. If a page must be nested, compute `../` per level from `axum::extract::OriginalUri`.
 
-The App URL also answers without its trailing slash (`.../apps/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. Domino's proxy also inserts its own `<title>` and favicon at the start of each HTML page's `<head>`, so the browser tab shows the App's Domino name.
+The App URL also answers without its trailing slash (`.../apps/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. Domino's proxy also inserts its own `<title>` and a `<link rel="shortcut icon" href=/favicon.ico>` at the start of each HTML page's `<head>`, so the browser tab shows the App's Domino name. That icon URL is root-absolute and answers 404 on the Apps host; the template's own relative `<link rel="icon" href="static/favicon.svg">` comes later and replaces it.
 
 `DOMINO_RUN_HOST_PATH` holds the prefix. Use it only where a value must be absolute, such as a cookie `Path` (set it to the prefix without the trailing slash, give the cookie an App-specific name, and add `HttpOnly; Secure; SameSite=Lax`). For identity, read the `domino-username` header rather than keeping a session cookie: every App on the deployment shares one origin.
 
 ## Identity: acting as the viewer or the publisher
 
-Every request carries the viewer twice: `domino-username` (`Anonymous` when anonymous access is on; `viewer()` in `src/lib.rs` reads it) and `Authorization: Bearer <jwt>`. `src/domino.rs` calls the Domino API with either identity, chosen per call:
+Requests carry the viewer in `domino-username` (`Anonymous` when anonymous access is on) and a token in `Authorization: Bearer <jwt>`. On Apps with extended identity propagation `domino-username` can be absent; `viewer_name()` in `src/domino.rs` then reads the token's `preferred_username` claim without verifying it, and `api/whoami` reports which source it used. Use that name for display; for decisions, call the Domino API as the viewer, which verifies the token. `src/domino.rs` calls the Domino API with either identity, chosen per call:
 
 | Identity | How the template calls | Token scope |
 |---|---|---|
@@ -53,6 +53,7 @@ Extended identity propagation:
 - The deployment-wide setting `com.cerebro.domino.apps.extendedIdentityPropagationToAppsEnabled` must be on (it is by default).
 - Each viewer sees a consent prompt; consent lasts 8 hours by default and up to 30 days. Until a viewer consents, every request to the App, JSON routes included, redirects to Domino's `/app-consent?appId=<id>&callback=<url>` page, so scripts and `curl` get HTML instead of the App's response. Open the App in a browser and consent first.
 - Without it, Domino rejects the viewer's token on most routes, sometimes with a 500 rather than a 401 or 403; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
+- Viewer calls work for people using the App in a browser after consent. A script that calls the App with its own bearer token has that token passed through unchanged, and Domino's in-cluster API rejects it (403): scripts call the Domino API directly with their own token instead.
 - Never log or return the token. `TraceLayer` does not log headers.
 - The template does not verify the JWT itself: Domino verifies it on every API call. To trust its claims inside the App without calling Domino (the "enhanced identity" pattern), verify the RS256 signature against Domino's JWKS with audience `apps`: https://docs.domino.ai/cloud/platform-capabilities/features/apps/authentication-and-identity/app-security
 
@@ -71,12 +72,12 @@ Extended identity propagation:
 
 ## Outbound TLS and HTTP proxies
 
-Write every outbound call assuming that the trust store holds the organization's own root certificates and that external requests pass through a TLS-inspecting corporate proxy:
+Write every outbound call anticipating that the trust store holds the organization's own root certificates and that external requests pass through a TLS-inspecting corporate proxy:
 
-- Trust the OS certificate store. reqwest and sqlx in the template do (`/etc/ssl/certs`, maintained by `update-ca-certificates`), so custom roots work without code. Never bundle a fixed root set (for example webpki-roots-only features), turn off verification (`danger_accept_invalid_certs`, `sslmode=require` where `verify-full` is possible) or pin certificates for external hosts: each breaks or bypasses the inspecting proxy.
+- Trust the OS certificate store. reqwest and sqlx in the template do (`/etc/ssl/certs`, maintained by `update-ca-certificates`), so custom roots work without code. Libraries or features that ship only a bundled root set (webpki-roots), and certificate pinning, fail behind an inspecting proxy.
 - Honour `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY` and `NO_PROXY`. The external client in `src/http.rs` does, in upper or lower case; `NO_PROXY` matches host names and domain suffixes, not ports, and `localhost` is not exempt unless listed.
 - Keep in-cluster calls off the proxy. The in-cluster client for `DOMINO_API_HOST` and `DOMINO_API_PROXY` never uses one; send any other in-cluster service through it too.
-- When a call fails with a certificate error, report it to the user (the trust store lacks a root their administrator manages) rather than working around it.
+- When a certificate error persists, point the client at the right roots (a complete PEM bundle through reqwest's `tls_certs_merge`, `sslrootcert=` for Postgres, `CARGO_HTTP_CAINFO` for Cargo) rather than turning verification off: disabling it silences the proxy's errors and removes the protection with them.
 - `http::install_crypto_provider()` installs rustls's ring provider before any client or pool is built; reqwest panics without one.
 
 ## Startup and shutdown
@@ -87,9 +88,11 @@ Write every outbound call assuming that the trust store holds the organization's
 
 ## How the binary is shipped
 
-`scripts/build-dist.sh` runs `cargo build --locked --profile dist`, copies `target/dist/<name>` to `$DIST_DIR` (default `/mnt/artifacts/dist`) and writes `<name>.stamp`: line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/` and `migrations/`; lines 2 and 3 record `rustc --version` and the Git commit.
+`scripts/build-dist.sh` runs `cargo build --locked --profile dist`, copies `target/dist/<name>` to `$DIST_DIR` (default `/mnt/artifacts/dist`) and writes `<name>.stamp`: line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/` and `migrations/`; the following lines record `rustc --version`, the Git commit, `RUSTFLAGS` and `arch=` (the build node's `uname -m`).
 
-At start, `app.sh` recomputes the hash over the App's files and compares it with line 1. Equal: it copies the binary to a temporary directory, marks it executable and `exec`s it. Different or missing: it prints which step to repeat and exits, and the App shows as failed in its logs. It never compiles.
+At start, `app.sh` recomputes the hash over the App's files and compares it with line 1, and compares `arch=` with the node it runs on. Both match: it copies the binary to a temporary directory, marks it executable and `exec`s it. Otherwise it prints which step to repeat and exits, and the App shows as failed in its logs. It never compiles.
+
+Hardware tiers can run on different node types: amd64 or arm64, and different CPU generations within one architecture. Build the binary on the App's own environment and hardware tier; a Job with that tier is the reliable way when the Workspace uses another. A binary for the wrong architecture cannot run at all; one built with `-C target-cpu` for a newer CPU crashes on older ones ([TOOLING.md](./TOOLING.md#target-cpu)).
 
 An App version pins the Git commit and the artifacts commit together, so App Preview, deployment and rollback all run the binary that matches their source. Add any other build input (an `include_str!` file outside `src/`) to the list in `scripts/stamp.sh`.
 

@@ -23,12 +23,12 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 ## Rules
 
 - **Never compile in `app.sh`.** Each Preview start, live sync, restart and autoscaled replica runs it; a build there costs minutes each time and needs crates.io at start.
-- **Build in the environment the App runs in.** The binary links the environment's glibc and matches its CPU architecture (amd64 or arm64); a binary built elsewhere can fail to start.
+- **Build where the App runs.** The binary links the environment's glibc and targets one CPU architecture. Hardware tiers can run on different node types (amd64 or arm64, different CPU generations), so build on the App's environment and tier, or in a Job on that tier; `app.sh` refuses a binary built for another architecture.
 - **Startup changes nothing.** Migrations, seeding and Dataset preparation run as a Job before publishing; see [domino-apps](../domino-apps/FRAMEWORKS.md#startup-must-not-change-state).
 - **Commit `Cargo.lock` and build with `--locked`**, so the App's binary comes from the dependency versions you tested.
 - **Never commit `target/`**: one Workspace build holds hundreds of MB to GBs. `.gitignore` excludes it.
 - **Secrets** come from Project environment variables read by the server (`DATABASE_URL`, `MODEL_API_URL`, `MODEL_API_TOKEN` in the template), never from files in the repository.
-- **Assume custom root CAs and a TLS-inspecting proxy.** Outbound code must trust the OS certificate store and honour `HTTPS_PROXY`/`NO_PROXY`, never bundle roots, skip verification or pin certificates, and keep in-cluster calls off the proxy ([APP.md](./APP.md#outbound-tls-and-http-proxies)).
+- **Anticipate custom root CAs and a TLS-inspecting proxy.** Outbound code trusts the OS certificate store, honours `HTTPS_PROXY`/`NO_PROXY` and keeps in-cluster calls off the proxy ([APP.md](./APP.md#outbound-tls-and-http-proxies)).
 - **Act as the viewer for the viewer's data.** `src/domino.rs` calls the Domino API with the viewer's forwarded token, or as the publisher through `DOMINO_API_PROXY`; viewer calls need extended identity propagation on the App and the viewer's consent ([APP.md](./APP.md#identity-acting-as-the-viewer-or-the-publisher)).
 
 ## Project defaults (from `assets/app/`)
@@ -49,12 +49,11 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 
 | Purpose | Command |
 |---|---|
-| Edit, type-check | `cargo check`; `cargo clippy --all-targets` |
 | Run beside the IDE | `PORT=8501 cargo run` (dev profile) |
 | All gates | `bash scripts/check.sh` |
 | Shipping binary | `bash scripts/build-dist.sh` (`dist` profile: release with fat LTO, one codegen unit, stripped symbols) |
 
-Keep `panic = "unwind"`: tokio and axum confine a panicking request to its connection, while `abort` takes the whole App down for every viewer. Trade-offs, CPU-specific builds and profile-guided optimization: [TOOLING.md](./TOOLING.md#build-profiles).
+Keep `panic = "unwind"`: tokio and axum confine a panicking request to its connection, while `abort` stops the App for every viewer. Trade-offs, CPU-specific builds and profile-guided optimization: [TOOLING.md](./TOOLING.md#build-profiles).
 
 ## Editors and coding agents
 
