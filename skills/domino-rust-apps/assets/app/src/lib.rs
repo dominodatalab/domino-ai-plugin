@@ -41,6 +41,8 @@ pub struct AppState {
     model: Option<Arc<ModelEndpoint>>,
     domino: DominoApi,
     db: Option<PgPool>,
+    /// The build label `app.sh` started (`APP_BUILD`, for example `2026.10.15`).
+    build: Option<Arc<str>>,
 }
 
 impl AppState {
@@ -51,6 +53,7 @@ impl AppState {
     /// - `DATABASE_URL`: Postgres, for example `postgres://user:pass@host/db?sslmode=verify-full`
     ///   (the database route answers 503 without it).
     /// - `DOMINO_API_HOST`, `DOMINO_API_PROXY`: injected by Domino.
+    /// - `APP_BUILD`: the build label, set by `app.sh` and reported by `/healthz`.
     ///
     /// # Errors
     ///
@@ -74,6 +77,7 @@ impl AppState {
             model,
             domino: DominoApi::from_env(http::internal_client()?),
             db,
+            build: env::var("APP_BUILD").ok().map(Arc::from),
         })
     }
 }
@@ -143,8 +147,9 @@ async fn index(headers: HeaderMap) -> Response {
     }
 }
 
-async fn healthz() -> Json<Value> {
-    Json(json!({ "status": "ok" }))
+/// Liveness plus the running build's label, so a deploy or rollback can be confirmed from outside.
+async fn healthz(State(state): State<AppState>) -> Json<Value> {
+    Json(json!({ "status": "ok", "build": state.build.as_deref() }))
 }
 
 /// The viewer's name and where it came from (`header` or `token_claim`).
@@ -289,6 +294,7 @@ mod tests {
             http: http::external_client().unwrap(),
             model: None,
             db,
+            build: None,
         }
     }
 
@@ -391,7 +397,19 @@ mod tests {
         let response = send(Request::get("/healthz").body(Body::empty()).unwrap()).await;
         assert_eq!(response.status(), StatusCode::OK);
         let body: Value = serde_json::from_str(&body_text(response).await).unwrap();
-        assert_eq!(body, json!({ "status": "ok" }));
+        assert_eq!(body, json!({ "status": "ok", "build": null }));
+    }
+
+    #[tokio::test]
+    async fn healthz_reports_the_build_label() {
+        let mut labelled = state(None, None, None);
+        labelled.build = Some(Arc::from("2026.10.15.2"));
+        let response = app(labelled)
+            .oneshot(Request::get("/healthz").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_str(&body_text(response).await).unwrap();
+        assert_eq!(body["build"], "2026.10.15.2");
     }
 
     #[tokio::test]

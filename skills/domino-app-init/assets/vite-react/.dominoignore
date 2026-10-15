@@ -1,0 +1,6 @@
+# Kept out of Domino storage. node_modules/ alone can exceed a Project's file limit; build/ is scratch
+# output that scripts/build-dist.sh copies into a dated build.
+node_modules/
+build/
+.env
+.env.local

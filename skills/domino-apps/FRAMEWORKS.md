@@ -394,6 +394,24 @@ Domino runs the entry point again on every restart, App Preview live sync, deplo
 2. **If startup must write, make it idempotent and safe to run concurrently.** Idempotent alone is not enough: "check whether the table exists, then create it" still races between two replicas. Use operations that are atomic on their own: `CREATE TABLE IF NOT EXISTS`, upserts on a unique key, a database advisory lock around migrations, or write to a temporary file and `rename` it into place.
 3. **Writes while serving** (user uploads, results, logs of user actions) follow https://docs.domino.ai/cloud/platform-capabilities/features/apps/persist-data-in-apps : Datasets, databases or object storage, never the project's files, with concurrent writers in mind.
 
+## Build once and version builds
+
+Apps with a build step (Vite, Rust) build in a Workspace or Job, never in `app.sh`. A build at start repeats on every restart, live sync, deployment and replica, needs the build toolchain and package-registry access in the App's environment, and can fail where nobody watches. `app.sh` only picks a finished build and starts it, so the App starts in seconds.
+
+- **Where builds live.** Git-based Project: `/mnt/artifacts/dist/`, saved by **File Changes > Sync All Changes**; each App version pins the Domino files commit together with the Git commit. DFS Project: `dist/` in the Project (`DIST_DIR=dist`), saved by **Sync to Domino**. CI or air-gapped sites: `dist/` committed on a commit tagged `build-<label>`.
+- **One folder per build, named by its UTC date.** `2026.10.15`; a later build that day adds `.2`, `.3` past the highest suffix in use, so a label is never reused and `sort -V` orders builds by time. Next to each folder, `<label>.stamp`: line 1 is a hash over every committed build input, then `build=`, `commit=` and the toolchain (plus `arch=` for native binaries).
+- **Keep the previous build.** After a build, delete an older build of the same sources, then keep the two newest (`KEEP_BUILDS`).
+- **`app.sh` runs the build that matches the code.** It hashes the App's committed inputs and starts the newest build whose stamp matches; when none does it exits with a message to run the build. It exports the label as `APP_BUILD` and logs it; `/healthz` reports it.
+- **Name the build in the App version.** Domino numbers versions v1, v2 and so on; put the label in the version's **Version Notes** (`description` on `POST /api/apps/v1/apps/{appId}/versions`, `createAndStart`, or `PATCH .../versions/{versionId}`) so each version says which build it runs.
+
+| To roll back | Do | Why it works |
+|---|---|---|
+| To an earlier release | Start that App version (App page, or `POST /api/apps/v1/apps/{appId}/versions/{versionId}/start` with `{}`) | The version pins its commits, so its own build comes back with it |
+| A code change | Revert the commit, save, publish a new version | The previous build is still in the folder and matches the reverted code; no rebuild |
+| Further back than the previous build | Rebuild from that commit | Only two builds are kept |
+
+Scripts: `scripts/build-dist.sh`, `scripts/stamp.sh` and `app.sh` in the `domino-app-init` Vite template ([build-dist.sh](../domino-app-init/assets/vite-react/scripts/build-dist.sh)) and in `domino-rust-apps` ([APP.md](../domino-rust-apps/APP.md#how-the-binary-is-shipped)).
+
 ## Environment variables
 
 Injected by Domino: `DOMINO_RUN_HOST_PATH` (the current URL prefix, with a trailing slash), `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_STARTING_USERNAME` (the publisher), `DOMINO_WORKING_DIR`, `DOMINO_API_HOST` and `DOMINO_API_PROXY` (in-cluster addresses for API calls; never use them in browser links) (full glossary: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables). Set by you as Project or user environment variables (UI or API: [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)): `MODEL_API_URL`, `MODEL_API_TOKEN`.

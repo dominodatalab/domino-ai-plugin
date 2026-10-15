@@ -1,6 +1,7 @@
 """SSH into Domino Workspaces through Domino Connect (`dom connect`), with connection multiplexing."""
 from __future__ import annotations
 
+import hashlib
 import os
 import shlex
 import socket
@@ -15,11 +16,15 @@ class Remote:
     def __init__(self, ws_id: str, state_dir: Path):
         self.ws = ws_id
         self.state_dir = state_dir
-        self.cm = state_dir / "cm"
-        self.cm.mkdir(parents=True, exist_ok=True)
+        # Control sockets live under a short /tmp path: a socket path must stay under 104 bytes on macOS,
+        # which a state directory inside a git worktree exceeds. One directory per state directory keeps
+        # two checkouts that reuse a local port from sharing a master connection.
+        tag = hashlib.sha1(str(state_dir.resolve()).encode()).hexdigest()[:10]
+        self.cm = Path("/tmp") / f"e2e-cm-{tag}"
+        self.cm.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     def ssh_opts(self) -> list[str]:
-        return ["-F", str(DOMINO_SSH_CONFIG), "-o", "ControlMaster=auto", "-o", f"ControlPath={self.cm}/%h-%p",
+        return ["-F", str(DOMINO_SSH_CONFIG), "-o", "ControlMaster=auto", "-o", f"ControlPath={self.cm}/%C",
                 "-o", "ControlPersist=120m", "-o", f"UserKnownHostsFile={self.state_dir / 'known_hosts'}",
                 "-o", "StrictHostKeyChecking=accept-new", "-o", "BatchMode=yes", "-o", "ConnectTimeout=60",
                 "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=6"]

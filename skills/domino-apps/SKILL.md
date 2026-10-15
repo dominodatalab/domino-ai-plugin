@@ -23,20 +23,20 @@ A Domino App runs project code in a container behind Domino's reverse proxy. The
 
 | Framework | `app.sh` runs | Details |
 |---|---|---|
-| Vite + React | `npm ci && npm run build && node server.js` (Express serves `dist/` and proxies model calls), or `npx serve -s dist -l 8888` when the app calls nothing | [REACT-VITE-GUIDE.md](./REACT-VITE-GUIDE.md) |
+| Vite + React | `node server.js` serving a build made once by `scripts/build-dist.sh`; never installs or builds | [REACT-VITE-GUIDE.md](./REACT-VITE-GUIDE.md) |
 | Streamlit | `streamlit run app.py --server.port 8888 --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false` | [FRAMEWORKS.md](./FRAMEWORKS.md) |
 | Dash | `python app.py` with `Dash(__name__, routes_pathname_prefix='/', requests_pathname_prefix=os.environ.get('DOMINO_RUN_HOST_PATH'))` and `app.run(host='0.0.0.0', port=8888)` | [FRAMEWORKS.md](./FRAMEWORKS.md) |
 | Flask | `python -m flask run --host=0.0.0.0 --port=8888` or `gunicorn -w 4 -b 0.0.0.0:8888 app:app` | [FRAMEWORKS.md](./FRAMEWORKS.md) |
 | Shiny | `R -e 'shiny::runApp("./", port=8888, host="0.0.0.0")'` | [FRAMEWORKS.md](./FRAMEWORKS.md) |
 | Rust (axum) | the prebuilt binary; never compiles | [domino-rust-apps](../domino-rust-apps/SKILL.md) |
 
-Vite: set `base: './'` in `vite.config.js` and use `HashRouter` for client-side routes: they live after `#`, so they never reach the server and relative asset URLs resolve from the App root on every route. `BrowserRouter` with a basename derived from `window.location.pathname` breaks on nested routes.
+Vite: `base: './'` and `HashRouter`. Routes after `#` never reach the server and relative assets resolve on every route; `BrowserRouter` breaks nested routes.
 
 ## Lifecycle
 
 Create, publish and deploy are separate steps. Publishing records an immutable version (code commit, environment revision, mounts, identity propagation); deploying starts it. Hardware tier, autoscaling, vanity URL and iframe settings are deployment settings: changing them restarts the instance without creating a version. Develop in a workspace with **App Preview** (a real App runtime, author-only at `/preview/<draftAppId>`), then **Publish App**, then **Deploy** the version from the App details page.
 
-Check two things before publishing. **Files**: the App runs the project's committed files, so sync first (DFS Workspace: **File Changes > Sync to Domino**; Git-based: commit and push) or the start fails with `entry script 'app.sh' not found`. **Packages**: the App uses the project's Compute Environment, not what you `pip install` in a Workspace (`streamlit: not found`, exit 127); check with `python -c "import <framework>"` and fix it as [FRAMEWORKS.md](./FRAMEWORKS.md#dependencies) shows.
+Check three things before publishing. **Builds**: Vite and Rust Apps start a build made once in a Workspace or Job, named by date, with the previous build kept and the label in Version Notes ([details](./FRAMEWORKS.md#build-once-and-version-builds)). **Files**: the App runs the project's committed files, so sync first (DFS Workspace: **File Changes > Sync to Domino**; Git-based: commit and push) or the start fails with `entry script 'app.sh' not found`. **Packages**: the App uses the project's Compute Environment, not what you `pip install` in a Workspace (`streamlit: not found`, exit 127); check with `python -c "import <framework>"` and fix it as [FRAMEWORKS.md](./FRAMEWORKS.md#dependencies) shows.
 
 ## Environment variables and headers
 

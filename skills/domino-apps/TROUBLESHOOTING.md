@@ -7,7 +7,7 @@ Start with the App logs: App details page, instance selector, or the beta logs r
 **Cause:** nothing is listening on `0.0.0.0:8888`. Domino requires that address and port; an App that binds `localhost`, `127.0.0.1` or another port fails to start.
 
 ```bash
-npx serve -s dist -l 8888            # React static
+node server.js                       # Vite: server.js listens on 0.0.0.0:8888
 streamlit run app.py --server.port 8888 --server.address 0.0.0.0
 python -m flask run --host=0.0.0.0 --port=8888
 ```
@@ -17,7 +17,9 @@ Other causes, visible in the logs:
 - `streamlit: not found` / `ModuleNotFoundError` / `exit code 127`: the framework is not in the Compute Environment. Packages pip-installed in a Workspace are not in the App. Use an environment that has it, a `requirements.txt` at the project root, or (prototype) `python -m pip install --user -q <pkg>` at the top of `app.sh`; see [FRAMEWORKS.md](./FRAMEWORKS.md), Dependencies.
 - `entry script 'app.sh' not found in the root directory of your project`: the file was never synced or committed, or the version was created over the API right after the upload, before the DFS head included it, and resolved the previous head. DFS project: **File Changes > Sync to Domino**; Git-based: commit and push; over the API pin `content.dfsCommitId` to the uploaded commit (see [API-APPS.md](./API-APPS.md)). Then publish a new version.
 - `Port 8888 is already in use` while testing in a Workspace: that port belongs to the IDE there. Test on another port in one command, since each tool call is a new shell: `streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true & pid=$!; sleep 8; curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8501/; kill $pid` (never `pkill -f`, which matches your own shell). Leave 8888 in `app.sh`, where the App's own container needs it.
-- `app.sh` not executable (`git update-index --chmod=+x app.sh`); wrong working directory (start `app.sh` with `cd "$(dirname "$0")"` so it runs next to `package.json` or `app.py`); `npm ci` without a `package-lock.json`.
+- `app.sh: no build matches these sources`: the saved code changed after the last build, or the build was never saved. Run `scripts/build-dist.sh`, save (**Sync All Changes** or **Sync to Domino**), publish a new version ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)).
+- `npm: command not found` or a Vite error about the Node version while building: building needs Node 20.19 or later with npm; the App itself needs only `node` ([REACT-VITE-GUIDE.md](./REACT-VITE-GUIDE.md#build-once-serve-the-build)).
+- `app.sh` not executable (`git update-index --chmod=+x app.sh`); wrong working directory (start `app.sh` with `cd "$(dirname "$0")"` so it runs next to `package.json` or `app.py`).
 
 ## 2. 404 on CSS and JS files
 
@@ -28,12 +30,12 @@ Other causes, visible in the logs:
 export default defineConfig({ base: './' })
 ```
 
-Verify after `npm run build`: `grep -o 'src="[^"]*"' dist/index.html` must show `./assets/...`, never `/assets/...`. For Flask, FastAPI and hand-written HTML use `href="static/style.css"`, not `/static/style.css`.
+Verify after `npm run build`: `grep -o 'src="[^"]*"' build/index.html` must show `./assets/...`, never `/assets/...`. For Flask, FastAPI and hand-written HTML use `href="static/style.css"`, not `/static/style.css`.
 
 ## 3. Blank page
 
 1. Browser console: a JavaScript error, or assets loaded from the wrong path (see 2).
-2. `app.sh` serves a stale or missing build: it must run `npm run build` before serving, and `dist/` must exist.
+2. The App serves an older build than expected: `/healthz` and the App log (`app.sh: serving build <label>`) name the build. Rebuild and save, then publish a new version.
 3. The App was not republished after the code change: publishing pins a commit, so edit, commit, publish a new version, deploy it.
 4. The URL lacks its trailing slash (`.../apps/<vanity>`): relative assets resolve one level up. Add the trailing-slash script ([FRAMEWORKS.md](./FRAMEWORKS.md#behind-dominos-app-proxy)).
 
@@ -42,7 +44,7 @@ Verify after `npm run build`: `grep -o 'src="[^"]*"' dist/index.html` must show 
 **Cause:** routes in the URL path reach the server, which has no file for them.
 
 - Preferred: `HashRouter`. Routes live after `#`, the server only ever sees `/`, and relative assets resolve correctly on every route.
-- If `BrowserRouter` must stay: serve with SPA fallback (`npx serve -s dist` or the Express fallback in [REACT-VITE-GUIDE.md](./REACT-VITE-GUIDE.md)) and expect relative asset URLs to break on nested routes.
+- If `BrowserRouter` must stay: serve with an SPA fallback (the template's `server.js` has one; `npx serve` needs `-s`) and expect relative asset URLs to break on nested routes.
 
 ## 5. Dash or another Python app worked before and fails after a restart
 
@@ -65,14 +67,12 @@ Publish a new version with the change and deploy it. Reference: https://docs.dom
 
 ## 7. `import.meta.env.VITE_*` is undefined
 
-Vite exposes only variables prefixed `VITE_`, and only those present at **build** time (`npm run build` in `app.sh` sees the App's environment variables). Use the prefix for non-secret values only. Runtime values belong in the backend or in a small `GET /api/config` route.
+Vite exposes only variables prefixed `VITE_`, and only those present at **build** time, in the shell that runs `scripts/build-dist.sh`; the App's environment variables never reach a build made before publishing. Use the prefix for non-secret values only. Runtime values belong in the backend or in a small `GET /api/config` route.
 
 ## 8. Slow start
 
-- `npm ci` with a committed `package-lock.json`, not `npm install`.
-- Add `serve` (or `express`) to `package.json` so `npx` fetches nothing at start.
+- `app.sh` installs or builds (`npm ci`, `npm run build`, `pip install`, `cargo build`): build once in a Workspace or Job and let `app.sh` only start the build ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)). On an air-gapped site, build wherever npm or a mirror is reachable, such as CI ([REACT-CICD.md](./REACT-CICD.md)).
 - Put Python packages in the Compute Environment, not in `app.sh`.
-- `npm ci` itself needs egress to the npm registry (or a private mirror configured in `.npmrc`). If the build is the bottleneck, build once in a Domino Workspace and commit `dist/` on a deploy branch (**Sync to Git**, or **Sync to Domino** in a DFS Project); on an air-gapped site build wherever npm or a mirror is reachable, such as your CI. Point the App's version at that branch and reduce `app.sh` to the serve step.
 
 ## 9. Streamlit websocket or "connection error"
 
@@ -112,19 +112,10 @@ curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/insta
 
 `APP_ID` comes from `GET /api/apps/v1/apps?projectId=$DOMINO_PROJECT_ID&name=<app name>` (`items[].id`) and `VERSION_ID` from that record's `currentVersion.id`. The App details page offers the same logs and a support bundle (`execution.log`, `executor.log`, Kubernetes events, nginx logs).
 
-Reproduce first with App Preview in a Workspace: it runs behind the real proxy with the identity headers. A local Docker build only checks the build and start command:
-
-```dockerfile
-FROM node:24
-WORKDIR /app
-COPY . .
-RUN npm ci && npm run build
-EXPOSE 8888
-CMD ["node", "server.js"]
-```
+Reproduce first with App Preview in a Workspace: it runs behind the real proxy with the identity headers. A local run only checks the build and the start command:
 
 ```bash
-docker build -t test-app . && docker run -p 8888:8888 test-app
+DIST_DIR=dist bash scripts/build-dist.sh && DIST_DIR=dist ./app.sh   # then open http://localhost:8888/healthz
 ```
 
 ## Quick reference
@@ -138,7 +129,8 @@ docker build -t test-app . && docker run -p 8888:8888 test-app
 | Model call 401 | Basic auth (sync) with the token as user and password; Bearer only for async |
 | CORS on model call | Call from the backend, not the browser |
 | Env var undefined | `VITE_` prefix for build-time values; project variables plus restart for runtime values |
-| Slow start | `npm ci`, vendored `serve`/`express`, packages in the environment |
+| `no build matches these sources` | `scripts/build-dist.sh`, save, publish |
+| Slow start | Build once; nothing installed or built in `app.sh`; packages in the environment |
 | Viewer calls 500/403, or publisher data | Section 10 |
 | Missing username, consent redirects, 413, timeouts, buffered streams | Section 11 |
 
