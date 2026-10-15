@@ -6,11 +6,6 @@ Start with the App logs: App details page, instance selector, or the beta logs r
 
 **Cause:** nothing is listening on `0.0.0.0:8888`. Domino requires that address and port; an App that binds `localhost`, `127.0.0.1` or another port fails to start.
 
-```javascript
-// vite.config.js (Vite serving in preview); the published App listens in server.js or serve
-server: { host: '0.0.0.0', port: 8888, strictPort: true }
-```
-
 ```bash
 npx serve -s dist -l 8888            # React static
 streamlit run app.py --server.port 8888 --server.address 0.0.0.0
@@ -40,6 +35,7 @@ Verify after `npm run build`: `grep -o 'src="[^"]*"' dist/index.html` must show 
 1. Browser console: a JavaScript error, or assets loaded from the wrong path (see 2).
 2. `app.sh` serves a stale or missing build: it must run `npm run build` before serving, and `dist/` must exist.
 3. The App was not republished after the code change: publishing pins a commit, so edit, commit, publish a new version, deploy it.
+4. The URL lacks its trailing slash (`.../apps/<vanity>`): relative assets resolve one level up. Add the trailing-slash script ([FRAMEWORKS.md](./FRAMEWORKS.md#behind-dominos-app-proxy)).
 
 ## 4. Deep links or page refresh return 404 (React Router)
 
@@ -50,7 +46,7 @@ Verify after `npm run build`: `grep -o 'src="[^"]*"' dist/index.html` must show 
 
 ## 5. Dash or another Python app worked before and fails after a restart
 
-**Cause:** the app builds its URL prefix from `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID`. That layout no longer matches once `SecureIdentityPropagationToAppsEnabled` is on (the default on 6.3 and Cloud). Symptoms: blank page, 404 or 502 after restart; Dash cannot load assets or callbacks.
+**Cause:** the app builds its URL prefix from `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID`. The prefix is not derived from them: App Preview (`/preview/<id>/`), deployed Apps (`/apps-internal/<id>/`, `/apps/<vanity>/`) and `/modelproducts/<id>/` differ, so a hand-built prefix breaks on the next restart or deploy. Symptoms: blank page, 404 or 502 after restart; Dash cannot load assets or callbacks.
 
 ```python
 app = Dash(__name__, routes_pathname_prefix="/",
@@ -87,21 +83,31 @@ streamlit run app.py --server.port 8888 --server.address 0.0.0.0 \
 
 Domino's Streamlit example sets the same two options in `~/.streamlit/config.toml`.
 
-## 10. 401 or 403 from Domino platform APIs inside the App
+## 10. Domino API calls from the App fail (401, 403, 500) or return the publisher's data
 
-- In-run calls go through `$DOMINO_API_PROXY` with no `Authorization` header, or carry a bearer from `http://localhost:8899/access-token` (fetch it per request; it expires).
-- Calling as the viewer requires extended identity propagation (enabled by a SysAdmin or CloudAdmin at publish time) and the viewer's consent; otherwise the forwarded JWT has limited scope.
+- **500 (or 401/403) on a viewer call:** without extended identity propagation the viewer's token works only for Dataset snapshot file reads and Data Source lookup by name. Publish with extended identity propagation (SysAdmin or CloudAdmin) or call as the publisher ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
+- **403 from `$DOMINO_API_HOST`:** the call sent a Domino CLI login token. Send the viewer's token, a Personal Access Token or a service account token.
+- **The viewer sees the publisher's data:** the code called `$DOMINO_API_HOST` without `Authorization`, which runs as the publisher. Forward the viewer's token and return 401 when it is missing.
+- **Publisher calls:** `$DOMINO_API_PROXY/...` with no header, or a bearer fetched per request from `$DOMINO_API_PROXY/access-token`.
+
+## 11. Identity, consent, limits and streaming
+
+- **Viewer name missing or `Anonymous`:** the App reads `domino-username`, which Apps with extended identity propagation do not receive. Read the token's `preferred_username` ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
+- **A script or `fetch` gets HTML or a 302:** a 302 to the sign-in page means no credentials; a 302 to `/app-consent?appId=...` means the user has not consented to an App with extended identity propagation. Consent once in a browser, then send a Personal Access Token.
+- **413:** the request body exceeds 25 MiB (the default limit). Upload in parts.
+- **No response after 300 s:** the proxy gives up on a response that sends nothing for 300 s. Run long work as a Job and poll for its result.
+- **WebSocket or server-sent-events connection closes after 300 s idle:** send a heartbeat more often. **Server-sent events arrive all at once:** send `X-Accel-Buffering: no` on the response.
+- **400 when opening the App URL directly:** the deployment shows Apps only inside Domino's iframe; open the App from Domino.
+- **Cookies or `localStorage` values from another App:** every App shares one origin; use App-specific cookie names with `Path` set to the prefix, and prefixed `localStorage` keys.
+- **`GET /favicon.ico` 404:** the proxy inserts the deployment's favicon link; add a relative `<link rel="icon">` later in `<head>`.
 
 ## Diagnostics
 
-Logs over the API (instance reads are beta-only):
+Logs over the API (instance reads are beta-only; in a run, no `Authorization` header on `$DOMINO_API_PROXY`; outside one, the deployment URL with a Personal Access Token):
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$DOMINO_API_HOST/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances"
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$DOMINO_API_HOST/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances/$INSTANCE_ID/logs?logType=stderr"
+curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances"
+curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances/$INSTANCE_ID/logs?logType=stderr"
 ```
 
 `APP_ID` comes from `GET /api/apps/v1/apps?projectId=$DOMINO_PROJECT_ID&name=<app name>` (`items[].id`) and `VERSION_ID` from that record's `currentVersion.id`. The App details page offers the same logs and a support bundle (`execution.log`, `executor.log`, Kubernetes events, nginx logs).
@@ -133,5 +139,7 @@ docker build -t test-app . && docker run -p 8888:8888 test-app
 | CORS on model call | Call from the backend, not the browser |
 | Env var undefined | `VITE_` prefix for build-time values; project variables plus restart for runtime values |
 | Slow start | `npm ci`, vendored `serve`/`express`, packages in the environment |
+| Viewer calls 500/403, or publisher data | Section 10 |
+| Missing username, consent redirects, 413, timeouts, buffered streams | Section 11 |
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning (logs and support bundle) and https://docs.domino.ai/cloud/platform-capabilities/features/apps/common-app-frameworks (minimal working examples).

@@ -1,14 +1,14 @@
 ---
 name: domino-debug-proxy
-description: Diagnose and fix Domino reverse-proxy and routing problems in published web apps by checking vite.config.js, package.json, app.sh, server.js and Python entry points (app.py) for the wrong port, localhost binding, absolute base paths, a hand-built URL prefix instead of DOMINO_RUN_HOST_PATH, BrowserRouter deep links, missing build steps, or a model token compiled into the browser bundle. Use when a Domino app never reaches Running, shows connection refused, 404s on CSS or JS assets, a blank page, broken deep links, or stopped working after a restart.
-compatibility: Domino 6.3 and Domino Cloud. Reads project files; the optional log check needs DOMINO_API_HOST and the localhost:8899 access-token endpoint in a run, or a Personal Access Token outside one.
+description: Diagnose and fix Domino reverse-proxy and routing problems in published web apps by checking vite.config.js, package.json, app.sh, server.js and Python entry points (app.py) for the wrong port, localhost binding, absolute base paths, a hand-built URL prefix instead of DOMINO_RUN_HOST_PATH, BrowserRouter deep links, missing build steps, or a model token compiled into the browser bundle. Use when a Domino app never reaches Running, shows connection refused, 404s on CSS or JS assets, a blank page, broken deep links, or stopped working after a restart, and when fetch gets HTML instead of JSON, Domino API calls from the app fail (401, 403, 500) or act as the publisher, streaming stalls, or uploads get 413.
+compatibility: Domino 6.3 and Domino Cloud. Reads project files; the optional log check needs DOMINO_API_PROXY in a run, or the deployment URL and a Personal Access Token outside one.
 ---
 
 # Debug Domino App proxy issues
 
 Applies to Domino 6.3 and Domino Cloud.
 
-Find the configuration mistakes that break apps behind Domino's reverse proxy, report them, and fix them with the user's agreement. The proxy authenticates viewers, strips the App's URL prefix, forwards to the container on port 8888, and adds the `domino-username` header.
+Find the configuration mistakes that break apps behind Domino's reverse proxy, report them, and fix them with the user's agreement. The proxy authenticates each viewer, strips the App's URL prefix (`<prefix>` and `<prefix>/` both arrive as `/`), forwards to port 8888, and by default passes the viewer's token as `Authorization: Bearer` (`domino-username` is a copy that Apps with extended identity propagation do not get).
 
 ## Steps
 
@@ -26,10 +26,11 @@ Find the configuration mistakes that break apps behind Domino's reverse proxy, r
 | 2 | Base path | Vite sets `base: './'`; HTML templates reference `static/...`, never `/static/...` |
 | 3 | Router | React Router uses `HashRouter` (pass). `BrowserRouter` is a warning, not a failure: it works only with an SPA fallback on the server (`serve -s` or the Express fallback) and an absolute `base` (`DOMINO_RUN_HOST_PATH` at build time, since `app.sh` builds inside the App container) instead of `./`; with the relative `base` it breaks assets on nested routes |
 | 4 | `app.sh` | Executable (`git update-index --chmod=+x app.sh`), changes to its own directory (`cd "$(dirname "$0")"`) or the project directory, runs `npm ci` and `npm run build` before serving, and does not `pip install` or `npm install` packages the Compute Environment should contain |
-| 5 | Prefix | Python frameworks that need a base path read `DOMINO_RUN_HOST_PATH` (Dash `requests_pathname_prefix`, Gradio `root_path`); nothing concatenates `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID` into a path |
-| 6 | Asset and API references | No root-absolute `fetch('/api/...')` or `/assets/...`; frontend API calls resolve with `new URL('api/', document.baseURI)` |
+| 5 | Prefix | Python frameworks that need a base path read `DOMINO_RUN_HOST_PATH` (Dash `requests_pathname_prefix`, Gradio `root_path`); nothing concatenates `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID` into a path; nothing reads `X-Script-Name` (Domino never sends it) |
+| 6 | Asset and API references | No root-absolute `fetch('/api/...')` or `/assets/...`; frontend API calls resolve with `new URL('api/', document.baseURI)`; the entry page adds a missing trailing slash |
 | 7 | Secrets | No `VITE_*_TOKEN` or `VITE_*_KEY` in `.env*`, workflow files or source; model endpoint calls happen in `server.js`, Flask, FastAPI or another backend. Synchronous endpoints use HTTP Basic (token as user and password), asynchronous ones Bearer |
 | 8 | Dash API | `app.run(...)`, not `app.run_server(...)` (removed in Dash 3) |
+| 9 | Identity | Viewer from the token's `preferred_username` (`domino-username` only without a token); viewer calls forward the token, answer 401 without one, never retry header-less; no browser link from `DOMINO_API_HOST` or `DOMINO_USER_HOST` |
 
 ## Common issues
 
@@ -43,6 +44,9 @@ Find the configuration mistakes that break apps behind Domino's reverse proxy, r
 | Model call 401 | Bearer sent to a synchronous endpoint, or token missing | Basic auth with the Model Access Token as user and password; set `MODEL_API_TOKEN` in project settings and restart |
 | Model call CORS error | Browser calls the endpoint directly | Route it through the backend |
 | `import.meta.env.VITE_X` undefined | Variable not set when `npm run build` ran, or no `VITE_` prefix | Prefix non-secret build-time values; keep runtime values server-side |
+| 404 on assets or `api/` only when the URL has no trailing slash | `<prefix>` arrives as `/`; relative URLs resolve one level up | Add the slash first thing in `<head>` ([RUNTIME.md](./RUNTIME.md#limits-and-branding)) |
+| `fetch` gets HTML (`Unexpected token '<'`) or a 302; Domino API calls fail (500, 403, 401) or act as the publisher | Consent, identity mode, credential type, or a dropped viewer token | [RUNTIME.md](./RUNTIME.md) |
+| Streaming stalls or drops, 413, 400 on the direct URL, favicon 404 | Proxy buffering and limits, Apps only allowed inside Domino, injected branding | [RUNTIME.md](./RUNTIME.md#limits-and-branding) |
 
 A corrected `app.sh` for a Vite app with a backend:
 
@@ -86,9 +90,9 @@ Recommended fixes:
 
 If the config is correct but the app still fails:
 
-1. Read the App logs on the App details page (instance selector; support bundle for Kubernetes and nginx logs). Over the API: `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`, then `GET .../instances/{instanceId}/logs?logType=stderr` with a bearer from `http://localhost:8899/access-token` (or a Personal Access Token outside a run).
+1. Read the App logs on the App details page (instance selector; support bundle for Kubernetes and nginx logs). Over the API: `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`, then `GET .../instances/{instanceId}/logs?logType=stderr`, on `$DOMINO_API_PROXY` with no `Authorization` header (outside a run, the deployment URL with a Personal Access Token).
 2. In the browser developer tools, check whether failing requests dropped the App's URL prefix (the path before the app's own routes) or went to another host.
 3. Confirm the App was republished after the last commit: a version pins a commit, and deploying an old version serves old code.
 4. Test in a workspace with **App Preview**, which runs the real proxy and `DOMINO_RUN_HOST_PATH`; a local `npm run dev` cannot reproduce them.
 
-For general deployment guidance, framework configs and the REST routes, use the `domino-apps` skill.
+Identity, consent, streaming, limits and branding symptoms: [RUNTIME.md](./RUNTIME.md). For general deployment guidance, framework configs and the REST routes, use the `domino-apps` skill.

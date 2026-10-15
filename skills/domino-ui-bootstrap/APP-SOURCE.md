@@ -30,10 +30,30 @@ fetch(`${apiBase}/projects`)
 
 Don't construct API URLs from `window.location.pathname` (`pathname.replace(/[^/]*$/, '') + 'api'` etc.) — those either bypass the proxy or break under deeper routes. Use `document.baseURI`.
 
+### 8c. Add the trailing slash in `index.html`
+
+Domino serves the App at `<prefix>` and `<prefix>/` alike, without a redirect. Opened without the slash, `./assets/...` and `new URL('api', document.baseURI)` resolve one level too high and 404. Make this the first element inside `<head>` in `index.html` (Vite leaves inline scripts without `type="module"` as written):
+
+```html
+<script>if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search + location.hash)</script>
+```
+
+Keep `location.search` and `location.hash`: `HashRouter` routes and Extension context live there.
+
+### 8d. Title, icon and storage
+
+- Domino inserts the deployment's `<title>` and a `/favicon.ico` link at the start of `<head>` in every HTML response. The inserted title wins, so set `document.title` in `main.tsx` when the tab must show the App's name. `/favicon.ico` answers 404 on the Apps host; keep a relative icon link in `index.html` (`<link rel="icon" href="./favicon.svg">`, file in `public/`).
+- Every App on the deployment shares one browser origin. Prefix `localStorage` keys with an App-specific name and keep viewer data out of it.
+- WebSockets: `const u = new URL('ws', document.baseURI); u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:'`.
+
+### 8e. Identity and Domino calls come from the backend
+
+The page has no Domino token: Domino adds the viewer's token to each request on its way to the App's backend. Get the viewer's name and any Domino data from the App's own backend (`fetch(new URL('api/whoami', document.baseURI))`), which reads the `preferred_username` claim of the `Authorization` token and calls Domino as the viewer or the publisher ([domino-apps](../domino-apps/SKILL.md)). Never call Domino APIs from the browser, and never build links from `DOMINO_API_HOST`.
+
 **When to apply this:**
 
-- **Fresh scaffolds / starter screens you're generating:** write 8a and 8b in from the start. If the starter screen calls a backend, route it through `apiBase`.
-- **Retrofits:** add 8a if `base` is missing/`/`. For API calls, scan for `fetch('/`, `axios.get('/`, `new WebSocket('ws`, and any `pathname`-based URL construction. Surface root-absolute or pathname-based URLs and recommend the `document.baseURI` form — **don't silently rewrite their fetches** (some may intentionally target another host).
+- **Fresh scaffolds / starter screens you're generating:** write 8a to 8e in from the start. If the starter screen calls a backend, route it through `apiBase`.
+- **Retrofits:** add 8a if `base` is missing/`/`, and 8c if `index.html` lacks the slash script. For API calls, scan for `fetch('/`, `axios.get('/`, `new WebSocket('ws`, and any `pathname`-based URL construction. Surface root-absolute or pathname-based URLs and recommend the `document.baseURI` form — **don't silently rewrite their fetches** (some may intentionally target another host).
 
 This overlaps with the `domino-apps` skill, which covers the full deploy shape (launch script, port binding, build output location). Point the user there for an actual app publish.
 

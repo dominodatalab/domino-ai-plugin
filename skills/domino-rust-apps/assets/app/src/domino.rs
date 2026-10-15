@@ -1,11 +1,14 @@
-//! Calls to the Domino API as the viewer or as the App's publisher.
+//! Who the viewer is, and calls to the Domino API as the viewer or as the App's publisher.
 //!
-//! - **Viewer.** Domino's proxy forwards the viewer's token as `Authorization: Bearer <jwt>`. By
-//!   default its scope only identifies the viewer. With extended identity propagation (turned on
-//!   for the App when an administrator publishes it, and after the viewer consents) the same token
-//!   carries the viewer's full Domino permissions.
-//! - **Publisher.** `DOMINO_API_PROXY` adds the publisher's token to any request sent without an
-//!   `Authorization` header.
+//! - **Identity.** Domino authenticates every request before it reaches the App and forwards the
+//!   viewer's token as `Authorization: Bearer <jwt>`; its `preferred_username` claim names the viewer.
+//!   The `domino-username` header is a convenience copy that Apps with extended identity propagation
+//!   do not receive, and there a client can send its own, so the token comes first.
+//! - **Viewer calls.** Without extended identity propagation the token only identifies the viewer and
+//!   most Domino routes reject it. With it (the App is published with it on, and the viewer consented)
+//!   the token is the viewer's own credential with their full permissions.
+//! - **Publisher calls.** `DOMINO_API_PROXY` adds the publisher's token to any request sent without
+//!   an `Authorization` header.
 //!
 //! The App chooses per call. Tokens are never logged.
 
@@ -18,29 +21,27 @@ use serde_json::Value;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NameSource {
-    /// The `domino-username` header set by Domino's proxy.
+    /// The `preferred_username` claim of the forwarded token.
+    Token,
+    /// The `domino-username` header, used only when the request carries no token.
     Header,
-    /// The `preferred_username` claim of the forwarded token, read without verifying its signature.
-    TokenClaim,
 }
 
-/// The viewer's Domino username: the `domino-username` header, or, where that header is absent (Apps
-/// with extended identity propagation), the `preferred_username` claim of the forwarded token. The
-/// claim is not verified here, so use it for display; for decisions, call the Domino API as the
-/// viewer, which checks the token.
+/// The viewer's Domino username from the forwarded token's `preferred_username` claim, or from the
+/// `domino-username` header when the request carries no token. Domino checked the token before
+/// forwarding the request; this function does not verify its signature itself, so for decisions that
+/// grant access, call the Domino API as the viewer, which does.
 #[must_use]
 pub fn viewer_name(headers: &HeaderMap) -> Option<(String, NameSource)> {
-    if let Some(name) = headers
-        .get("domino-username")
-        .and_then(|value| value.to_str().ok())
-    {
-        return Some((name.to_owned(), NameSource::Header));
+    if let Some(token) = bearer(headers) {
+        let payload = token.split('.').nth(1)?;
+        let bytes = URL_SAFE_NO_PAD.decode(payload.trim_end_matches('=')).ok()?;
+        let claims: Value = serde_json::from_slice(&bytes).ok()?;
+        let name = claims.get("preferred_username")?.as_str()?;
+        return Some((name.to_owned(), NameSource::Token));
     }
-    let payload = bearer(headers)?.split('.').nth(1)?;
-    let bytes = URL_SAFE_NO_PAD.decode(payload.trim_end_matches('=')).ok()?;
-    let claims: Value = serde_json::from_slice(&bytes).ok()?;
-    let name = claims.get("preferred_username")?.as_str()?;
-    Some((name.to_owned(), NameSource::TokenClaim))
+    let name = headers.get("domino-username")?.to_str().ok()?;
+    Some((name.to_owned(), NameSource::Header))
 }
 
 /// Whose permissions a Domino API call uses.

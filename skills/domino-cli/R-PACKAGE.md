@@ -86,7 +86,7 @@ library(httr); library(jsonlite)
 
 in_run <- nzchar(Sys.getenv("DOMINO_RUN_ID"))                      # set inside Workspaces, Jobs and Apps
 if (in_run && nzchar(Sys.getenv("DOMINO_API_PROXY"))) {
-  base <- Sys.getenv("DOMINO_API_PROXY"); auth <- NULL               # the proxy adds the token
+  base <- Sys.getenv("DOMINO_API_PROXY"); auth <- NULL               # the proxy adds the token (in an App, the publisher's)
 } else if (in_run) {
   tok  <- content(GET("http://localhost:8899/access-token"), as = "text")
   base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", tok))

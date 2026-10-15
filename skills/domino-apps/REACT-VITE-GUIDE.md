@@ -7,7 +7,8 @@ How a Vite-built React app is served behind Domino's reverse proxy, and how it c
 ```
 Viewer opens:  the App's `url` field (an apps hostname or an /apps/<vanity>/ path; both end in a prefix)
 Proxy:         authenticates the viewer, strips the prefix, forwards to the container on port 8888,
-               adds the `domino-username` header (and `Authorization` when identity propagation is on)
+               adds `Authorization: Bearer <viewer token>` (secure identity propagation, the default) and,
+               except for Apps with extended identity propagation, a `domino-username` copy of the name
 Container:     GET /              -> index.html
                GET /assets/x.js   -> served from dist/
 ```
@@ -50,6 +51,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 ```
 
 Routes appear as `.../apps/<vanity>/#/dashboard`.
+
+The App URL also answers without its trailing slash, where `./assets/...` resolves one level up. Make this the first line of `<head>` in `index.html`:
+
+```html
+<script>if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search + location.hash)</script>
+```
 
 ## Serving the build
 
@@ -110,7 +117,20 @@ app.use((req, res) => {                       // SPA fallback for extension-less
 app.listen(8888, '0.0.0.0', () => console.log('listening on 0.0.0.0:8888'))
 ```
 
-The same server can call the Domino platform API as the publisher or, when extended identity propagation is enabled for the App, as the viewer by forwarding the incoming `Authorization` header ([SKILL.md](./SKILL.md#calling-domino-apis-and-model-endpoints-from-an-app)).
+The same server can call the Domino platform API as the publisher (`$DOMINO_API_PROXY` with no header) or, when extended identity propagation is enabled for the App, as the viewer by forwarding the incoming `Authorization` header. Never fall back to a header-less call when the viewer's token is missing: `$DOMINO_API_HOST` would run it as the publisher.
+
+```javascript
+app.get('/api/projects', async (req, res) => {
+  const auth = req.get('authorization')
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'no viewer token' })
+  const upstream = await fetch(process.env.DOMINO_API_HOST + '/api/projects/beta/projects?limit=20', {
+    headers: { Authorization: auth },
+  })
+  res.status(upstream.status).type('application/json').send(await upstream.text())
+})
+```
+
+Who the viewer is, and which routes accept the token in each identity mode: [FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls).
 
 ### Frontend call
 

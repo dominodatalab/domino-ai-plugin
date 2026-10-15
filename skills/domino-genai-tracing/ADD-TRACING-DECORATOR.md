@@ -205,7 +205,7 @@ async def chat(body: dict):
     return StreamingResponse((c for c in result["chunks"]), media_type="text/plain")
 ```
 
-Token-by-token delivery to the client then starts after the model finished; if that latency is unacceptable, trace the non-streaming parts (tools, retrieval) with `@mlflow.trace` and leave the streaming call untraced.
+Token-by-token delivery to the client then starts after the model finished; if that latency is unacceptable, trace the non-streaming parts (tools, retrieval) with `@mlflow.trace` and leave the streaming call untraced. In a Domino App, the proxy cuts a response that sends nothing for 300 seconds, so a long agent turn that collects its whole answer first can time out; for true streaming through the proxy, set the response header `X-Accel-Buffering: no` so it does not buffer the stream.
 
 ## Span annotation APIs
 

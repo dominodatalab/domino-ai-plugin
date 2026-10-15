@@ -408,20 +408,32 @@ mod tests {
         assert_eq!(body, json!({ "username": null, "source": null }));
     }
 
-    #[tokio::test]
-    async fn whoami_falls_back_to_the_forwarded_token() {
+    fn token_for(username: &str) -> String {
         use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-        // Apps with extended identity propagation can receive the token without `domino-username`.
-        let claims = URL_SAFE_NO_PAD.encode(r#"{"preferred_username":"jane.doe"}"#);
+        let claims = URL_SAFE_NO_PAD.encode(format!(r#"{{"preferred_username":"{username}"}}"#));
+        format!("Bearer e30.{claims}.sig")
+    }
+
+    #[tokio::test]
+    async fn whoami_reads_the_forwarded_token() {
+        // Apps with extended identity propagation receive the token without `domino-username`.
         let request = Request::get("/api/whoami")
-            .header(header::AUTHORIZATION, format!("Bearer e30.{claims}.sig"))
+            .header(header::AUTHORIZATION, token_for("jane.doe"))
             .body(Body::empty())
             .unwrap();
         let body: Value = serde_json::from_str(&body_text(send(request).await).await).unwrap();
-        assert_eq!(
-            body,
-            json!({ "username": "jane.doe", "source": "token_claim" })
-        );
+        assert_eq!(body, json!({ "username": "jane.doe", "source": "token" }));
+    }
+
+    #[tokio::test]
+    async fn whoami_prefers_the_token_over_a_client_supplied_header() {
+        let request = Request::get("/api/whoami")
+            .header(header::AUTHORIZATION, token_for("jane.doe"))
+            .header("domino-username", "someone.else")
+            .body(Body::empty())
+            .unwrap();
+        let body: Value = serde_json::from_str(&body_text(send(request).await).await).unwrap();
+        assert_eq!(body, json!({ "username": "jane.doe", "source": "token" }));
     }
 
     #[tokio::test]

@@ -19,6 +19,9 @@ Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 | Inside a Domino execution, `DOMINO_API_PROXY` not set | `$DOMINO_API_HOST` | `Authorization: Bearer` with the short-lived token from `http://localhost:8899/access-token` |
 | Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you; **Account Settings** or `POST /api/pat/v1/tokens`, value returned once: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#personal-access-tokens)) or a **service account token** (unattended automation) |
 
+In an App both in-run rows act as the publisher (the user the App run was started as) for every
+viewer; to act as the viewer, see [HOSTS.md](./HOSTS.md#inside-an-app).
+
 Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`, `api_key=`) are
 deprecated. Never recommend them, not even as a fallback.
 
@@ -97,7 +100,8 @@ base = base_url                                 # examples in other skills use e
 
 `DOMINO_RUN_ID`, `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME`
 and `DOMINO_API_HOST` are injected into every execution (glossary:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables).
+https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables). Inside a run
+`DOMINO_API_HOST` can be an in-pod address: never build links for users from it.
 
 ## Route types
 

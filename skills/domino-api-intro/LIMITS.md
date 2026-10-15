@@ -12,7 +12,7 @@ Do not use these in new examples or agent steps:
 |---------|--------|
 | `X-Domino-Api-Key` header, `DOMINO_USER_API_KEY`, `api_key=` in python-domino | Deprecated; never use, not even as a fallback |
 | `DOMINO_TOKEN_FILE` / JWT file propagation | Not set in executions; on Domino 6.3 the `EnableLegacyJwtTooling` feature flag can re-enable it; do not build on it |
-| Deriving the deployment URL from the JWT `iss` claim | Unsupported; read `DOMINO_API_HOST` or the value an API response returns |
+| Deriving the deployment URL from the JWT `iss` claim | Unsupported; for API calls read `DOMINO_API_HOST`; for links users open, see [HOSTS.md](./HOSTS.md) |
 
 Legacy API key section (migration only):
 https://docs.domino.ai/cloud/reference/api/domino-api-authentication#authenticate-with-an-api-key-legacy
@@ -24,7 +24,7 @@ Most list routes in the Public API spec take `offset` and `limit` query paramete
 
 | Service | Response shape |
 |---------|----------------|
-| Nucleus `/api/...` lists (projects, jobs, users, environments, datasets, hardware tiers) | `{"<items-key>": [...], "metadata": {"requestId", "notices", "offset", "limit", "totalCount"}}`. The items key is the resource name (`projects`, `jobs`, `users`, `environments`, `datasets`, `hardwareTiers`). `totalCount` is optional in the schema. |
+| Platform `/api/...` lists (projects, jobs, users, environments, datasets, hardware tiers) | `{"<items-key>": [...], "metadata": {"requestId", "notices", "offset", "limit", "totalCount"}}`. The items key is the resource name (`projects`, `jobs`, `users`, `environments`, `datasets`, `hardwareTiers`). `totalCount` is optional in the schema. |
 | Taxonomy `/api/taxonomy/v1` and NetApp `/remotefs/v1` lists | `{"data": [...], "meta": {"pagination": {"total" or "totalCount", "limit", "offset"}}}` |
 | Model serving, apps | `{"items": [...], "metadata": {...}}` with `offset` / `limit` (apps: `limit` defaults to no limit) |
 | Registered models `/api/registeredmodels/v1` and `/v2` | `{"items": [...], "metadata": {"nextPageToken"}}`; page with `pageToken` / `maxResults` (default 25), not offset |

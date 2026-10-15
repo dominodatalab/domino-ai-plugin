@@ -35,7 +35,8 @@ If the target directory already contains an app, stop and ask before overwriting
 3. Keep these invariants in every generated file:
    - Bind `0.0.0.0` on port `8888`. Domino requires both; an App on any other address or port fails to start.
    - Where the framework needs its base path, read `DOMINO_RUN_HOST_PATH` (Dash `requests_pathname_prefix`, Gradio `root_path`). Never build the prefix from project owner, name and run ID.
-   - Use relative URLs for assets and API calls. For Vite set `base: './'` and use `HashRouter`.
+   - Use relative URLs for assets and API calls. For Vite set `base: './'`, use `HashRouter`, and make this the first line of `<head>` in `index.html` (the App URL also answers without its trailing slash): `<script>if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search + location.hash)</script>`.
+   - Identify the viewer from the `Authorization` token, not `domino-username` alone (`viewer.py` in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
    - Secrets stay on the server: no token in a `VITE_` variable, no token in the repo.
 4. Add `.env`, `.env.local`, `node_modules/` and `dist/` to `.gitignore`; keep `.env.example`.
 5. **Check that the framework is in the Compute Environment.** The App runs in the project's environment (or the one chosen at publish time); packages `pip`-installed in a Workspace are not in it, and the App dies with `streamlit: not found` (exit 127). Run `python -c "import streamlit"` (or `dash`, `flask`, `gradio`, `fastapi`; `node -v` for Vite) in the Workspace. If it fails: an environment that has the package (best), `requirements.txt` at the project root, or a `pip install` at the top of `app.sh` for a prototype; trade-offs in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#dependencies).
@@ -61,12 +62,13 @@ if __name__ == "__main__":
 
 ```python
 from flask import Flask, request
+from viewer import viewer_name  # viewer.py from domino-apps/FRAMEWORKS.md
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return f"Hello {request.headers.get('domino-username', 'Anonymous')}"
+    return f"Hello {viewer_name(request.headers) or 'viewer'}"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8888, debug=False)

@@ -99,8 +99,10 @@ App reading on behalf of the signed-in user (Domino passes the user's bearer tok
 request to the App):
 
 ```python
-token = request.headers.get("Authorization", "")[7:]
-dataset = DatasetClient(token=token).get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
+auth = request.headers.get("Authorization", "")
+if not auth.startswith("Bearer "):
+    abort(401)            # no viewer token: never fall back to the App's own (publisher) identity
+dataset = DatasetClient(token=auth[7:]).get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
 ```
 
 ## Errors

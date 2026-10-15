@@ -35,7 +35,7 @@ When the endpoint is **Running**, open its **Calling** tab. It shows:
 - the endpoint URL, which is the `base_url` for an OpenAI-style client, and
 - a code snippet for the OpenAI Python SDK.
 
-Inside a Workspace, Job or App the bearer token comes from the local sidecar at `http://localhost:8899/access-token`. Outside Domino use a Personal Access Token.
+Inside a Workspace, Job or App the bearer token comes from `$DOMINO_API_PROXY/access-token` (by default `http://localhost:8899/access-token`); in an App it is the publisher's token. It is short-lived, so fetch it per call in an App or long Job. Outside Domino use a Personal Access Token.
 
 With the OpenAI SDK:
 
@@ -45,9 +45,12 @@ import requests
 from openai import OpenAI
 
 ENDPOINT_URL = os.environ["LLM_ENDPOINT_URL"]
-API_KEY = requests.get("http://localhost:8899/access-token").text
 
-client = OpenAI(base_url=ENDPOINT_URL, api_key=API_KEY)
+def token() -> str:                                      # in-run access token, fresh per call
+    proxy = os.environ.get("DOMINO_API_PROXY", "http://localhost:8899")
+    return requests.get(f"{proxy}/access-token", timeout=5).text.strip()
+
+client = OpenAI(base_url=ENDPOINT_URL, api_key=token())
 response = client.chat.completions.create(
     model="your-model-name",
     messages=[{"role": "user", "content": "Hello"}],
@@ -65,14 +68,19 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 ENDPOINT_URL = os.environ["LLM_ENDPOINT_URL"]
-API_KEY = requests.get("http://localhost:8899/access-token").text
 
-model = OpenAIChatModel(
-    "your-model-name",
-    provider=OpenAIProvider(base_url=ENDPOINT_URL, api_key=API_KEY),
-)
-agent = Agent(model)
-print(agent.run_sync("Summarize the latest quarterly report.").output)
+def token() -> str:                                      # in-run access token, fresh per call
+    proxy = os.environ.get("DOMINO_API_PROXY", "http://localhost:8899")
+    return requests.get(f"{proxy}/access-token", timeout=5).text.strip()
+
+def make_agent() -> Agent:                               # build per request in an App
+    model = OpenAIChatModel(
+        "your-model-name",
+        provider=OpenAIProvider(base_url=ENDPOINT_URL, api_key=token()),
+    )
+    return Agent(model)
+
+print(make_agent().run_sync("Summarize the latest quarterly report.").output)
 ```
 
 `your-model-name` is the `servedModelName` configured on the endpoint. The OpenAI Responses API is also supported. Store the URL as a Domino environment variable (for example `LLM_ENDPOINT_URL`) rather than hard-coding it, so swapping endpoints is a configuration change.

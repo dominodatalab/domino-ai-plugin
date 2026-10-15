@@ -11,9 +11,9 @@ declared one, so read whichever of `errors`, `error` and `message` is present:
 
 | Shape | Where the spec declares it |
 |-------|----------------------------|
-| `{"errors": ["..."], "requestId": "..."}` | A few Nucleus responses (schema `Error`); Nucleus 400 and 500 bodies also use it |
-| `{"error": "..."}` | Most Nucleus `/api/...` 400/404/500 responses |
-| `{"code": "...", "message": "..."}` (`ErrorV1`) | Nucleus 401/403 |
+| `{"errors": ["..."], "requestId": "..."}` | A few platform API responses (schema `Error`); platform API 400 and 500 bodies also use it |
+| `{"error": "..."}` | Most platform `/api/...` 400/404/500 responses |
+| `{"code": "...", "message": "..."}` (`ErrorV1`) | Platform API 401/403 |
 | `{"message": "..."}` | Taxonomy (`/api/taxonomy/v1`) and NetApp (`/remotefs/v1`) 400/401/403/404/409 |
 | `{"errors": [{"line": N, "message": "..."}]}` | Taxonomy `422` on `validate-file` / `import-from-file` |
 | `{"message": "...", "success": false}` | Dataset and volume file services |
@@ -31,7 +31,7 @@ request never reached the service (wrong base URL or path), not a validation pro
 | **404** | Wrong id, wrong base URL, or the route is not served where you called it. Check the id, then the base URL per [HOSTS.md](./HOSTS.md). |
 | **409** | Conflict (duplicate name, state). Fetch the current state and reconcile. |
 | **502 / 504 / timeout** | Response too large or upstream overloaded. Reduce page size, paginate, then retry with backoff only if the call is idempotent. |
-| **500** | Retry once with backoff if idempotent; otherwise stop and surface the error with its `requestId`. |
+| **500** | Retry once with backoff if idempotent; otherwise stop and surface the error with its `requestId`. Inside an App with a forwarded viewer token, see [wrong-surface symptoms](#wrong-surface-symptoms) first. |
 
 ## Jobs and execution status
 
@@ -75,6 +75,19 @@ These look like 404 or connection errors rather than a JSON error body:
   `Authorization: Bearer`). See [HOSTS.md](./HOSTS.md#model-api-invocation).
 - Governance 404 on the in-run base: the governance skill falls back to the deployment
   URL with a PAT or service account token. See [HOSTS.md](./HOSTS.md#governance).
+
+Inside an App:
+
+- 500 (sometimes 401 or 403) from a Domino API call that forwarded an App viewer's token:
+  without extended identity propagation that token is accepted only by Dataset snapshot file
+  reads and Data Source lookup by name. Do not retry; call as the publisher, or have a SysAdmin
+  or CloudAdmin publish the App with extended identity propagation
+  ([HOSTS.md](./HOSTS.md#inside-an-app)).
+- 403 from `DOMINO_API_HOST` inside an App with a token from the Domino CLI login: send a
+  Personal Access Token instead.
+- HTML where a script calling an App expected JSON: a 302 to `/app-consent?appId=...` means the
+  user has not consented to the App acting for them (open the App once in a browser and accept);
+  a 302 to the sign-in page means no accepted credential was sent.
 
 ## Safe 4xx handling
 

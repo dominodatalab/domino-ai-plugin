@@ -136,7 +136,9 @@ Or `stream=True` on `chat.completions.create` and read `chunk.choices[0].delta.c
 - `400` with `... not implemented` (`unsupported`): the alias is not the kind the route needs, for example a chat alias on `/v1/embeddings`.
 - A `4xx` whose body names a grant, a budget or a guardrail rule: no access to the alias, the applicable budget is spent for its period, or a rule denied the prompt or response. Ask the administrator for access or budget, or change the prompt.
 - `403` such as `Only a gateway admin can manage gateway admins`: an administrator-only route; developers do not need those.
-- `413` from the App proxy: the request body is too large (usually a very large tool result); trim it.
+- `413` from the App proxy: the request body exceeds the App proxy limit (25 MiB by default), usually a very large tool result; trim it.
+- **302 to `/app-consent?appId=...`**: the user has not consented to the gateway App acting for them; open the gateway URL in a browser once and accept.
+- A response that sends no bytes for 300 seconds is cut off by the App proxy: stream long generations.
 - `401 Token expired`: the gateway's own answer for an expired `dgw_` token, reachable only if the token passes the App proxy.
 - A `200` carrying `X-LLM-Fallback-Served-By` and `X-LLM-Fallback-Reason` headers: the administrator configured a fallback alias and it served the request.
 

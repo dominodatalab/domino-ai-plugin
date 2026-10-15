@@ -32,30 +32,50 @@ The App is served under a prefix such as `/apps/<id>/`, and the server receives 
 
 Keep HTML pages one level deep and pass identifiers as query strings (`item?id=42`), so the same relative links work from every page. If a page must be nested, compute `../` per level from `axum::extract::OriginalUri`.
 
-The App URL also answers without its trailing slash (`.../apps/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. Domino's proxy also inserts its own `<title>` and a `<link rel="shortcut icon" href=/favicon.ico>` at the start of each HTML page's `<head>`, so the browser tab shows the App's Domino name. That icon URL is root-absolute and answers 404 on the Apps host; the template's own relative `<link rel="icon" href="static/favicon.svg">` comes later and replaces it.
+The App URL also answers without its trailing slash (`.../apps-internal/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. The prefix differs by how the App is opened (`/preview/<id>` in App Preview, `/apps-internal/<id>`, `/apps/<vanity>`, `/modelproducts/<id>`); `DOMINO_RUN_HOST_PATH` holds the current one with a trailing slash. Domino never sends `X-Script-Name`.
 
-`DOMINO_RUN_HOST_PATH` holds the prefix. Use it only where a value must be absolute, such as a cookie `Path` (set it to the prefix without the trailing slash, give the cookie an App-specific name, and add `HttpOnly; Secure; SameSite=Lax`). For identity, read the `domino-username` header rather than keeping a session cookie: every App on the deployment shares one origin.
+Domino's proxy inserts the deployment's branding into HTML responses: a `<title>` and a favicon link at the first literal `<head>` of each `text/html` response (not when the App compresses its responses). The inserted title comes first, so the browser tab shows it. The default favicon link, `/favicon.ico`, is root-absolute and answers 404 on the Apps host; the template's own `<link rel="icon" href="static/favicon.svg">` comes later in `<head>` and takes its place.
+
+`DOMINO_RUN_HOST_PATH` holds the prefix. Use it only where a value must be absolute, such as a cookie `Path` (set it to the prefix without the trailing slash, give the cookie an App-specific name, and add `HttpOnly; Secure; SameSite=Lax`): every App on the deployment shares one origin, so cookies and `localStorage` are shared across Apps. Domino removes its own session cookies before requests reach the App. Some deployments only show Apps inside Domino's page; there, opening the App URL directly answers 400.
 
 ## Identity: acting as the viewer or the publisher
 
-Requests carry the viewer in `domino-username` (`Anonymous` when anonymous access is on) and a token in `Authorization: Bearer <jwt>`. On Apps with extended identity propagation `domino-username` can be absent; `viewer_name()` in `src/domino.rs` then reads the token's `preferred_username` claim without verifying it, and `api/whoami` reports which source it used. Use that name for display; for decisions, call the Domino API as the viewer, which verifies the token. `src/domino.rs` calls the Domino API with either identity, chosen per call:
+Domino authenticates every request before it reaches the App. What the App receives depends on its identity mode:
+
+| Mode | When | The App receives | Viewer calls to the Domino API |
+|---|---|---|---|
+| Default | Every App, unless set otherwise | `Authorization: Bearer <jwt>`: a short-lived token issued for Apps (audience `apps`), plus `domino-username` copied from it | Most routes reject the token, often with a 500; a few data-access routes accept it (Dataset snapshot file reads, Data Source lookup by name) |
+| Extended identity propagation | The App version has it on, and the viewer consented | `Authorization: Bearer <jwt>` with the viewer's own credential; no `domino-username`, and a client-supplied one passes through | Any route the viewer may use |
+| Secure identity propagation off | Deployment setting | `domino-username` only | None |
+
+`viewer_name()` in `src/domino.rs` reads the viewer from the token's `preferred_username` claim (`sub` is the Domino user id) and falls back to `domino-username` only when no token arrived; `api/whoami` reports which source it used. Never read `domino-username` while a token is present. Domino checked the token before forwarding the request. To rely on its claims inside the App, verify the RS256 signature against the Domino realm's keys and pin the issuer `https://<domino-domain>/auth/realms/DominoRealm`; do not require audience `apps`, which extended-mode tokens lack. For decisions that grant access, call the Domino API as the viewer.
+
+`src/domino.rs` calls the Domino API with either identity, chosen per call:
 
 | Identity | How the template calls | Token scope |
 |---|---|---|
 | Viewer (default) | `$DOMINO_API_HOST` + the viewer's bearer token | Identifies the viewer only, unless the App has extended identity propagation and the viewer consented; then the viewer's full Domino permissions |
 | Publisher (`?as=publisher`) | `$DOMINO_API_PROXY` with no `Authorization` header; the proxy adds the publisher's token | The publisher's permissions |
 
-`/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) show the difference: the viewer and the publisher see different users and project lists. Use the viewer's identity whenever the App reads or changes data on someone's behalf, so Domino enforces that person's permissions; use the publisher's only for the App's own shared resources.
+`/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) show the difference: the viewer and the publisher see different users and project lists. Use the viewer's identity whenever the App reads or changes data on someone's behalf, so Domino enforces that person's permissions; use the publisher's only for the App's own shared resources. "Publisher" is the user the App was started as.
+
+`DOMINO_API_HOST` can be a local API gateway inside the App's pod (`http://127.0.0.1:<port>`). It accepts browser-session, service-account and Personal Access Token credentials, and runs a request that has no `Authorization` header as the publisher. Never drop the viewer's token and retry without it: that silently changes whose permissions apply. Never build links for the browser from `DOMINO_API_HOST` or `DOMINO_USER_HOST`; either can be an address inside the pod. `localhost:8899` is the default behind `DOMINO_API_PROXY`, not a fixed address: use the variable.
 
 Extended identity propagation:
 
 - It is part of the App version: **Allow App to act for viewers in Domino** in the App's sharing settings, or `"extendedIdentityPropagationToAppsEnabled": true` in the version's `content` ([domino-apps API-APPS.md](../domino-apps/API-APPS.md)). Changing it creates a version. Only a SysAdmin or CloudAdmin can publish an App with it on, and it cannot be turned off for that App afterwards.
 - The deployment-wide setting `com.cerebro.domino.apps.extendedIdentityPropagationToAppsEnabled` must be on (it is by default).
 - Each viewer sees a consent prompt; consent lasts 8 hours by default and up to 30 days. Until a viewer consents, every request to the App, JSON routes included, redirects to Domino's `/app-consent?appId=<id>&callback=<url>` page, so scripts and `curl` get HTML instead of the App's response. Open the App in a browser and consent first.
-- Without it, Domino rejects the viewer's token on most routes, sometimes with a 500 rather than a 401 or 403; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
-- Viewer calls work for people using the App in a browser after consent. A script that calls the App with its own bearer token has that token passed through unchanged, and Domino's in-cluster API rejects it (403): scripts call the Domino API directly with their own token instead.
+- Without it, Domino rejects the viewer's token on most routes, often with a 500; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
+- Scripts and other non-browser clients call the App with a Personal Access Token as the bearer; the App receives that token and acts with it. Consent must already exist for that user (granted once in a browser): until then every request, JSON included, gets a 302 to `/app-consent`, and a request with no credentials gets a 302 to the sign-in page. Tokens from the Domino CLI login are refused where `DOMINO_API_HOST` is the local gateway (403).
 - Never log or return the token. `TraceLayer` does not log headers.
-- The template does not verify the JWT itself: Domino verifies it on every API call. To trust its claims inside the App without calling Domino (the "enhanced identity" pattern), verify the RS256 signature against Domino's JWKS with audience `apps`: https://docs.domino.ai/cloud/platform-capabilities/features/apps/authentication-and-identity/app-security
+- Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/authentication-and-identity/app-security
+
+## Streaming, WebSockets and limits
+
+- Request bodies above 25 MiB are rejected with 413 by default, and the proxy gives up on a response that sends nothing for 300 seconds.
+- WebSockets work through the proxy. Idle WebSocket and server-sent-event connections close after 300 seconds, so send a heartbeat (axum: `Sse::new(stream).keep_alive(KeepAlive::default())`).
+- For server-sent events, set the response header `X-Accel-Buffering: no`, or the proxy buffers the stream and the browser receives events in bursts.
 
 ## Secrets and model endpoints
 
