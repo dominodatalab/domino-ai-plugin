@@ -1,0 +1,9 @@
+[profile.default]
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+# cargo nextest run --profile ci: run every test and write target/nextest/ci/junit.xml
+[profile.ci]
+fail-fast = false
+
+[profile.ci.junit]
+path = "junit.xml"

@@ -1,0 +1,48 @@
+id: s15-rust-app-author-git
+title: Set up a Rust web service with strict defaults, built and checked, nothing published (git Project)
+journey: apps (Rust)
+project_type: git
+expected_skills: [domino-rust-apps]
+timeout_s: 1800
+setup:
+  # Stands in for a Compute Environment with Rust: the pinned toolchain plus nextest and cargo-deny, on PATH.
+  - type: ws_file
+    path: '{{home}}/.e2e-rust-setup.sh'
+    content: |
+      set -e
+      if [ ! -x "$HOME/.cargo/bin/rustup" ]; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
+          --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src >/dev/null 2>&1
+        cd /tmp
+        f=cargo-nextest-0.9.148-x86_64-unknown-linux-gnu
+        curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.148/$f.tar.gz
+        tar -xzf $f.tar.gz -C "$HOME/.cargo/bin"
+        d=cargo-deny-0.20.2-x86_64-unknown-linux-musl
+        curl -fsSLO https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/$d.tar.gz
+        tar -xzf $d.tar.gz -C "$HOME/.cargo/bin" --strip-components=1 $d/cargo-deny
+      fi
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$HOME"/.cargo/bin/* "$HOME/.local/bin/"
+  - type: ws_shell
+    cmd: 'bash {{home}}/.e2e-rust-setup.sh && mkdir -p {{run_dir}}'
+prompt: |
+  Start a small Rust web service in this directory that I'll publish as a Domino App later: a status page
+  and a JSON health check. Set it up the way you would for a service where correctness matters, and make sure
+  it builds and all its checks pass before you finish. Don't publish or start anything in Domino yet.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-rust-apps'
+    only_builds: [next]
+  - type: source_regex
+    glob: 'rust-toolchain.toml Cargo.toml .gitignore'
+    must_match: ['channel\s*=\s*"1\.\d+\.\d+"', 'pedantic\s*=\s*\{[^}]*priority\s*=\s*-1', '(?m)^/?target/?\s*$']
+  - type: script_lint
+    path: '{{run_dir}}/app.sh'
+    forbid:
+      compiles_at_start: 'cargo\s+(\+\S+\s+)?(build|run|install)'
+    require:
+      runs_binary: '\bexec\b'
+  - type: script_runs              # the model's own build leaves target/ warm, so this stays inside the 180 s limit
+    cmd: 'cargo clippy --locked --all-targets -- -D warnings && cargo test --locked'
+  - type: nothing_started
+cleanup: []

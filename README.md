@@ -32,7 +32,7 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
-| `skills/` (34 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
+| `skills/` (35 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
 | Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; Cursor asks for `DOMINO_HOST` and `DOMINO_TOKEN` at install) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ❌ not registered; `mcp_config.json` carries only the docs server (register it by hand as the server README shows) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
@@ -328,11 +328,11 @@ public release:
 
 ```bash
 git clone https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
-agy plugin validate ~/domino-ai-plugin   # optional: 34 skills, 3 agents, 1 MCP server
+agy plugin validate ~/domino-ai-plugin   # optional: 35 skills, 3 agents, 1 MCP server
 agy plugin install ~/domino-ai-plugin
 ```
 
-`agy plugin list` shows the import with its components (34 skills, 3 agents, 1 rule, 1 MCP server). The
+`agy plugin list` shows the import with its components (35 skills, 3 agents, 1 rule, 1 MCP server). The
 installed copy includes `rules/domino.md`, which Antigravity reads as an always-on rule
 (`trigger: always_on`). The bundled Domino MCP server is not registered for Antigravity, by
 design: `mcp_config.json` carries only the docs server. For the Job and file tools, register the
@@ -511,6 +511,7 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-projects` | Git integration and project collaboration |
 | `domino-apps` | Deploy web apps (React, Streamlit, Dash) behind Domino's proxy |
 | `domino-app-init` | Scaffold a new Domino-ready app with framework templates |
+| `domino-rust-apps` | Build a Rust (axum) App: pinned toolchain in an environment, Clippy, nextest, cargo-deny, rust-analyzer, and a prebuilt binary that Apps start without compiling |
 | `domino-debug-proxy` | Diagnose reverse-proxy and routing issues in apps |
 | `domino-ui-bootstrap` | Bootstrap a Vite + React project on the Domino design system |
 | `domino-extensions` | Build and operate Domino UI Extensions |

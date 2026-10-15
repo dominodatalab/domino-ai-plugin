@@ -29,6 +29,10 @@ class FakeR:
             p = cmd[8:].split(" &&")[0].strip().strip("'"); return (0, "EXISTS") if p in s.dirs else (1, "")
         if cmd.startswith("cat "):
             p = cmd[4:].strip().strip("'"); return (0, s.files[p]) if p in s.files else (1, "No such file")
+        if cmd.startswith("cd ") and "for f in $(ls " in cmd:   # source_regex: concatenate the named files
+            rd = cmd[3:].split(" &&")[0].strip().strip("'")
+            names = cmd.split("$(ls ", 1)[1].split(" 2>/dev/null")[0].split()
+            return 0, "".join(f"=== {n}\n{s.files[rd + '/' + n]}\n" for n in names if rd + "/" + n in s.files)
         if cmd.startswith("bash -n "):
             p = cmd[8:].split(" &&")[0].strip().strip("'")
             if p not in s.files: return 1, ""
@@ -125,6 +129,25 @@ for t in ("dfs", "git"):
 # s14
 case("s14 next MPI cluster", True, run("s14-mpi-disambiguation", "next", tr([SK("domino-distributed-computing")], "Use an MPI compute cluster attached to a Job: clusterType MPI with 4 GPU worker nodes, then run mpirun. Nothing launched yet.")))
 case("s14 next routes to Slurm", False, run("s14-mpi-disambiguation", "next", tr([SK("domino-distributed-computing")], "Use an MPI cluster, or wrap it in an sbatch script and submit via /api/hpc/v1/jobs.")))
+
+# s15
+RD15 = "/mnt/code/e2e-runs/s15-rust-app-author-git-next-rdry"
+GOOD_RUST = {"rust-toolchain.toml": '[toolchain]\nchannel = "1.99.1"\n',
+             "Cargo.toml": '[lints.clippy]\npedantic = { level = "warn", priority = -1 }\n',
+             ".gitignore": "/target/\n",
+             "app.sh": '#!/usr/bin/env bash\nset -euo pipefail\ncd "$(dirname "$0")"\nexec "$run"\n'}
+def rust(**over):
+    files = {**GOOD_RUST, **over}
+    return FakeR({f"{RD15}/{k}": v for k, v in files.items() if v is not None})
+DONE15 = "Created the service; cargo clippy and the tests pass. Nothing was published."
+case("s15 next good project", True, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15), r=rust()))
+case("s15 next app.sh compiles", False, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15),
+     r=rust(**{"app.sh": "#!/usr/bin/env bash\ncargo build --release && exec target/release/app\n"})))
+case("s15 next floating stable channel", False, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15),
+     r=rust(**{"rust-toolchain.toml": '[toolchain]\nchannel = "stable"\n'})))
+case("s15 next pedantic without priority", False, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15),
+     r=rust(**{"Cargo.toml": '[lints.clippy]\npedantic = "warn"\n'})))
+case("s15 next skill not loaded", False, run("s15-rust-app-author-git", "next", tr([], DONE15), r=rust()))
 
 bad = 0
 for name, expect, ok, detail in cases:

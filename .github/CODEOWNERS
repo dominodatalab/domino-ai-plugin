@@ -53,6 +53,7 @@
 # Apps, extensions, launchers  (docs: features/apps, features/extensions, features/launchers)
 /skills/domino-apps/                           @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-app-init/                @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
+/skills/domino-rust-apps/               @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-debug-proxy/             @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-ui-bootstrap/            @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor
 /skills/domino-extensions/              @DDL-Theo-Linnemann @ddl-matthew-bonyak @ddl-ryan-connor @ddl-bira-ignacio

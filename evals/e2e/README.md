@@ -128,6 +128,10 @@ Other tools (run them with `uv run tools/<tool>.py`; those that talk to Domino t
 | s12-hpc-submit | DFS | support checked or a start attempted with a correct body after an upload; no fallback; nothing created; honest reply |
 | s13-hpc-author-dfs / -git | DFS / Git | the written sbatch script: `bash -n`, `--array`, `$SLURM_ARRAY_TASK_ID`, `umask`, results under an existing Dataset, no Workspace paths |
 | s14-mpi-disambiguation | Git | an MPI cluster recommended, not Slurm; nothing launched |
+| s15-rust-app-author-git | Git | pinned toolchain, Clippy pedantic, `target/` ignored, `app.sh` runs a binary without compiling, Clippy and tests pass; nothing started |
+| s16-rust-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` runs the prebuilt binary without compiling |
+
+s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.cargo`, linked into `~/.local/bin`), standing in for a Compute Environment with Rust.
 
 ### Scenario format
 

@@ -1,0 +1,110 @@
+# The axum App
+
+The template in `assets/app/` is a small server-rendered App: axum 0.8 for routing, askama for HTML templates checked at compile time, tower-http for static files and request logs, sqlx for Postgres, reqwest for the Domino API and model endpoints, and tracing for logs. HTTP and Postgres share one TLS stack (rustls with the ring provider, no C toolchain beyond `cc`). Domino rules that apply to every framework (port, prefix, identity, sharing) are in [domino-apps](../domino-apps/SKILL.md); this file covers what they mean in Rust.
+
+## Layout
+
+| Path | Contents |
+|---|---|
+| `src/lib.rs` | `app()` router, handlers, `AppState`, `shutdown_signal()`, in-process tests |
+| `src/domino.rs` | Domino API calls as the viewer or the publisher |
+| `src/http.rs` | The two HTTP clients: in-cluster (never proxied) and external (proxy-aware) |
+| `src/main.rs` | Logging setup, `PORT` (default 8888) on `0.0.0.0`, graceful shutdown |
+| `templates/*.html` | askama templates; a field typo fails `cargo build` |
+| `static/` | CSS and JavaScript served at `static/...` |
+
+Routes: `/` (page), `healthz`, `api/whoami`, `api/me` and `api/projects` (Domino API as viewer or publisher), `api/db` (Postgres check), `api/predict` (model endpoint), `refresh` (relative redirect). Delete the ones the App does not need, with their tests.
+
+Add routes in `app()` with `/{id}` path parameters and a leading `/` (`.route("/items/{id}", get(item))`). The axum 0.7 forms `/:id` and `/*rest`, and a path without a leading `/`, panic when the router is built, so the App never reaches Running. The template's tests build the router, which catches this.
+
+Pin `axum = "0.8.9"`: axum 0.9 changes `axum::serve` and middleware signatures. Older examples use `axum::Server` and `#[async_trait]`, which no longer exist.
+
+## URLs behind Domino's proxy
+
+The App is served under a prefix such as `/apps/<id>/`, and the server receives paths rooted at `/`. Every URL the browser follows must therefore be relative:
+
+| Write | Not | Because |
+|---|---|---|
+| `href="static/app.css"`, `src="static/app.js"` | `href="/static/app.css"` | A leading `/` resolves against the Domino host, outside the App |
+| `fetch("api/whoami")`, `<form action="refresh">` | `fetch("/api/whoami")` | Same |
+| `Redirect::to("./")`, `Redirect::to("./items")` | `Redirect::to("/")` | `Location: /` sends the browser to Domino's home page |
+| `ServeDir::new("static").redirect_to_trailing_slash(false)` | `ServeDir::new("static")` | ServeDir redirects a directory request to a root-absolute path |
+
+Keep HTML pages one level deep and pass identifiers as query strings (`item?id=42`), so the same relative links work from every page. If a page must be nested, compute `../` per level from `axum::extract::OriginalUri`.
+
+The App URL also answers without its trailing slash (`.../apps/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. Domino's proxy also inserts its own `<title>` and favicon at the start of each HTML page's `<head>`, so the browser tab shows the App's Domino name.
+
+`DOMINO_RUN_HOST_PATH` holds the prefix. Use it only where a value must be absolute, such as a cookie `Path` (set it to the prefix without the trailing slash, give the cookie an App-specific name, and add `HttpOnly; Secure; SameSite=Lax`). For identity, read the `domino-username` header rather than keeping a session cookie: every App on the deployment shares one origin.
+
+## Identity: acting as the viewer or the publisher
+
+Every request carries the viewer twice: `domino-username` (`Anonymous` when anonymous access is on; `viewer()` in `src/lib.rs` reads it) and `Authorization: Bearer <jwt>`. `src/domino.rs` calls the Domino API with either identity, chosen per call:
+
+| Identity | How the template calls | Token scope |
+|---|---|---|
+| Viewer (default) | `$DOMINO_API_HOST` + the viewer's bearer token | Identifies the viewer only, unless the App has extended identity propagation and the viewer consented; then the viewer's full Domino permissions |
+| Publisher (`?as=publisher`) | `$DOMINO_API_PROXY` with no `Authorization` header; the proxy adds the publisher's token | The publisher's permissions |
+
+`/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) show the difference: the viewer and the publisher see different users and project lists. Use the viewer's identity whenever the App reads or changes data on someone's behalf, so Domino enforces that person's permissions; use the publisher's only for the App's own shared resources.
+
+Extended identity propagation:
+
+- It is part of the App version: **Allow App to act for viewers in Domino** in the App's sharing settings, or `"extendedIdentityPropagationToAppsEnabled": true` in the version's `content` ([domino-apps API-APPS.md](../domino-apps/API-APPS.md)). Changing it creates a version. Only a SysAdmin or CloudAdmin can publish an App with it on, and it cannot be turned off for that App afterwards.
+- The deployment-wide setting `com.cerebro.domino.apps.extendedIdentityPropagationToAppsEnabled` must be on (it is by default).
+- Each viewer sees a consent prompt; consent lasts 8 hours by default and up to 30 days. Until a viewer consents, every request to the App, JSON routes included, redirects to Domino's `/app-consent?appId=<id>&callback=<url>` page, so scripts and `curl` get HTML instead of the App's response. Open the App in a browser and consent first.
+- Without it, Domino rejects the viewer's token on most routes, sometimes with a 500 rather than a 401 or 403; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
+- Never log or return the token. `TraceLayer` does not log headers.
+- The template does not verify the JWT itself: Domino verifies it on every API call. To trust its claims inside the App without calling Domino (the "enhanced identity" pattern), verify the RS256 signature against Domino's JWKS with audience `apps`: https://docs.domino.ai/cloud/platform-capabilities/features/apps/authentication-and-identity/app-security
+
+## Secrets and model endpoints
+
+- Configuration comes from environment variables read once in `AppState::from_env()`. Set secrets as Project or user environment variables, never in files.
+- `/api/predict` shows a synchronous model endpoint call: HTTP Basic auth with the token as both username and password, body `{"data": ...}`, from the server only. Endpoint URL and token: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
+
+## Postgres
+
+- `DATABASE_URL` (a Project or user environment variable) holds the connection string, for example `postgres://app_user:<password>@db.example.internal:5432/appdb?sslmode=verify-full`. Without it, `/api/db` answers 503 and the rest of the App works.
+- The pool is created with `connect_lazy`: startup parses the URL and connects to nothing, so the App starts while the database is down, and each request waits at most 5 seconds for a connection.
+- TLS: `sslmode=verify-full` checks the server's certificate chain and host name against the OS certificate store; `sslrootcert=/path/ca.pem` in the URL adds a CA for a database with a private one. `require` encrypts without checking the certificate. The `PGSSLMODE` and `PGSSLROOTCERT` environment variables work too. Postgres connections never use an HTTP proxy.
+- Pass values as bind parameters (`sqlx::query("SELECT name FROM items WHERE id = $1").bind(id)`), never by formatting SQL strings. The template uses the runtime query API; sqlx's `query!` macros check SQL at compile time but need a database or committed `.sqlx` query data during every build, so add them only with that in place.
+- Create tables and load data with a Job before publishing, never at App start ([domino-apps](../domino-apps/FRAMEWORKS.md#startup-must-not-change-state)).
+
+## Outbound TLS and HTTP proxies
+
+Write every outbound call assuming that the trust store holds the organization's own root certificates and that external requests pass through a TLS-inspecting corporate proxy:
+
+- Trust the OS certificate store. reqwest and sqlx in the template do (`/etc/ssl/certs`, maintained by `update-ca-certificates`), so custom roots work without code. Never bundle a fixed root set (for example webpki-roots-only features), turn off verification (`danger_accept_invalid_certs`, `sslmode=require` where `verify-full` is possible) or pin certificates for external hosts: each breaks or bypasses the inspecting proxy.
+- Honour `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY` and `NO_PROXY`. The external client in `src/http.rs` does, in upper or lower case; `NO_PROXY` matches host names and domain suffixes, not ports, and `localhost` is not exempt unless listed.
+- Keep in-cluster calls off the proxy. The in-cluster client for `DOMINO_API_HOST` and `DOMINO_API_PROXY` never uses one; send any other in-cluster service through it too.
+- When a call fails with a certificate error, report it to the user (the trust store lacks a root their administrator manages) rather than working around it.
+- `http::install_crypto_provider()` installs rustls's ring provider before any client or pool is built; reqwest panics without one.
+
+## Startup and shutdown
+
+- `main` reads configuration, binds `0.0.0.0:$PORT` and serves. It writes nothing: no migrations, no seeding, no files. Restarts, live sync and autoscaled replicas all run it again, often at the same time.
+- `app.sh` starts the binary with `exec`. `shutdown_signal()` resolves on SIGTERM or Ctrl-C, and axum then finishes in-flight requests, which matters for local runs and Jobs. When Domino stops an App it ends the container, and the server may not get to run its shutdown path, so never rely on shutdown to save state: write anything durable when it happens.
+- Logs go to stdout, which the App's **Logs** tab shows. `RUST_LOG` (an environment variable) sets the level, for example `RUST_LOG=info,domino_rust_app=debug`. ANSI colours are on only when stdout is a terminal.
+
+## How the binary is shipped
+
+`scripts/build-dist.sh` runs `cargo build --locked --profile dist`, copies `target/dist/<name>` to `$DIST_DIR` (default `/mnt/artifacts/dist`) and writes `<name>.stamp`: line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/` and `migrations/`; lines 2 and 3 record `rustc --version` and the Git commit.
+
+At start, `app.sh` recomputes the hash over the App's files and compares it with line 1. Equal: it copies the binary to a temporary directory, marks it executable and `exec`s it. Different or missing: it prints which step to repeat and exits, and the App shows as failed in its logs. It never compiles.
+
+An App version pins the Git commit and the artifacts commit together, so App Preview, deployment and rollback all run the binary that matches their source. Add any other build input (an `include_str!` file outside `src/`) to the list in `scripts/stamp.sh`.
+
+Where the binary lives:
+
+| Project | Location | Saved by |
+|---|---|---|
+| Git-based (default) | `/mnt/artifacts/dist/` | **File Changes > Sync All Changes** (artifacts go to Domino storage, code to Git) |
+| Git-based, binary in Git | `dist/` in the repository (`DIST_DIR=dist`) | Commit and push, only for builds you publish |
+| DFS | `dist/` in the Project (`DIST_DIR=dist`) | **File Changes > Sync to Domino** |
+
+A Job builds the same way and saves artifacts when it finishes: run `bash scripts/build-dist.sh` as the Job command on the App's environment and hardware tier. Use a Job when you want the binary built from the committed code rather than from a Workspace's working tree.
+
+## Other UI approaches
+
+- **Vite + React frontend** for heavy client-side interaction or the Domino design system ([domino-ui-bootstrap](../domino-ui-bootstrap/SKILL.md)): build it with `base: './'` and `HashRouter`, serve `dist/` from axum with `.fallback_service(ServeDir::new("frontend/dist").redirect_to_trailing_slash(false))`, and keep JSON routes under `api/`. Add the frontend's `dist/` to `scripts/stamp.sh` inputs.
+- **htmx** for partial page updates: copy `htmx.min.js` into `static/` instead of loading it from a CDN (the App's content security policy can block external scripts), and keep `hx-get="api/..."` URLs relative.
+- **Leptos or Dioxus** (Rust compiled to WebAssembly) only when the browser must run Rust. They need the `wasm32-unknown-unknown` target and their own build CLIs, compile twice, and default to root-absolute asset paths; Dioxus fixes its base path at build time.
