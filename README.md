@@ -7,6 +7,10 @@ plugin** (`plugin.json` plus `mcp_config.json`). All of them share the
 same skills; all but the OpenAI directory package, which is skills-only, also carry the same
 always-on guidance and the same Domino MCP server.
 
+> **Moved from `dominodatalab/domino-claude-plugin`.** That repository is deprecated and receives
+> no new releases; this one replaces it. To switch an existing install, see
+> [Updating (Claude Code)](#updating-claude-code), including the Domino Workspace steps.
+
 ## Overview
 
 The plugin gives AI coding assistants skills for the main Domino Data Lab surfaces:
@@ -19,7 +23,7 @@ The plugin gives AI coding assistants skills for the main Domino Data Lab surfac
 - **Apps**: Deploy React, Streamlit, and Dash applications
 - **Models**: Deploy, monitor, and manage model endpoints
 - **GenAI**: Trace and evaluate AI agents with the Domino SDK
-- **Distributed Computing**: Spark, Ray, and Dask clusters
+- **Distributed Computing**: Spark, Ray, Dask and Open MPI clusters, and Slurm HPC
 - **Projects, Launchers, Flows, governance, tags and properties, LLM access, and the Domino APIs and SDKs**
 
 Skills say which Domino versions they apply to; see [Compatibility](#compatibility).
@@ -49,7 +53,8 @@ the Codex variant. CI enforces this; see [Skill rules](#skill-rules).
 
 - **Claude Code CLI** v2.1.133 or later (`claude --version` to check). Plugins exist since 2.0.12,
   but the subagents need the `skills:` preload (2.0.43) and plugin skills reachable from a
-  subagent through the Skill tool (2.1.133). Tested on 2.1.296.
+  subagent through the Skill tool (2.1.133). Tested on 2.1.300; the Claude Code 2.1.235 in the
+  Domino Workspace image also loads it.
 - Access to a Domino Data Lab instance
 - A Domino [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)
   or service account token, only for the bundled MCP server when it runs outside a Domino Workspace
@@ -207,6 +212,24 @@ When team members trust the repository folder, Claude Code will prompt them to i
   unrelated histories, so `git pull` alone can't switch a clone; the fetch and `checkout -B` above
   can.
 
+- **Domino Workspace:** a new Workspace starts with the plugin its image ships, which can still be
+  the deprecated `domino-claude-plugin` (`claude plugin list` shows
+  `domino-claude-plugin@domino-marketplace`, version `1.0.0`). Domino 6.3 can refresh the clone at
+  launch, but only from the clone's `origin`; on Domino Cloud nothing refreshes it until the image
+  does. To update now, point the image's clone at this repository, check out the release and start
+  a new session:
+
+  ```bash
+  P=~/.claude/marketplaces/domino/plugins/domino-claude-plugin
+  git -C $P remote set-url origin https://github.com/dominodatalab/domino-ai-plugin.git
+  git -C $P fetch origin main
+  git -C $P checkout -B main origin/main
+  ```
+
+  `claude plugin list` keeps showing the image's entry (`1.0.0`); `grep '"version"'
+  $P/.claude-plugin/plugin.json` shows the version Claude Code loads. The change persists in that
+  Workspace across restarts; a new Workspace starts from its image again.
+
 - **Anthropic marketplace:** `claude plugin update dominodatalab@claude-plugins-official`, then
   restart. That entry follows whatever commit Anthropic pins, which still points at the deprecated
   `domino-claude-plugin` repository.
@@ -277,9 +300,9 @@ gemini extensions install https://github.com/dominodatalab/domino-ai-plugin
 ```
 
 Gemini CLI installs the repository's latest GitHub Release when one exists and the default branch
-otherwise; add `--ref release-YYYY.XYY.N` to pin a release. Only releases that include
-`gemini-extension.json` can be installed, so the first usable one is the first release cut after
-this file landed; earlier tags fail. At install it asks for the two settings the bundled MCP
+otherwise; add `--ref release-YYYY.XYY.N` to pin a release. `release-2026.603.5` is the first
+release that includes `gemini-extension.json`; earlier tags fail. Install asks a consent question
+first (`--consent` answers it, for a script). It then asks for the two settings the bundled MCP
 server needs outside a Domino Workspace: the Domino URL (`DOMINO_HOST`) and `DOMINO_TOKEN`, a
 Personal Access Token or service account token, kept in the system keychain (or in an encrypted
 file where there is no keychain, such as a Domino Workspace). Inside a Workspace leave both empty,
@@ -305,7 +328,7 @@ field); the skills, context file and MCP servers load, and nothing is logged.
 
 ## Installation: Antigravity
 
-Antigravity's `agy` CLI (1.3.3) installs a plugin from a **local directory**: it reads
+Antigravity's `agy` CLI (tested on 1.3.5) installs a plugin from a **local directory**: it reads
 `plugin.json`, imports `skills/`, `agents/` and the Domino docs MCP server from
 `mcp_config.json`, and copies the whole checkout under `~/.gemini/config/plugins/dominodatalab`.
 A git URL is rejected (`install target must be a directory`), so clone first; `main` is the
@@ -317,7 +340,7 @@ agy plugin validate ~/domino-ai-plugin   # optional: 34 skills, 3 agents, 1 MCP 
 agy plugin install ~/domino-ai-plugin
 ```
 
-`agy plugin list` shows the import with its components (`skills`, `agents`, `mcpServers`). The
+`agy plugin list` shows the import with its components (34 skills, 3 agents, 1 rule, 1 MCP server). The
 installed copy includes `rules/domino.md`, which Antigravity reads as an always-on rule
 (`trigger: always_on`). The bundled Domino MCP server is not registered for Antigravity, by
 design: `mcp_config.json` carries only the docs server. For the Job and file tools, register the
@@ -402,16 +425,18 @@ scripts/sync-manifests.py
 
 ### Testing a release candidate
 
-A candidate such as `2026.603.5-rc.1` lives on the branch `rc/2026.603.5` and is tagged
-`release-2026.603.5-rc.1` as a pre-release; nothing installs it unless you ask for that ref,
-and `rc.1` < `rc.2` < `2026.603.5`, so each candidate and the final release update an
-installed copy. The commands below use the branch; the tag works in its place.
+A candidate such as `2026.603.6-rc.1` lives on the branch `rc/2026.603.6` and is tagged
+`release-2026.603.6-rc.1` as a pre-release; nothing installs it unless you ask for that ref,
+and `rc.1` < `rc.2` < `2026.603.6`, so each candidate and the final release update an
+installed copy. The commands below use `rc/2026.603.6` as the example: replace it with the
+candidate's branch (the [Releases](https://github.com/dominodatalab/domino-ai-plugin/releases)
+page lists them). The tag works in place of the branch.
 
 - **Claude Code** (if the GitHub marketplace is already added, remove it first: `claude plugin
   marketplace remove domino-marketplace`):
 
   ```bash
-  claude plugin marketplace add dominodatalab/domino-ai-plugin#rc/2026.603.5
+  claude plugin marketplace add dominodatalab/domino-ai-plugin#rc/2026.603.6
   claude plugin install dominodatalab@domino-marketplace
   ```
 
@@ -422,24 +447,24 @@ installed copy. The commands below use the branch; the tag works in its place.
   update domino-marketplace`, then `claude plugin update dominodatalab@domino-marketplace`, then
   restart. Back to the public release: remove the marketplace again, add it without `#rc/...`,
   install.
-- **Codex**: `codex plugin marketplace add dominodatalab/domino-ai-plugin@rc/2026.603.5`, then
+- **Codex**: `codex plugin marketplace add dominodatalab/domino-ai-plugin@rc/2026.603.6`, then
   `codex plugin add dominodatalab@domino-marketplace`. Newer candidate: `codex plugin marketplace
   upgrade domino-marketplace`, then `codex plugin add dominodatalab@domino-marketplace` again.
   Back: `codex plugin marketplace remove domino-marketplace`, add it without the ref, `codex
   plugin add` again.
-- **Gemini CLI**: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref rc/2026.603.5`
+- **Gemini CLI**: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref rc/2026.603.6`
   (or `--pre-release` for the newest candidate; `npx -y @google/gemini-cli` stands in for `gemini`
-  when it isn't installed). Run it in a terminal: it asks a `[Y/n]` consent question, then for the
-  Domino URL and token, which can be left empty; without a terminal it waits at the consent prompt.
+  when it isn't installed). It asks a `[Y/n]` consent question (`--consent` answers it), then for the Domino URL and token,
+  which can be left empty (`--skip-settings` skips them).
   Newer candidate: `gemini extensions update dominodatalab`. Back: `gemini extensions uninstall
   dominodatalab`, then install without the ref.
 - **Cursor**: choosing a ref for a GitHub-imported marketplace isn't documented, so clone the
-  branch into the local plugins folder: `git clone -b rc/2026.603.5
+  branch into the local plugins folder: `git clone -b rc/2026.603.6
   https://github.com/dominodatalab/domino-ai-plugin ~/.cursor/plugins/local/dominodatalab`, then
   Developer: Reload Window. Newer candidate: `git -C ~/.cursor/plugins/local/dominodatalab pull`,
   then Developer: Reload Window. Back: delete that folder and reinstall from GitHub.
 - **Antigravity**: `agy` installs a copy of a local checkout, so clone the branch and install it:
-  `git clone -b rc/2026.603.5 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin-rc && agy plugin install ~/domino-ai-plugin-rc`.
+  `git clone -b rc/2026.603.6 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin-rc && agy plugin install ~/domino-ai-plugin-rc`.
   Newer candidate: `git -C ~/domino-ai-plugin-rc pull && agy plugin install ~/domino-ai-plugin-rc`.
   Back: `agy plugin uninstall dominodatalab`, then `agy plugin install` from a `main` checkout.
 - **Domino Workspaces**: the image's updater follows `release-X.Y` by name and never an `rc/`
@@ -449,8 +474,8 @@ installed copy. The commands below use the branch; the tag works in its place.
 
   ```bash
   git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin remote set-url origin https://github.com/dominodatalab/domino-ai-plugin.git
-  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.5
-  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B rc/2026.603.5 origin/rc/2026.603.5
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin rc/2026.603.6
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B rc/2026.603.6 origin/rc/2026.603.6
   ```
 
   Start a new session. `claude plugin list` keeps showing the image's marketplace entry
