@@ -58,12 +58,12 @@ Extended identity propagation:
 
 ## Secrets and model endpoints
 
-- Configuration comes from environment variables read once in `AppState::from_env()`. Set secrets as Project or user environment variables, never in files.
+- Configuration comes from environment variables read once in `AppState::from_env()`. Set secrets as Project environment variables, never in files; user variables come from whoever starts the App.
 - `/api/predict` shows a synchronous model endpoint call: HTTP Basic auth with the token as both username and password, body `{"data": ...}`, from the server only. Endpoint URL and token: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
 
 ## Postgres
 
-- `DATABASE_URL` (a Project or user environment variable) holds the connection string, for example `postgres://app_user:<password>@db.example.internal:5432/appdb?sslmode=verify-full`. Without it, `/api/db` answers 503 and the rest of the App works.
+- `DATABASE_URL`, a Project environment variable, holds the connection string (user variables come from whoever starts the App, so they vanish when someone else deploys it), for example `postgres://app_user:<password>@db.example.internal:5432/appdb?sslmode=verify-full`. Without it, `/api/db` answers 503 and the rest of the App works.
 - The pool is created with `connect_lazy`: startup parses the URL and connects to nothing, so the App starts while the database is down, and each request waits at most 5 seconds for a connection.
 - TLS: `sslmode=verify-full` checks the server's certificate chain and host name against the OS certificate store; `sslrootcert=/path/ca.pem` in the URL adds a CA for a database with a private one. `require` encrypts without checking the certificate. The `PGSSLMODE` and `PGSSLROOTCERT` environment variables work too. Postgres connections never use an HTTP proxy.
 - Pass values as bind parameters (`sqlx::query("SELECT name FROM items WHERE id = $1").bind(id)`), never by formatting SQL strings. The template uses the runtime query API; sqlx's `query!` macros check SQL at compile time but need a database or committed `.sqlx` query data during every build, so add them only with that in place.

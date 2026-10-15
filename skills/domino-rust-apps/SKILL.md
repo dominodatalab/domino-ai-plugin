@@ -27,7 +27,7 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 - **Startup changes nothing.** Migrations, seeding and Dataset preparation run as a Job before publishing; see [domino-apps](../domino-apps/FRAMEWORKS.md#startup-must-not-change-state).
 - **Commit `Cargo.lock` and build with `--locked`**, so the App's binary comes from the dependency versions you tested.
 - **Never commit `target/`**: one Workspace build holds hundreds of MB to GBs. `.gitignore` excludes it.
-- **Secrets** come from Project or user environment variables read by the server (`DATABASE_URL`, `MODEL_API_URL`, `MODEL_API_TOKEN` in the template), never from files in the repository.
+- **Secrets** come from Project environment variables read by the server (`DATABASE_URL`, `MODEL_API_URL`, `MODEL_API_TOKEN` in the template), never from files in the repository.
 - **Assume custom root CAs and a TLS-inspecting proxy.** Outbound code must trust the OS certificate store and honour `HTTPS_PROXY`/`NO_PROXY`, never bundle roots, skip verification or pin certificates, and keep in-cluster calls off the proxy ([APP.md](./APP.md#outbound-tls-and-http-proxies)).
 - **Act as the viewer for the viewer's data.** `src/domino.rs` calls the Domino API with the viewer's forwarded token, or as the publisher through `DOMINO_API_PROXY`; viewer calls need extended identity propagation on the App and the viewer's consent ([APP.md](./APP.md#identity-acting-as-the-viewer-or-the-publisher)).
 
