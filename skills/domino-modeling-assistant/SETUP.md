@@ -27,31 +27,24 @@ When the plugin is installed from the source repository (for example Claude Code
 
 Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication (6.3: replace `cloud` with `6.3`). A Personal Access Token carries your identity and expires; rotate it before it does. For unattended automation use a Domino service account token instead. The server does not accept legacy API keys: if `DOMINO_API_KEY` is set without `DOMINO_TOKEN`, every API tool fails with a message telling you to set `DOMINO_TOKEN`.
 
-### Set environment variables
-
-The server reads two variables:
+### Give the URL and token to the server
 
 | Variable | Value |
 |---|---|
-| `DOMINO_HOST` | The deployment's HTTPS URL (the one in your browser's address bar); `DOMINO_API_HOST` is accepted as a fallback |
+| `DOMINO_HOST` | The address you open Domino at in your browser, for example `https://domino.example.com`; `DOMINO_API_HOST` is accepted as a fallback |
 | `DOMINO_TOKEN` | The Personal Access Token or service account token, sent as `Authorization: Bearer` |
 
-Either export them in your shell profile (`~/.bashrc`, `~/.zshrc`, or equivalent):
+Claude Code asks for both when the plugin is enabled (change them under `/plugin` > Installed > dominodatalab > Configure options), and Gemini CLI asks at install (change them with `gemini extensions config dominodatalab`). Every other host, including Codex, Cursor and Antigravity, reads them from the env file `~/.config/domino-mcp-server/.env`. Have the user write it themselves; this keeps the token off the screen and out of shell history, and makes the file readable only by them:
 
 ```bash
-export DOMINO_HOST="https://<your Domino domain>"
-export DOMINO_TOKEN="<your Personal Access Token>"
+bash -c 'mkdir -p ~/.config/domino-mcp-server && umask 077 &&
+  read -r -p "Domino URL (https://...): " host && read -rs -p "Domino token: " token && echo &&
+  printf "DOMINO_HOST=%s\nDOMINO_TOKEN=%s\n" "$host" "$token" > ~/.config/domino-mcp-server/.env'
 ```
 
-or, for hosts that start MCP servers with a stripped environment (Codex on a laptop does), put them in an env file the server reads when the host passes neither variable: `$DOMINO_MCP_ENV_FILE` if set, else `$XDG_CONFIG_HOME/domino-mcp-server/.env`, else `~/.config/domino-mcp-server/.env` (`KEY=value` lines; existing environment variables win):
+The server also reads `$DOMINO_MCP_ENV_FILE` or `$XDG_CONFIG_HOME/domino-mcp-server/.env` where the host passes those variables (Codex passes neither), and `DOMINO_HOST` and `DOMINO_TOKEN` from the environment where the host passes it (Gemini CLI drops TOKEN-named variables). Plugin settings win over the environment, which wins over the env file. A `.env` in the project directory is not read. Never ask the user to paste the token into the conversation, and never commit it or put it in a shared configuration file.
 
-```bash
-mkdir -p ~/.config/domino-mcp-server
-printf 'DOMINO_HOST=https://<your Domino domain>\nDOMINO_TOKEN=<your Personal Access Token>\n' > ~/.config/domino-mcp-server/.env
-chmod 600 ~/.config/domino-mcp-server/.env
-```
-
-A `.env` in the project directory is not read. Never commit the token or paste it into a shared configuration file.
+To check the setup, call `get_domino_environment_info`: `credential_sources` says where each value came from, and `connection` names the Domino user the token belongs to or the error to fix.
 
 ## Step 2: Configure your project (laptop only)
 

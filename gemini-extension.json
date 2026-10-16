@@ -6,12 +6,12 @@
   "settings": [
     {
       "name": "Domino URL",
-      "description": "URL of your Domino deployment, used by the bundled Domino MCP server when it runs outside a Domino Workspace. Leave empty inside a Workspace.",
+      "description": "Only for use outside a Domino Workspace: the address you open Domino at in your browser, for example https://domino.example.com. Leave empty inside a Workspace.",
       "envVar": "DOMINO_HOST"
     },
     {
-      "name": "Domino token",
-      "description": "A Domino Personal Access Token or service account token, sent as a bearer by the bundled Domino MCP server when it runs outside a Domino Workspace. Leave empty inside a Workspace, where the server uses the API proxy.",
+      "name": "Domino Personal Access Token",
+      "description": "Only for use outside a Domino Workspace: in Domino, Account > Account settings > Personal Access Token > Generate new Token. Kept in your system keychain. Leave empty inside a Workspace.",
       "envVar": "DOMINO_TOKEN",
       "sensitive": true
     }

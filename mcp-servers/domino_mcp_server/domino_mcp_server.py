@@ -62,7 +62,8 @@ def _drop_unset_placeholders(environ: Dict[str, str]) -> None:
 
 
 # Some hosts start stdio MCP servers with a minimal environment and give a plugin no way to
-# forward more: Codex passes only HOME, LANG, LC_ALL, LOGNAME, PATH, SHELL and USER, and drops a
+# forward more: Codex passes only HOME, LANG, LC_ALL, LOGNAME, PATH, SHELL, TERM, TMPDIR, TZ and USER
+# (plus __CF_USER_TEXT_ENCODING on macOS), and drops a
 # plugin server that declares env_vars. Inside a Domino Workspace or Job the Domino variables are
 # still set on the process that started the agent, so copy the ones this server reads from the
 # nearest ancestor that has them. Linux only; the kernel allows reading the environment of
@@ -169,10 +170,10 @@ def _auth_help() -> str:
         "(2) DOMINO_TOKEN: in Domino, Account > Account settings > Personal Access Token > Generate "
         "new Token (a service account token also works; legacy API keys do not). "
         "(3) Give both to the server: Claude Code asks for them when the plugin is enabled (change "
-        "them under /plugin > Installed > dominodatalab > Configure options); Cursor and Gemini CLI "
-        "ask at install; any host, including Codex, reads them from the env file "
-        f"{_env_file_path()} as DOMINO_HOST=... and DOMINO_TOKEN=... lines (chmod 600). Then start "
-        "a new session. Inside a Domino Workspace or Job nothing is needed. See "
+        "them under /plugin > Installed > dominodatalab > Configure options); Gemini CLI asks at "
+        "install (change them with `gemini extensions config dominodatalab`); every other host, "
+        f"including Codex, Cursor and Antigravity, reads them from the env file {_env_file_path()} "
+        "as DOMINO_HOST=... and DOMINO_TOKEN=... lines (chmod 600). Then start a new session. Inside a Domino Workspace or Job nothing is needed. See "
         "https://docs.domino.ai/cloud/reference/api/domino-api-authentication."
     )
     legacy_dotenv = Path(__file__).resolve().parent / ".env"
