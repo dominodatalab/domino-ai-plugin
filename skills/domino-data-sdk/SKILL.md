@@ -98,10 +98,11 @@ per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. Hosts come from
 - **Domino endpoints (model APIs)** get no automatic token. Store a service-account token as
   an environment variable on the endpoint and pass it: `DataSourceClient(token=os.environ["DATA_API_TOKEN"])`
   (`token=`, not the deprecated `api_key=`).
-- **Apps acting for the calling user**: use the bearer from the incoming request,
-  `DatasetClient(token=request.headers["Authorization"][7:])`, built per request. Without
+- **Apps acting for the calling user**: pass the incoming request's bearer token,
+  `DatasetClient(token=token)`, built per request. Without
   extended identity propagation that token covers only Dataset file reads and Data Source
-  lookup by name. With no bearer, answer 401; never fall back to the publisher's credentials.
+  lookup by name. With no bearer or an empty one, answer 401; never pass `token=None`, which
+  uses the publisher's credentials.
 - **Outside Domino**: the Data Source proxy hosts are internal to the deployment, so run Data
   API code inside a Domino execution. If your admin exposes them, set `DOMINO_API_HOST` to the
   deployment URL, the two proxy host variables as the admin gives them, and pass `token=` a

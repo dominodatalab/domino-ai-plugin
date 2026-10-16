@@ -324,9 +324,10 @@ import requests
 
 
 def viewer_token(headers):
-    """The bearer token Domino forwards with each request, or None."""
+    """The bearer token Domino forwards with each request, or None (also for an empty one)."""
     auth = headers.get("Authorization", "")
-    return auth[7:] if auth.startswith("Bearer ") else None
+    token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+    return token or None
 
 
 def viewer_name(headers):

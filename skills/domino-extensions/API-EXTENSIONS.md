@@ -72,7 +72,8 @@ PREFIX = os.environ.get("DOMINO_RUN_HOST_PATH", "/")     # current URL prefix, t
 
 def viewer_token():
     header = flask.request.headers.get("Authorization", "")
-    return header[len("Bearer "):] if header.startswith("Bearer ") else None
+    token = header[len("Bearer "):].strip() if header.startswith("Bearer ") else ""
+    return token or None
 
 
 def viewer_name(token):
@@ -89,7 +90,7 @@ def index():
         return flask.Response("Missing required query parameter: datasetId", status=400)
     token = viewer_token()
     if token is None:   # never call without it: DOMINO_API_HOST would run the call as the publisher
-        return flask.Response("No viewer token: open the App from Domino and accept the consent prompt", status=401)
+        return flask.Response("No viewer token: open the App through Domino", status=401)
     response = requests.get(f"{API_HOST}/api/datasetrw/v1/datasets/{dataset_id}",
                             headers={"Authorization": f"Bearer {token}"}, timeout=30)
     if not response.ok:
