@@ -4,12 +4,13 @@ Step 10 (write or merge the agent instructions file at the project root) and Ste
 
 ## Step 10 — Write or update the instructions file
 
-The **project root** (from Step 1 — not the app folder if those are different paths) should have an instructions file (`CLAUDE.md` or `AGENTS.md`; see "Host-specific files") that tells future assistant sessions four things:
+The **project root** (from Step 1 — not the app folder if those are different paths) should have an instructions file (`CLAUDE.md` or `AGENTS.md`; see "Host-specific files") that tells future assistant sessions five things:
 
 1. The npm package is `@dominodatalab/extensions-tools`. All imports in this project use that name.
 2. Storybook code snippets (and the `node_modules/@dominodatalab/extensions-tools/README.md`) import from `@domino/base-components` — that's a Storybook alias. Rewrite to `@dominodatalab/extensions-tools` before pasting.
 3. Component APIs come from the Storybook MCP. Don't invent props.
-4. **URLs must be proxy-aware (assets and API).** When deployed, this app is served under a proxy prefix (e.g. `/preview/<appId>/`). Two things keep URLs working (see Step 8): `base: './'` in `vite.config.ts`, and an `apiBase` resolved against `document.baseURI`. Root-absolute URLs (`fetch('/api/…')`) bypass the proxy and 404.
+4. **URLs must be proxy-aware (assets and API).** When deployed, this app is served under a proxy prefix (e.g. `/preview/<appId>/`). Three things keep URLs working (see Step 8): `base: './'` in `vite.config.ts`, an `apiBase` resolved against `document.baseURI`, and the trailing-slash script first in `index.html`'s `<head>`. Root-absolute URLs (`fetch('/api/…')`) bypass the proxy and 404.
+5. **The browser has no Domino token.** Identity and Domino data come from the App's backend (`api/...`), which reads the viewer from the forwarded token and calls Domino as the viewer or the publisher.
    ```ts
    const apiBase = new URL('api', document.baseURI).href
    fetch(`${apiBase}/projects`)

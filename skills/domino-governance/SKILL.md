@@ -18,7 +18,7 @@ Governance REST lives at `/api/governance/v1/*`. Pick the base where `GET $BASE/
 |---------|------|----------------|
 | In-run, `DOMINO_API_PROXY` set (JWT credential propagation) | `$DOMINO_API_PROXY/api/governance/v1` | None (proxy adds starting-user JWT) |
 | In-run, no proxy, governance on platform API gateway | `$DOMINO_USER_HOST` or `$DOMINO_API_HOST` + `/api/governance/v1` | Bearer from `GET http://localhost:8899/access-token` |
-| In-run but proxy or sidecar returns **404** on `/api/governance/v1/*` (gateway off or governance not registered on 8763) | public deployment URL + `/api/governance/v1` | Bearer PAT or service account token |
+| In-run but proxy or sidecar returns **404** on `/api/governance/v1/*` (the in-run base does not route governance) | public deployment URL + `/api/governance/v1` | Bearer PAT or service account token |
 | Outside any run | public deployment URL + `/api/governance/v1` | Bearer PAT or service account token |
 
 Do **not** scrape the JWT `iss` claim to derive the cluster URL. Prefer `DOMINO_API_PROXY` in-run when step 1 succeeds; otherwise step 2 or 3.

@@ -99,7 +99,10 @@ App reading on behalf of the signed-in user (Domino passes the user's bearer tok
 request to the App):
 
 ```python
-token = request.headers.get("Authorization", "")[7:]
+auth = request.headers.get("Authorization", "")
+token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+if not token:
+    abort(401)            # never DatasetClient(token=None): that falls back to the publisher's identity
 dataset = DatasetClient(token=token).get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
 ```
 

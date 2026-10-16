@@ -1,0 +1,50 @@
+id: s17-vite-app-publish-dfs
+title: Build a Vite React App once and publish it so it starts without npm (DFS Project)
+journey: apps (Vite)
+project_type: dfs
+expected_skills: [domino-app-init, domino-apps]
+timeout_s: 2700
+setup:
+  # Stands in for a Workspace that can build: Node 22 with npm on PATH. The App itself runs on the
+  # environment's own node, which may be older and lack npm.
+  - type: ws_file
+    path: '{{home}}/.e2e-node-setup.sh'
+    content: |
+      set -e
+      export NVM_DIR="$HOME/.nvm"
+      if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+        curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | PROFILE=/dev/null bash >/dev/null 2>&1
+      fi
+      . "$NVM_DIR/nvm.sh"
+      nvm install 22 >/dev/null 2>&1
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$(nvm which 22)" "$HOME/.local/bin/node"
+      ln -sf "$(dirname "$(nvm which 22)")/npm" "$HOME/.local/bin/npm"
+      ln -sf "$(dirname "$(nvm which 22)")/npx" "$HOME/.local/bin/npx"
+  - type: ws_shell
+    cmd: 'bash {{home}}/.e2e-node-setup.sh && mkdir -p {{run_dir}}'
+prompt: |
+  Build a small React dashboard with Vite in this directory whose home page says "Vite E2E {{run_tag}}", and
+  publish it as a Domino App named `e2e-vite-{{run_tag}}` on the `{{job_tier}}` hardware tier so my teammates
+  can open it. Make sure it actually starts, then give me its URL.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-app-init|domino-apps'
+    only_builds: [next]
+  - type: app_running
+    name_regex: '{{run_tag}}'
+    wait_s: 600
+  - type: app_url_ok
+    name_regex: '{{run_tag}}'
+  - type: script_lint
+    path: '{{run_dir}}/app.sh'
+    forbid:
+      builds_at_start: '\bnpm\s+(ci|i|install|run)\b|\bvite\s+build\b|\bnpx\b|\byarn\b|\bpnpm\b'
+    require:
+      runs_node: '\bnode\b'
+  - type: ws_file                  # a dated build: <label>.stamp beside its folder, saved in the Project
+    name_glob: '20[0-9][0-9].[01][0-9].[0-3][0-9]*.stamp'
+    must_be_under: ['/mnt']
+cleanup:
+  - type: delete_apps
+    name_regex: '{{run_tag}}'

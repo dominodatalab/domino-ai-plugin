@@ -6,3 +6,5 @@ skills/domino-ui-bootstrap/SETUP-STEPS.md       # host-specific MCP registration
 skills/domino-ui-bootstrap/PROJECT-FILES.md     # host-specific instructions-file and settings steps for Claude Code and Codex
 skills/domino-llm-gateway/SKILL.md            # names Claude Code and Codex as the coding-assistant hosts with gateway setup steps
 skills/domino-llm-gateway/CODING-ASSISTANTS.md # host-specific gateway setup for Claude Code and Codex
+skills/domino-rust-apps/TOOLING.md            # host-specific LSP and hook setup for each coding agent, Claude Code included
+skills/domino-rust-apps/assets/app/scripts/agent-hooks/rust_gate.py  # hook output formats per agent host and the CLAUDE_PROJECT_DIR variable

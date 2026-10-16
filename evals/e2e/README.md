@@ -128,6 +128,11 @@ Other tools (run them with `uv run tools/<tool>.py`; those that talk to Domino t
 | s12-hpc-submit | DFS | support checked or a start attempted with a correct body after an upload; no fallback; nothing created; honest reply |
 | s13-hpc-author-dfs / -git | DFS / Git | the written sbatch script: `bash -n`, `--array`, `$SLURM_ARRAY_TASK_ID`, `umask`, results under an existing Dataset, no Workspace paths |
 | s14-mpi-disambiguation | Git | an MPI cluster recommended, not Slurm; nothing launched |
+| s15-rust-app-author-git | Git | pinned toolchain, Clippy pedantic, `target/` ignored, `app.sh` runs a binary without compiling, Clippy and tests pass; nothing started |
+| s16-rust-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` runs the prebuilt binary without compiling |
+| s17-vite-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` serves a prebuilt build with `node` and never runs npm, npx or a build; a dated build stamp exists |
+
+s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.cargo`, linked into `~/.local/bin`), standing in for a Compute Environment with Rust. s17 installs Node 22 with npm the same way (nvm, linked into `~/.local/bin`), standing in for a Workspace that can build; the App still runs on the environment's own `node`.
 
 ### Scenario format
 

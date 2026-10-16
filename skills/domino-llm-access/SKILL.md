@@ -55,7 +55,7 @@ Never hard-code, commit, or pass keys on a command line.
 
 Needs **Project Collaborator** permission and a **GPU hardware tier** whose memory holds the model's weights (about 16 GB for a 7B model, 24 GB or more from 13B). UI walkthrough: [HOST-AN-LLM.md](./HOST-AN-LLM.md). REST equivalent (`/api/gen-ai/beta`, identical on 6.3 and Cloud): [HOST-AN-LLM-API.md](./HOST-AN-LLM-API.md).
 
-Once the endpoint is **Running**, its **Calling** tab shows the URL (the `base_url`) and a ready-made snippet. Inside a Workspace, Job or App the bearer is the in-run access token:
+Once the endpoint is **Running**, its **Calling** tab shows the URL (the `base_url`) and a ready-made snippet. Inside a Workspace, Job or App the bearer is the in-run access token (in an App, the publisher's); it is short-lived, so fetch it per call in an App or long Job:
 
 ```python
 import os
@@ -63,9 +63,12 @@ import requests
 from openai import OpenAI
 
 ENDPOINT_URL = os.environ["LLM_ENDPOINT_URL"]            # copied from the Calling tab
-API_KEY = requests.get("http://localhost:8899/access-token").text  # in-run access token
 
-client = OpenAI(base_url=ENDPOINT_URL, api_key=API_KEY)
+def token() -> str:                                      # in-run access token, fresh per call
+    proxy = os.environ.get("DOMINO_API_PROXY", "http://localhost:8899")
+    return requests.get(f"{proxy}/access-token", timeout=5).text.strip()
+
+client = OpenAI(base_url=ENDPOINT_URL, api_key=token())
 response = client.chat.completions.create(
     model="your-model-name",   # the endpoint's servedModelName
     messages=[{"role": "user", "content": "Hello"}],

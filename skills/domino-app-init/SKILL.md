@@ -26,19 +26,21 @@ If the target directory already contains an app, stop and ask before overwriting
 
    | Framework | Files to copy |
    |---|---|
-   | `vite-react` | `assets/vite-react/vite.config.js`, `assets/vite-react/app.sh`, `assets/vite-react/server.js`, `assets/vite-react/.env.example` (run `npm create vite@latest` first if there is no Vite project yet, then `npm install express` and `npm install -D serve`) |
+   | `vite-react` | From `assets/vite-react/`: `vite.config.js`, `app.sh`, `server.js`, `scripts/build-dist.sh`, `scripts/stamp.sh`, `.env.example`, `.dominoignore` (run `npm create vite@latest` first if there is no Vite project yet; `server.js` needs no packages) |
    | `streamlit` | `assets/streamlit/app.sh`, and `assets/streamlit/app.py.template` saved as `app.py` |
    | `dash` | `assets/dash/app.sh`, and `assets/dash/app.py.template` saved as `app.py` |
    | `flask`, `gradio`, `fastapi` | No template; write the files from the snippets below |
 
-2. Make `app.sh` executable (`chmod +x app.sh`) and commit the mode (`git update-index --chmod=+x app.sh`). The templates start with `cd "$(dirname "$0")"`, so `app.sh` works from the repo root or an app subfolder.
+2. Make `app.sh` and `scripts/*.sh` executable (`chmod +x`) and commit the mode (`git update-index --chmod=+x app.sh`). The templates start with `cd "$(dirname "$0")"`, so `app.sh` works from the repo root or an app subfolder.
 3. Keep these invariants in every generated file:
    - Bind `0.0.0.0` on port `8888`. Domino requires both; an App on any other address or port fails to start.
    - Where the framework needs its base path, read `DOMINO_RUN_HOST_PATH` (Dash `requests_pathname_prefix`, Gradio `root_path`). Never build the prefix from project owner, name and run ID.
-   - Use relative URLs for assets and API calls. For Vite set `base: './'` and use `HashRouter`.
+   - Use relative URLs for assets and API calls. For Vite set `base: './'`, use `HashRouter`, and make this the first line of `<head>` in `index.html` (the App URL also answers without its trailing slash): `<script>if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search + location.hash)</script>`.
+   - Identify the viewer from the `Authorization` token, not `domino-username` alone (`viewer.py` in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
    - Secrets stay on the server: no token in a `VITE_` variable, no token in the repo.
-4. Add `.env`, `.env.local`, `node_modules/` and `dist/` to `.gitignore`; keep `.env.example`.
-5. **Check that the framework is in the Compute Environment.** The App runs in the project's environment (or the one chosen at publish time); packages `pip`-installed in a Workspace are not in it, and the App dies with `streamlit: not found` (exit 127). Run `python -c "import streamlit"` (or `dash`, `flask`, `gradio`, `fastapi`; `node -v` for Vite) in the Workspace. If it fails: an environment that has the package (best), `requirements.txt` at the project root, or a `pip install` at the top of `app.sh` for a prototype; trade-offs in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#dependencies).
+   - Vite: `app.sh` never installs or builds; it serves a dated build `scripts/build-dist.sh` made ([why](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)).
+4. Add `.env`, `.env.local`, `node_modules/`, `build/` and `dist/` to `.gitignore`; keep `.env.example`. In a DFS Project add `node_modules/` and `build/` to the `.dominoignore` at the Project root (Domino reads only that one).
+5. **Check that the framework is in the Compute Environment.** The App runs in the project's environment, without what you `pip install` in a Workspace (`streamlit: not found`, exit 127). Run `python -c "import streamlit"` (or `dash`, `flask`, `gradio`, `fastapi`). Vite: the App needs `node` 18+, the build Node 20.19+ with npm ([REACT-VITE-GUIDE.md](../domino-apps/REACT-VITE-GUIDE.md#build-once-serve-the-build)). If missing: an environment with the package (best), `requirements.txt` at the project root, or `pip install` in `app.sh` for a prototype ([trade-offs](../domino-apps/FRAMEWORKS.md#dependencies)).
 6. Finish with the post-initialization checklist.
 
 ## Reference snippets
@@ -61,12 +63,13 @@ if __name__ == "__main__":
 
 ```python
 from flask import Flask, request
+from viewer import viewer_name  # viewer.py from domino-apps/FRAMEWORKS.md
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return f"Hello {request.headers.get('domino-username', 'Anonymous')}"
+    return f"Hello {viewer_name(request.headers) or 'viewer'}"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8888, debug=False)
@@ -128,9 +131,9 @@ Tell the user to:
 
 1. Set `MODEL_API_URL` and `MODEL_API_TOKEN` (if used) in the project's environment variables (see Inputs for where each comes from).
 2. Make sure the framework is in the App's environment (step 5), not only the Workspace.
-3. **Sync before publishing.** An App runs the project's committed files, not the Workspace's working copy. DFS project: **File Changes > Sync to Domino** (or the bundled MCP server's upload tool), then check `app.sh` and `app.py` under **Code**. Git-based: `git add`, `git commit`, `git push` from the Workspace terminal. Creating the version over the API right after an upload: pin `content.dfsCommitId` to the uploaded commit ([domino-apps/API-APPS.md](../domino-apps/API-APPS.md)).
-4. Optional start check in the Workspace, on another port (8888 is the IDE's) and in one command: the one-liner in [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#streamlit). Keep 8888 in `app.sh` for the App container.
+3. **Build, then sync, before publishing.** Vite: `bash scripts/build-dist.sh` (`DIST_DIR=dist` in a DFS Project) after every code change. An App runs the project's committed files, not the Workspace's working copy. DFS project: **File Changes > Sync to Domino** (or the bundled MCP server's upload tool), then check `app.sh` and `app.py` under **Code**. Git-based: `git add`, `git commit`, `git push`, then **Sync All Changes** to save a Vite build in `/mnt/artifacts`. Creating the version over the API right after an upload: pin `content.dfsCommitId` to the uploaded commit ([domino-apps/API-APPS.md](../domino-apps/API-APPS.md)).
+4. Optional start check in the Workspace on another port (8888 is the IDE's), in one command: [domino-apps/FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#streamlit). Keep 8888 in `app.sh`.
 5. Open **App Preview** in the workspace, select `app.sh`, and test: it runs the latest committed code in the real App runtime with the proxy prefix.
-6. **Publish App**, then **Deploy** the version from the App details page and set sharing.
+6. **Publish App** with the build label (Vite) in the Version Notes, then **Deploy** the version from the App details page and set sharing.
 
 Deployment, CI/CD and framework details: `domino-apps`; 404s, blank pages or routing problems after publishing: `domino-debug-proxy`; Domino design system SPA: `domino-ui-bootstrap`.

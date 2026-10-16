@@ -32,6 +32,7 @@ other hosts open `skills/<skill-name>/SKILL.md` in the plugin directory.
 | --- | --- | --- |
 | App fails to start, shows a blank page, 404s on assets, "connection refused", broken client-side routing, auth or CORS errors | `domino-apps` | `TROUBLESHOOTING.md`. Domino Apps must listen on `0.0.0.0:8888`; React SPAs use `base: './'` and `HashRouter` |
 | `vite.config.js`, `package.json` or `app.sh` look wrong (port, host, base path, missing build) | `domino-debug-proxy` | `SKILL.md` |
+| An App's `fetch` gets HTML or a consent redirect, its Domino API calls fail (401, 403, 500) or act as the publisher, streaming stalls, or uploads get 413 | `domino-debug-proxy` | `RUNTIME.md` |
 | Job failed, hung, or produced no output; a scheduled Job did not run | `domino-jobs` | `SKILL.md`, then `SCRIPT-PATTERNS.md` |
 | Environment build failed; a package is missing at runtime; wrong base image | `domino-environments` | the troubleshooting section of `SKILL.md` |
 | Model endpoint fails to build, returns errors, or is slow; 401 when calling it | `domino-model-endpoints` (deployment, monitoring) and `domino-model-serving` (REST lifecycle, invocation auth) | `SKILL.md`. Synchronous endpoints take HTTP Basic with the token as username and password; asynchronous ones take `Authorization: Bearer` |

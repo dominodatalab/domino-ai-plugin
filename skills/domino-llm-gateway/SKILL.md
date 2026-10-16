@@ -25,7 +25,7 @@ The extension injects **nothing** into a Workspace: no URL, no token, no `ANTHRO
 
 Send `Authorization: Bearer <token>` on every request.
 
-- **Inside a Domino Workspace, Job or App:** read the access token from `$DOMINO_API_PROXY/access-token` (the sidecar at `http://localhost:8899/access-token`). It is short-lived, so re-read it before every request instead of caching it in a long-running process.
+- **Inside a Domino Workspace, Job or App:** read the access token from `$DOMINO_API_PROXY/access-token` (by default `http://localhost:8899/access-token`). It is short-lived, so re-read it before every request instead of caching it in a long-running process. In an App it is the publisher's token: every viewer's calls use the publisher's grants and budget, so tag them with `X-LLM-Tag-<key>` to attribute usage.
 - **Outside Domino (laptop, CI):** a Domino bearer such as a Personal Access Token in a variable the user creates, for example `LLM_GATEWAY_TOKEN`. A Domino access token works from a laptop; a PAT or one of the gateway's own tokens (prefix `dgw_`, issued by an administrator) may be answered with the App login redirect or 401, in which case use a Domino access token.
 - Legacy user API keys are deprecated and not used. The Anthropic path needs the bearer in `Authorization`; a credential sent only as `x-api-key` is treated as no credential.
 
@@ -62,7 +62,7 @@ The `openai`, `anthropic`, `pydantic-ai` and `langchain-openai` packages are **n
 
 ## When a call is refused
 
-A **302 to the Domino login page** (HTML) is a missing, malformed or expired bearer: re-read the access token per call. The Anthropic SDK with `api_key=` gets that HTML as a string and fails with `AttributeError: 'str' object has no attribute 'content'`; use `auth_token=`. `404 "Model '...' not found"` is an unknown alias: list `/v1/models`. A `4xx` naming a grant, budget or guardrail rule means no access, a spent budget, or a denied prompt or response: ask the administrator, or change the prompt. A 403 such as `Only a gateway admin can manage gateway admins` is an administrator-only route. `413` from the App proxy means the body is too large. Details: [CALLING-MODELS.md](./CALLING-MODELS.md#errors-to-expect).
+A **302 to the Domino login page** (HTML) is a missing, malformed or expired bearer: re-read the access token per call. A 302 to `/app-consent?appId=...` means the user has not consented to the gateway App acting for them: open the gateway URL in a browser once and accept. The Anthropic SDK with `api_key=` gets that HTML as a string and fails with `AttributeError: 'str' object has no attribute 'content'`; use `auth_token=`. `404 "Model '...' not found"` is an unknown alias: list `/v1/models`. A `4xx` naming a grant, budget or guardrail rule means no access, a spent budget, or a denied prompt or response: ask the administrator, or change the prompt. A 403 such as `Only a gateway admin can manage gateway admins` is an administrator-only route. `413` from the App proxy means the body is too large. Details: [CALLING-MODELS.md](./CALLING-MODELS.md#errors-to-expect).
 
 ## Coding assistants through the gateway
 

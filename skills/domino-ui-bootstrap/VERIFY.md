@@ -33,8 +33,8 @@ If `build` fails:
 
 If the build is green but **assets or API calls 404 after deploy**:
 
-- **Cause:** root-absolute URLs (asset tags pointing to `/assets/…`, or `fetch('/api/…')`) bypass the proxy.
-- **Fix:** apply both parts of Step 8 — `base: './'` (8a) and `apiBase` via `document.baseURI` (8b).
+- **Cause:** root-absolute URLs (asset tags pointing to `/assets/…`, or `fetch('/api/…')`) bypass the proxy, or the App was opened without its trailing slash and the Step 8c script is missing.
+- **Fix:** apply Step 8: `base: './'` (8a), `apiBase` via `document.baseURI` (8b), and the trailing-slash script (8c).
 - Verify the running app is on the latest commit and was re-published — a stale publish serves the old build regardless of code changes.
 
 ---
@@ -49,4 +49,4 @@ Tell the user:
 - Anything that changed in their existing code (downgraded versions, swapped router, edited entry point) so they're not surprised.
 - The `>500 KB chunk` build warning is expected (Step 12).
 - **Port 8888 means two different things.** A published Domino App must listen on `0.0.0.0:8888`; inside a Domino workspace that port belongs to the IDE, so test there with **App Preview** and keep `npm run dev` for a laptop ([domino-apps/REACT-VITE-GUIDE.md](../domino-apps/REACT-VITE-GUIDE.md#developing-in-a-domino-workspace)).
-- **Next step toward a deployable app:** suggest that the user create an `app.sh` launch script that runs `npm ci`, `npm run build`, and then serves `dist/` on `0.0.0.0:8888` (`npx serve -s dist -l 8888`, or an Express server when the app calls a model endpoint or the Domino API, so tokens stay server-side). `npm run build` alone does not serve anything. Point them at the `domino-apps` skill for the full deploy shape.
+- **Next step toward a deployable app:** suggest the build-once setup from the `domino-app-init` Vite template: copy `app.sh`, `server.js`, `scripts/build-dist.sh` and `scripts/stamp.sh`, and set `build: { outDir: 'build' }` in `vite.config.ts` so `npm run build` cannot empty the dated builds in `dist/`. `scripts/build-dist.sh` builds once in the Workspace; `app.sh` never runs npm and serves the matching build with `server.js` on `0.0.0.0:8888`, which keeps tokens server-side, calls Domino as the viewer by forwarding the request's `Authorization` header, and as the publisher through `$DOMINO_API_PROXY` with no header ([REACT-VITE-GUIDE.md](../domino-apps/REACT-VITE-GUIDE.md#build-once-serve-the-build)). Point them at the `domino-apps` skill for the full deploy shape.

@@ -3,7 +3,10 @@
 Base URL and credential for each place code runs: [SKILL.md](./SKILL.md#authentication).
 
 Do not derive the deployment URL from a JWT claim, and do not copy hostnames out of one
-execution into another. Read `DOMINO_API_HOST` or use the URL an API response returns.
+execution into another. For API calls, read `DOMINO_API_HOST` or `DOMINO_API_PROXY` where the
+call runs. For links a user opens, use a URL an API response returns or the deployment URL the
+user gives you: inside a run `DOMINO_API_HOST` and `DOMINO_USER_HOST` can be in-cluster or
+in-pod addresses.
 
 ## One base for the Public API
 
@@ -16,8 +19,36 @@ documented exception that NetApp file operations under `/remotefs/v1/.../files/*
 the spec's `/datasetrw/...` snapshot-file routes return 404 (HTML), and only the
 `/v4/datasetrw/...` form answers (non-public route; may change in a future Domino version, see [route types](./SKILL.md#route-types)).
 Inside a run `$DOMINO_API_PROXY` or
-`$DOMINO_API_HOST` stands in for the base for the Nucleus `/api/...` routes, but not for
-`/remotefs/v1` (next section).
+`$DOMINO_API_HOST` stands in for the base for the platform `/api/...` routes, but not for
+`/remotefs/v1` (NetApp Volumes, below).
+
+## Inside an App
+
+An App serves many viewers but runs as one user, the publisher (the user the App run was
+started as). Which identity a call carries:
+
+| Call | Acts as |
+|---|---|
+| `$DOMINO_API_PROXY/<path>` with no `Authorization` header, or a bearer from `$DOMINO_API_PROXY/access-token` | The publisher, for every viewer |
+| `$DOMINO_API_HOST/<path>` with the viewer's `Authorization` header forwarded unchanged | The viewer |
+| `$DOMINO_API_HOST/<path>` with no `Authorization` header | The publisher |
+
+- Domino authenticates each request before it reaches the App and, with secure identity
+  propagation on (the default), sends the viewer's token as `Authorization: Bearer <jwt>`.
+  Without extended identity propagation that token lasts about 5 minutes, has audience `apps`,
+  and only Dataset snapshot file reads and Data Source lookup by name accept it; other routes
+  reject it, often with HTTP 500. With extended identity propagation (turned on for the App
+  version by a SysAdmin or CloudAdmin, and permanent for that App) and the viewer's consent, it
+  is the viewer's own credential with the viewer's permissions.
+- When the App means to act as the viewer and no token arrived, answer 401. Never retry
+  without the header: on the in-App `DOMINO_API_HOST` that runs as the publisher.
+- `DOMINO_API_HOST` can be a gateway inside the App's pod (`http://127.0.0.1:<port>`). It
+  accepts browser-session, service-account and Personal Access Token bearers and answers 403 to
+  tokens from the Domino CLI login.
+- `localhost:8899` is the default address behind `DOMINO_API_PROXY`, not a fixed one; read the
+  variable.
+- Reading the viewer's name, verifying the token, consent redirects and the URL prefix:
+  [domino-apps](../domino-apps/SKILL.md).
 
 ## NetApp Volumes (`/remotefs/v1`)
 

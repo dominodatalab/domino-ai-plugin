@@ -1,0 +1,6 @@
+# Pin the exact toolchain the Compute Environment installs. A mismatch makes rustup download
+# this version on the first cargo call, which needs network access.
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt", "rust-analyzer", "rust-src"]
+profile = "minimal"

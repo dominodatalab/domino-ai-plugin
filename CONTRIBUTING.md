@@ -507,10 +507,11 @@ How each channel receives a release:
   auto-update: Claude Code has nothing to fetch.
 - **`--plugin-dir`**: loads in place; `git pull` or checking out a tag is the update.
 - **OpenAI plugin directory (ChatGPT and Codex)**: nothing is pulled automatically. After a
-  release, build the ZIP with `scripts/build-openai.sh` from the release tag and upload it to
-  the existing plugin in the portal; the portal rejects an upload whose `plugin.json` version
-  is unchanged. Upload only releases from `main`: a backport on `release-X.Y` can carry a later
-  year than `main`, so it would sort as newer and roll the listing back.
+  release, build the ZIP with `scripts/build-openai.sh` from a clean checkout of the release
+  tag and upload it to the existing plugin in the portal (**Upload plugin to make changes**).
+  Every upload needs a new `plugin.json` version (the portal asks for confirmation before
+  reusing a published one) and the same `name`. Upload only releases from `main`, so the
+  listing always carries the newest `main` release.
 - **Gemini CLI**: `gemini extensions install https://github.com/dominodatalab/domino-ai-plugin`
   installs from the repository's latest GitHub Release once one exists (otherwise from the
   default branch). `tag-release.yml` publishes a Release on every push to `main` and marks only

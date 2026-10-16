@@ -5,7 +5,7 @@
 # ///
 """Offline dry-run of scenario checks: real scenario YAML + real check code, mocked Domino/Workspace, synthetic
 stream-json transcripts. Each case states whether the run should pass. usage: dryrun_checks.py"""
-import copy, json, subprocess, sys, tempfile, time
+import copy, fnmatch, json, shlex, subprocess, sys, tempfile, time
 from pathlib import Path
 import yaml
 HERE = Path(__file__).resolve().parent.parent
@@ -16,12 +16,16 @@ from e2elib.runner import _tmpl
 T0 = time.time() - 120; T1 = time.time()
 class FakeD:
     host = "https://domino.example.com"
-    def __init__(s, jobs=None, hpc=None, wss=None): s._jobs, s._hpc, s._wss = jobs or [], hpc or [], wss or []
+    def __init__(s, jobs=None, hpc=None, wss=None, apps=None):
+        s._jobs, s._hpc, s._wss, s._apps = jobs or [], hpc or [], wss or [], apps or []
     def jobs(s, pid, n): return s._jobs
     def get(s, path, params=None, ok=None):
         if path.startswith("/api/hpc/v1/jobs"): return {"jobs": s._hpc, "totalCount": len(s._hpc)}
         if path.startswith("/v4/workspace/project/"): return s._wss
+        if path.startswith("/api/apps/v1/apps"): return {"items": s._apps}
         return {}
+    def request(s, method, path, url=None, ok=None, raw=False, headers=None, **kw):   # app_url_ok
+        return (200, "<html></html>") if s._apps else (404, "")
 class FakeR:
     def __init__(s, files=None, dirs=("/domino/datasets/local/e2e-data", "/mnt/data/e2e-data")): s.files = files or {}; s.dirs = set(dirs)
     def sh(s, cmd, timeout=300):
@@ -29,6 +33,13 @@ class FakeR:
             p = cmd[8:].split(" &&")[0].strip().strip("'"); return (0, "EXISTS") if p in s.dirs else (1, "")
         if cmd.startswith("cat "):
             p = cmd[4:].strip().strip("'"); return (0, s.files[p]) if p in s.files else (1, "No such file")
+        if cmd.startswith("cd ") and "for f in $(ls " in cmd:   # source_regex: concatenate the named files
+            rd = cmd[3:].split(" &&")[0].strip().strip("'")
+            names = cmd.split("$(ls ", 1)[1].split(" 2>/dev/null")[0].split()
+            return 0, "".join(f"=== {n}\n{s.files[rd + '/' + n]}\n" for n in names if rd + "/" + n in s.files)
+        if cmd.startswith("find ") and " -name " in cmd:   # ws_file: files whose name matches the glob
+            glob = shlex.split(cmd.split(" -name ", 1)[1])[0]
+            return 0, "".join(f"{len(v)} {k}\n" for k, v in s.files.items() if fnmatch.fnmatch(k.rsplit("/", 1)[-1], glob))
         if cmd.startswith("bash -n "):
             p = cmd[8:].split(" &&")[0].strip().strip("'")
             if p not in s.files: return 1, ""
@@ -125,6 +136,49 @@ for t in ("dfs", "git"):
 # s14
 case("s14 next MPI cluster", True, run("s14-mpi-disambiguation", "next", tr([SK("domino-distributed-computing")], "Use an MPI compute cluster attached to a Job: clusterType MPI with 4 GPU worker nodes, then run mpirun. Nothing launched yet.")))
 case("s14 next routes to Slurm", False, run("s14-mpi-disambiguation", "next", tr([SK("domino-distributed-computing")], "Use an MPI cluster, or wrap it in an sbatch script and submit via /api/hpc/v1/jobs.")))
+
+# s15
+RD15 = "/mnt/code/e2e-runs/s15-rust-app-author-git-next-rdry"
+GOOD_RUST = {"rust-toolchain.toml": '[toolchain]\nchannel = "1.99.1"\n',
+             "Cargo.toml": '[lints.clippy]\npedantic = { level = "warn", priority = -1 }\n',
+             ".gitignore": "/target/\n",
+             "app.sh": '#!/usr/bin/env bash\nset -euo pipefail\ncd "$(dirname "$0")"\nexec "$run"\n'}
+def rust(**over):
+    files = {**GOOD_RUST, **over}
+    return FakeR({f"{RD15}/{k}": v for k, v in files.items() if v is not None})
+DONE15 = "Created the service; cargo clippy and the tests pass. Nothing was published."
+case("s15 next good project", True, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15), r=rust()))
+case("s15 next app.sh compiles", False, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15),
+     r=rust(**{"app.sh": "#!/usr/bin/env bash\ncargo build --release && exec target/release/app\n"})))
+case("s15 next floating stable channel", False, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15),
+     r=rust(**{"rust-toolchain.toml": '[toolchain]\nchannel = "stable"\n'})))
+case("s15 next pedantic without priority", False, run("s15-rust-app-author-git", "next", tr([SK("domino-rust-apps")], DONE15),
+     r=rust(**{"Cargo.toml": '[lints.clippy]\npedantic = "warn"\n'})))
+case("s15 next skill not loaded", False, run("s15-rust-app-author-git", "next", tr([], DONE15), r=rust()))
+
+# s17
+GOOD_APP_SH = ('#!/usr/bin/env bash\nset -euo pipefail\ncd "$(dirname "$0")"\nwant=$(bash scripts/stamp.sh)\n'
+               'export BUILD_DIR=dist/2026.10.15 APP_BUILD=2026.10.15\nexec node server.js\n')
+RUNNING = [{"id": "a1", "name": "e2e-vite-rdry", "url": "/apps/x/",
+            "currentVersion": {"currentInstance": {"status": "Running"}}}]
+def vite(app_sh=GOOD_APP_SH, stamp=True, build="next"):
+    RD17 = f"/mnt/e2e-runs/s17-vite-app-publish-dfs-{build}-rdry"
+    files = {f"{RD17}/app.sh": app_sh}
+    if stamp:
+        files[f"{RD17}/dist/2026.10.15.stamp"] = "abc\nbuild=2026.10.15\n"
+    return FakeR(files)
+DONE17 = "Published e2e-vite-rdry; it is Running at https://apps.example/apps/x/."
+case("s17 next good app", True, run("s17-vite-app-publish-dfs", "next", tr([SK("domino-app-init")], DONE17), d=FakeD(apps=RUNNING), r=vite()))
+case("s17 next builds in app.sh", False, run("s17-vite-app-publish-dfs", "next", tr([SK("domino-app-init")], DONE17), d=FakeD(apps=RUNNING),
+     r=vite(app_sh="#!/bin/bash\nset -e\nnpm ci && npm run build\nexec node server.js\n")))
+case("s17 next serve via npx", False, run("s17-vite-app-publish-dfs", "next", tr([SK("domino-apps")], DONE17), d=FakeD(apps=RUNNING),
+     r=vite(app_sh="#!/bin/bash\nexec npx serve -s dist -l 8888\n")))
+case("s17 next no dated build", False, run("s17-vite-app-publish-dfs", "next", tr([SK("domino-app-init")], DONE17), d=FakeD(apps=RUNNING),
+     r=vite(stamp=False)))
+case("s17 next app not running", False, run("s17-vite-app-publish-dfs", "next", tr([SK("domino-app-init")], DONE17), d=FakeD(),
+     r=vite()))
+case("s17 next skill not loaded", False, run("s17-vite-app-publish-dfs", "next", tr([], DONE17), d=FakeD(apps=RUNNING), r=vite()))
+case("s17 none good app", True, run("s17-vite-app-publish-dfs", "none", tr([], DONE17), d=FakeD(apps=RUNNING), r=vite(build="none")))
 
 bad = 0
 for name, expect, ok, detail in cases:

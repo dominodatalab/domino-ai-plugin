@@ -1,0 +1,49 @@
+id: s16-rust-app-publish-dfs
+title: Build a Rust web App and publish it so it starts from a prebuilt binary (DFS Project)
+journey: apps (Rust)
+project_type: dfs
+expected_skills: [domino-rust-apps, domino-apps]
+timeout_s: 2700
+setup:
+  # Stands in for a Compute Environment with Rust (same script as s15).
+  - type: ws_file
+    path: '{{home}}/.e2e-rust-setup.sh'
+    content: |
+      set -e
+      if [ ! -x "$HOME/.cargo/bin/rustup" ]; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
+          --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src >/dev/null 2>&1
+        cd /tmp
+        f=cargo-nextest-0.9.148-x86_64-unknown-linux-gnu
+        curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.148/$f.tar.gz
+        tar -xzf $f.tar.gz -C "$HOME/.cargo/bin"
+        d=cargo-deny-0.20.2-x86_64-unknown-linux-musl
+        curl -fsSLO https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/$d.tar.gz
+        tar -xzf $d.tar.gz -C "$HOME/.cargo/bin" --strip-components=1 $d/cargo-deny
+      fi
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$HOME"/.cargo/bin/* "$HOME/.local/bin/"
+  - type: ws_shell
+    cmd: 'bash {{home}}/.e2e-rust-setup.sh && mkdir -p {{run_dir}}'
+prompt: |
+  Build a small Rust web app in this directory whose home page says "Rust E2E {{run_tag}}" and that has a
+  JSON health check, and publish it as a Domino App named `e2e-rust-{{run_tag}}` on the `{{job_tier}}`
+  hardware tier so my teammates can open it. Make sure it actually starts, then give me its URL.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-rust-apps'
+    only_builds: [next]
+  - type: app_running
+    name_regex: '{{run_tag}}'
+    wait_s: 600
+  - type: app_url_ok
+    name_regex: '{{run_tag}}'
+  - type: script_lint
+    path: '{{run_dir}}/app.sh'
+    forbid:
+      compiles_at_start: 'cargo\s+(\+\S+\s+)?(build|run|install)'
+    require:
+      runs_binary: '\bexec\b'
+cleanup:
+  - type: delete_apps
+    name_regex: '{{run_tag}}'

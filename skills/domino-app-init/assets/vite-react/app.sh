@@ -1,31 +1,34 @@
-#!/bin/bash
-# Domino App entry point for a Vite + React application.
-# Domino runs this file when the App starts; the server must listen on 0.0.0.0:8888.
-
-set -e
-
-echo "=== Domino Vite React App ==="
-echo "Project: $DOMINO_PROJECT_NAME"
-echo "Owner: $DOMINO_PROJECT_OWNER"
-echo "Started by: $DOMINO_STARTING_USERNAME"
-
-# Run from the directory that holds this script and package.json (the repo root, or the app
-# subfolder when app.sh lives there).
+#!/usr/bin/env bash
+# Domino App entry point for a Vite + React app. Serves a build that scripts/build-dist.sh made, with
+# server.js (Node built-ins only); never installs or builds, so it starts in seconds and needs no npm.
+# It picks the newest build, in /mnt/artifacts/dist/<package name> (or $DIST_DIR) and then ./dist, whose stamp
+# matches these sources.
+set -euo pipefail
 cd "$(dirname "$0")"
+want=$(bash scripts/stamp.sh)
+build=
+found=
+name=$(node -p "require('./package.json').name" | tr -c 'A-Za-z0-9._\n-' '-')
+roots=("${DIST_DIR:-/mnt/artifacts/dist/$name}")
+[ "${roots[0]}" = dist ] || roots+=(dist)
 
-# Deterministic install from package-lock.json (requires Node in the Compute Environment and
-# egress to the npm registry or a private mirror configured in .npmrc; on an air-gapped site
-# commit the built dist/ on a deploy branch and skip the install and build steps).
-echo "Installing dependencies..."
-npm ci
+for root in "${roots[@]}"; do
+  for stamp in $(printf '%s\n' "$root"/*.stamp | sort -rV); do
+    [ -f "$stamp" ] && [ -f "${stamp%.stamp}/index.html" ] || continue
+    label=${stamp##*/}
+    found="$found ${label%.stamp}"
+    if [ "$(head -n1 "$stamp")" = "$want" ]; then
+      build=${stamp%.stamp}
+      break 2
+    fi
+  done
+done
 
-# Production bundle with base: './' (relative asset URLs).
-echo "Building production bundle..."
-npm run build
+if [ -z "$build" ]; then
+  echo "app.sh: no build matches these sources (found:${found:- none}); run scripts/build-dist.sh, save, and publish again" >&2
+  exit 1
+fi
 
-# Serve dist/ and proxy model endpoint calls server-side so the token never reaches the browser.
-# server.js reads MODEL_API_URL and MODEL_API_TOKEN from the environment (set them in the
-# Domino project settings). For a purely static app, replace the line below with:
-#   npx serve -s dist -l 8888 --no-clipboard      (add serve to devDependencies first)
-echo "Starting server on 0.0.0.0:8888..."
-node server.js
+export BUILD_DIR=$build APP_BUILD=${build##*/}
+echo "app.sh: serving build $APP_BUILD from ${build%/*}"
+exec node server.js

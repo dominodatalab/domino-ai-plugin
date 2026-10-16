@@ -1,0 +1,43 @@
+# cargo deny check: RustSec advisories, licences, banned or duplicate crates, and crate sources.
+
+[graph]
+all-features = true
+
+[advisories]
+# Vulnerabilities always fail. Unmaintained and unsound crates fail when this crate depends on them directly.
+unmaintained = "workspace"
+unsound = "workspace"
+yanked = "deny"
+
+[licenses]
+# Permissive licences only; add one here when cargo deny names a new licence you accept.
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "CDLA-Permissive-2.0",
+  "ISC",
+  "MIT",
+  "OpenSSL",
+  "Unicode-3.0",
+  "Zlib",
+]
+confidence-threshold = 0.93
+# Dependency updates change which of these appear; an unused entry is not a problem.
+unused-allowed-license = "allow"
+
+# This crate is unpublished (publish = false) and needs no licence of its own.
+[licenses.private]
+ignore = true
+
+[bans]
+# reqwest and sqlx pull a few crates in two versions (tower-http, sha2, base64, getrandom); that costs
+# binary size, not correctness. Inspect with `cargo tree -d` when size matters.
+multiple-versions = "allow"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

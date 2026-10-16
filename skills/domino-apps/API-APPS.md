@@ -9,9 +9,13 @@ Base URL and auth: [domino-api-intro](../domino-api-intro/SKILL.md#authenticatio
 Connectivity check:
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)
-curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/apps/v1/apps?limit=1"
+# in a Domino run: the proxy adds the credential
+curl -s "$DOMINO_API_PROXY/api/apps/v1/apps?limit=1"
+# outside a run: deployment URL and a Personal Access Token or service account token
+curl -s -H "Authorization: Bearer $DOMINO_API_TOKEN" "$DOMINO_API_HOST/api/apps/v1/apps?limit=1"
 ```
+
+The examples below use the in-run form; outside a run add the `Authorization` header and use the deployment URL.
 
 ## v1 vs beta
 
@@ -35,6 +39,7 @@ Beta remains the only surface for instance reads, thumbnails (`/apps/{appId}/thu
   "visibility": "AUTHENTICATED",
   "discoverable": true,
   "initialVersion": {
+    "description": "build 2026.10.15",
     "content": {
       "environmentId": "<environmentId>",
       "gitRef": { "type": "branches", "value": "main" }
@@ -46,7 +51,8 @@ Beta remains the only surface for instance reads, thumbnails (`/apps/{appId}/thu
 
    - `visibility` enum: `AUTHENTICATED`, `GRANT_BASED`, `GRANT_BASED_STRICT`, `PUBLIC`. The spec carries no descriptions; the docs name two sharing modes, "Anyone in Domino" (any Domino account) and "Restricted" (listed users plus project collaborators), which are `AUTHENTICATED` and `GRANT_BASED`. `GRANT_BASED_STRICT` is undocumented; `PUBLIC` (anonymous viewers) also needs the admin setting described on the app-configuration-settings page. `discoverable` is the "Make globally discoverable" switch.
    - `gitRef.type`: `head`, `commitId`, `branches`, `tags`, `custom`. DFS projects use `content.dfsCommitId` instead (the field sits inside `content` on `initialVersion`, `versions` and `createAndStart`). Either way the App runs the project's **committed** files, so sync first: in a DFS Workspace **File Changes > Sync to Domino** (or the bundled MCP server's upload tool); in a Git-based project commit and push. **Right after syncing or uploading, pin `dfsCommitId`; do not leave it out to take the head**, because the head the Apps service resolves can lag the upload by a few seconds and the version then runs the previous commit without your file. Use the `commitId` the upload tool returned (the newest, if several), or read `GET /api/projects/beta/projects/{projectId}/commits/latest` (`{"commitId": ...}`) and confirm `GET /api/projects/v1/projects/{projectId}/files/{commitId}/app.sh/content` returns 200 before passing it. `entryPoint` is a path relative to the project root; a missing file fails the start with `entry script 'app.sh' not found in the root directory of your project`.
-   - `content` also accepts `environmentRevisionId`, `dataPlaneId` (must match the hardware tier's data plane or the call returns 422), `externalVolumeMountIds`, `netAppVolumeIds`, `mountDatasets`, `extendedIdentityPropagationToAppsEnabled`. `deployment` also accepts `autoscalingSpecification`, `vanityUrl`, `renderIFrame`.
+   - `content` also accepts `environmentRevisionId`, `dataPlaneId` (must match the hardware tier's data plane or the call returns 422), `externalVolumeMountIds`, `netAppVolumeIds`, `mountDatasets`, `extendedIdentityPropagationToAppsEnabled` (only a SysAdmin or CloudAdmin can set it, and once on for an App it cannot be turned off). `deployment` also accepts `autoscalingSpecification`, `vanityUrl`, `renderIFrame`.
+   - `description` on a version (`initialVersion`, `versions`, `createAndStart`; changed later with `PATCH .../versions/{versionId}` without a restart) is what the App page shows as Version Notes. For an App that starts a prebuilt build, put the build label there ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)).
    - IDs: `GET /api/environments/beta/environments` and `GET /api/hardwaretiers/v1/hardwaretiers` (both paginated with `limit`/`offset`).
    - The response (`AppResponseV1`) carries `id`, `url` and `currentVersion` (the most recently started version; right after creation it is the new version), so `currentVersion.id` is the version to start. The Cloud spec also returns `latestVersion` (most recently created version, started or not); the 6.3 spec does not, so code that must find the newest version on both targets lists `GET /api/apps/v1/apps/{appId}/versions` (`items[]` newest first, each with `id`, `versionNumber`, `createdAt`) and takes the highest `versionNumber`. On Cloud 6.4 `environmentRevisionId` and the commit may be omitted (the server resolves the environment's selected revision and the DFS head), and a DFS App's `url` looks like `https://apps.<domain>/u/<owner>/<project>/app/?appId=<id>` until a vanity URL is set.
 
@@ -67,24 +73,22 @@ Instance logs are beta-only:
 
 ```bash
 # instances of a version (newest first is not guaranteed; read createdAt)
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$DOMINO_API_HOST/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances"
+curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances"
 # logs for one instance; logType: complete (default) | prepareoutput | stdout | stderr
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$DOMINO_API_HOST/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances/$INSTANCE_ID/logs?logType=stdout&limit=200"
+curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances/$INSTANCE_ID/logs?logType=stdout&limit=200"
 ```
 
 The response is `{"logContent": [{"timestamp", "logType", "log", "size"}], "isComplete", "pagination"}`; `realTimeLogs` streams the same data. The App details page shows the same logs with an instance selector and offers a support bundle download.
 
 ## Management URL vs App URL
 
-Management calls go to the platform API base above. Viewers open the `url` field of the App record (an `apps` hostname or a `/apps/<vanity>/` path, depending on the deployment). Do not call `/api/apps/...` on the App's own hostname, and do not build the viewer URL by hand.
+Management calls go to the platform API base above. Viewers open the `url` field of the App record (an `apps` hostname or a `/apps/<vanity>/` path, depending on the deployment). Do not call `/api/apps/...` on the App's own hostname, and do not build the viewer URL by hand, least of all from `DOMINO_API_HOST` or `DOMINO_USER_HOST` (in-cluster addresses). A script that calls the App itself needs a Personal Access Token, and for an App with extended identity propagation the user must have consented once in a browser; otherwise it gets a 302 to sign-in or consent.
 
 ## When a call fails
 
 | Response | Likely cause |
 |---|---|
-| 401 | Missing or expired token, or an in-run call that bypassed the proxy and sent no bearer |
+| 401 | Missing or expired token. In a run, call `$DOMINO_API_PROXY` with no header instead of sending your own |
 | 403 | No edit permission on the project |
 | 415 on v1 `start` | Empty request body; send `{}` as JSON |
 | 422 on create or `versions` | `visibility`, `name` or `projectId` missing; `hardwareTierId or dataPlaneId is required` when `deployment.hardwareTierId` is omitted and the App has no started version to inherit from; unknown environment or hardware tier; `dataPlaneId` not matching the tier |

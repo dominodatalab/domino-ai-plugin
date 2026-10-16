@@ -7,9 +7,10 @@ How a Vite-built React app is served behind Domino's reverse proxy, and how it c
 ```
 Viewer opens:  the App's `url` field (an apps hostname or an /apps/<vanity>/ path; both end in a prefix)
 Proxy:         authenticates the viewer, strips the prefix, forwards to the container on port 8888,
-               adds the `domino-username` header (and `Authorization` when identity propagation is on)
+               adds `Authorization: Bearer <viewer token>` (secure identity propagation, the default) and,
+               except for Apps with extended identity propagation, a `domino-username` copy of the name
 Container:     GET /              -> index.html
-               GET /assets/x.js   -> served from dist/
+               GET /assets/x.js   -> served from the build app.sh selected
 ```
 
 Two consequences for a single-page app:
@@ -27,11 +28,11 @@ export default defineConfig({
   plugins: [react()],
   base: './',                       // relative asset URLs in the build; required behind the proxy
   server: { host: '0.0.0.0', port: 8888, strictPort: true },   // laptop development only
-  build:  { outDir: 'dist', assetsDir: 'assets' },
+  build:  { outDir: 'build', assetsDir: 'assets' },   // scratch output; dated builds go to dist/
 })
 ```
 
-`server` matters only for `npm run dev` on a laptop. Neither the dev server nor `vite preview` is a way to serve the App on Domino: Vite ignores a relative `base` in dev mode and its host check rejects proxied hostnames, so a published App serves `dist/` as described below and in-Domino testing goes through App Preview.
+`server` matters only for `npm run dev` on a laptop. Neither the dev server nor `vite preview` is a way to serve the App on Domino: Vite ignores a relative `base` in dev mode and its host check rejects proxied hostnames, so a published App serves a build as described below and in-Domino testing goes through App Preview. `outDir` is `build/` because `npm run build` empties its output folder, and the dated builds in `dist/` must survive it.
 
 ## Router
 
@@ -51,66 +52,22 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 Routes appear as `.../apps/<vanity>/#/dashboard`.
 
-## Serving the build
+The App URL also answers without its trailing slash, where `./assets/...` resolves one level up. Make this the first line of `<head>` in `index.html`:
 
-### Static only (the app calls nothing)
-
-```bash
-#!/bin/bash
-# app.sh
-set -e
-cd "$(dirname "$0")"       # run next to package.json, wherever app.sh lives in the repo
-npm ci
-npm run build
-npx serve -s dist -l 8888 --no-clipboard
+```html
+<script>if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search + location.hash)</script>
 ```
 
-Add `serve` to `devDependencies` so `npm ci` installs it and `npx` needs no network access at start. `-s` rewrites unknown paths to `index.html`: harmless with `HashRouter`, required with `BrowserRouter`. `npm ci` itself needs egress to the npm registry or a private mirror (`.npmrc`); on an air-gapped site commit `dist/` on a deploy branch and reduce `app.sh` to the serve step.
+## Build once, serve the build
 
-### Static build plus a backend (the app calls a model endpoint or the Domino API)
+`app.sh` never installs or builds. Build in a Workspace or a Job with `scripts/build-dist.sh`, save the build, then publish. Dated builds, the previous build kept for rollbacks, and how `app.sh` picks one: [FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds). Copy `app.sh`, `server.js`, `scripts/build-dist.sh` and `scripts/stamp.sh` from the `domino-app-init` template ([assets/vite-react](../domino-app-init/assets/vite-react/server.js)).
 
-The token must never reach the browser, so a small Express server serves `dist/` and makes the call. `app.sh` ends with `node server.js` instead of `npx serve`; add `express` to `dependencies` (`package.json` from the Vite scaffold already has `"type": "module"`).
+- **Node.** Building needs Node 20.19 or later with npm (Vite 8). The App needs only `node` 18 or later, because `server.js` uses Node built-ins and the App never runs npm. A Compute Environment can ship an older Node without npm: check `node -v` and `npm -v` in the Workspace, and if either is missing or older, add Node 22 to the environment, or install it for your user with nvm (`curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash`, open a new shell, `nvm install 22`).
+- **Build.** `bash scripts/build-dist.sh` runs `npm ci` and `npm run build` (Vite writes `build/`), then copies `build/` into a dated folder under `/mnt/artifacts/dist/<package name>/` in a Git-based Project, or `dist/` with `DIST_DIR=dist` in a DFS Project. Registry access (or a mirror in `.npmrc`) is needed only here. `VITE_` variables come from the shell that runs the build, not from the App.
+- **Save.** Git-based: commit and push the code, and **File Changes > Sync All Changes** saves the build. DFS: **Sync to Domino**, with `node_modules/` and `build/` listed in the `.dominoignore` at the Project root (Domino reads only that file; a folder pattern matches at any depth).
+- **Serve.** `app.sh` hashes the committed build inputs (`index.html`, `package.json`, `package-lock.json`, `src/`, `public/`, Vite and TypeScript config), picks the newest build whose stamp matches, and runs `node server.js` with `BUILD_DIR` and `APP_BUILD` set. It never falls back to an older or newer build.
 
-```javascript
-// server.js
-import express from 'express'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const dist = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist')
-const app = express()
-app.use(express.json())
-
-// Server-side call to a synchronous Domino endpoint: HTTP Basic with the token as user and password.
-// Asynchronous endpoints take "Authorization: Bearer <token>" instead.
-app.post('/api/predict', async (req, res) => {
-  const url = process.env.MODEL_API_URL
-  const token = process.env.MODEL_API_TOKEN
-  if (!url || !token) return res.status(500).json({ error: 'MODEL_API_URL or MODEL_API_TOKEN is not set' })
-  const basic = Buffer.from(token + ':' + token).toString('base64')
-  try {
-    const upstream = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Basic ' + basic },
-      body: JSON.stringify({ data: req.body }),
-    })
-    res.status(upstream.status).type('application/json').send(await upstream.text())
-  } catch (err) {
-    console.error('model endpoint call failed:', err)
-    res.status(502).json({ error: 'model endpoint call failed' })
-  }
-})
-
-app.use(express.static(dist))
-app.use((req, res) => {                       // SPA fallback for extension-less paths only
-  if (path.extname(req.path)) return res.status(404).end()   // a missing asset stays a 404
-  res.sendFile(path.join(dist, 'index.html'))
-})
-
-app.listen(8888, '0.0.0.0', () => console.log('listening on 0.0.0.0:8888'))
-```
-
-The same server can call the Domino platform API as the publisher or, when extended identity propagation is enabled for the App, as the viewer by forwarding the incoming `Authorization` header ([SKILL.md](./SKILL.md#calling-domino-apis-and-model-endpoints-from-an-app)).
+`server.js` serves the build with an SPA fallback for extension-less paths (a missing asset stays 404), answers `healthz` with the build label, calls the model endpoint server-side (`POST api/predict`), and calls the Domino API as the viewer by forwarding the request's `Authorization` header (`GET api/projects`); without the header it answers 401 instead of calling without one, because `$DOMINO_API_HOST` runs header-less calls as the publisher. Calls as the publisher go to `$DOMINO_API_PROXY` with no header. Which routes accept the viewer's token: [FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls).
 
 ### Frontend call
 
@@ -144,7 +101,7 @@ A changed variable takes effect on the next start of the App. `.env.example` doc
 
 ## Developing in a Domino Workspace
 
-Use **App Preview**: open the App Preview tab in the workspace, set the App file (`app.sh`), Compute Environment and Hardware Tier, and start it. Preview runs the committed code in a real App pod on port 8888 with the production proxy, `DOMINO_RUN_HOST_PATH` and identity headers, at `/preview/<draftAppId>` (author only). Commit, and live sync restarts the container with the new commit. Publish from the same workspace with **Publish App**.
+Use **App Preview**: open the App Preview tab in the workspace, set the App file (`app.sh`), Compute Environment and Hardware Tier, and start it. Preview runs the saved code in a real App pod on port 8888 with the production proxy, `DOMINO_RUN_HOST_PATH` and identity headers, at `/preview/<draftAppId>` (author only). After a code change, run `scripts/build-dist.sh` and save before Preview restarts: `app.sh` serves only a build of the saved code and otherwise stops with `no build matches these sources`. Publish from the same workspace with **Publish App**.
 
 Do not try to run the Vite dev server inside the workspace instead: the workspace IDE owns port 8888, Vite serves `/@vite/client` and `/src/main.jsx` from the domain root in dev mode (it ignores a relative `base`), and its host check rejects proxied hostnames, so the page comes up blank behind Jupyter Server Proxy. Keep `npm run dev` for a laptop and App Preview for Domino.
 
@@ -157,13 +114,17 @@ my-react-app/
     App.jsx
     main.jsx
   public/
-  dist/              # build output, git-ignored
-  vite.config.js
-  package.json       # "type": "module"; express in dependencies; serve in devDependencies if used
-  server.js
+  scripts/
+    build-dist.sh    # npm ci, npm run build, copy into a dated build, keep the previous one
+    stamp.sh         # hash of the committed build inputs
+  build/             # Vite's scratch output; git- and Domino-ignored
+  dist/              # dated builds in a DFS Project (Git-based: /mnt/artifacts/dist/<package name>/)
+  vite.config.js     # base './', outDir 'build'
+  package.json       # "type": "module"; no runtime dependencies are needed by server.js
+  server.js          # Node built-ins only
   app.sh             # starts with cd "$(dirname "$0")", so the folder can sit anywhere in the repo
   .env.example
-  .gitignore
+  .gitignore         # node_modules/, build/, dist/, .env
 ```
 
 The `domino-app-init` skill writes these files; `domino-debug-proxy` checks them.

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- The App URL also answers without its trailing slash, where relative URLs resolve one level too high. -->
+  <script>if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/" + location.search + location.hash);</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <!-- Domino's proxy inserts a root-absolute /favicon.ico link that 404s on the Apps host; this relative one replaces it. -->
+  <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
+  <link rel="stylesheet" href="static/app.css">
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  <p>Signed in as <strong>{{ username }}</strong>.</p>
+  <ul>
+    <li><a href="healthz">healthz</a></li>
+    <li><a href="api/whoami">api/whoami</a></li>
+    <li><a href="api/me">api/me</a> (you, with extended identity propagation) and <a href="api/me?as=publisher">as the publisher</a></li>
+    <li><a href="api/projects">api/projects</a> visible to you, or <a href="api/projects?as=publisher">to the publisher</a></li>
+  </ul>
+  <form method="post" action="refresh"><button type="submit">Refresh</button></form>
+  <pre id="whoami"></pre>
+  <script src="static/app.js"></script>
+</body>
+</html>

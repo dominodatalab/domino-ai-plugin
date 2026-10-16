@@ -1,7 +1,7 @@
 ---
 name: domino-extensions
 description: Build and operate Domino UI Extensions (mount a published Domino App at a Domino UI mount point with page context). Covers extension_manifest.json, the official installer versus the manual Extensions API, App publish and identity requirements, auth and host rules for Extension backends, and the /api/extensions/beta routes. Use when creating an Extension, wiring mount points, publishing an Extension App from a project, pointing an Extension at a new App version, or automating the Extension install lifecycle. Not for generic App deployment alone (see domino-apps) or SPA scaffolding (see domino-ui-bootstrap).
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token or service account token. Creating an Extension needs admin permissions; publishing its App with extended identity propagation needs a SysAdmin or CloudAdmin.
+compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY, outside a run a Personal Access Token or service account token. Creating an Extension needs admin permissions; publishing its App with extended identity propagation needs a SysAdmin or CloudAdmin.
 ---
 
 # Domino Extensions
@@ -37,7 +37,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/extensions (ov
 | `datasetFileContext` | Three-dot menu of a file in a Dataset | `datasetId`, `datasetSnapshotId`, `filePath` |
 | `modelDetails` | Model details page | `modelId`, `modelVersionId` |
 | `adminPanel` | New page in the Admin panel | none |
-| `netAppVolume`, `netAppVolumeFileContext` | NetApp Volume pages (in the API schema; the docs list only the five above) | `netAppVolumeId`, `netAppVolumeSnapshotId`, `filePath` |
+| `netAppVolume`, `netAppVolumeFileContext` | NetApp Volume pages (API only) | `netAppVolumeId`, `netAppVolumeSnapshotId`, `filePath` |
 
 `urlConfig.contextualQueryParams` accepts only the spec enum (the eight names above), and the App receives exactly what the config lists. The file parameter is `filePath`, not `datasetFilePath`. Read the parameters on the App's root route, validate the ones you need and return a clear 400 when they are missing, and call Domino with the forwarded `Authorization` header. A worked Flask example and the exact config shapes are in [API-EXTENSIONS.md](./API-EXTENSIONS.md).
 
@@ -55,13 +55,13 @@ Domino-built Extensions are installed, upgraded and uninstalled from **Admin pan
 
 | Call | Credential and base |
 |---|---|
-| Platform API as the **viewer** | Forward the request's `Authorization` bearer on `$DOMINO_API_HOST/api/...`. Consent expires (8 hours by default, up to 30 days) |
-| Platform API as the **publisher** | `$DOMINO_API_PROXY/api/...` with no header, or a bearer from `http://localhost:8899/access-token` on `$DOMINO_API_HOST` |
+| Platform API as the **viewer** | Forward the request's `Authorization` header unchanged to `$DOMINO_API_HOST/api/...`; answer 401 when it is missing. Consent expires (8 hours by default, up to 30 days) |
+| Platform API as the **publisher** | `$DOMINO_API_PROXY/api/...` with no header, or a bearer from `$DOMINO_API_PROXY/access-token` |
 | Governance `/api/governance/v1/*` | Base URL per the `domino-governance` skill; bearer PAT or service account, never an API key |
 | Model inference | The `url` from the endpoint record, not a hand-built host |
 | Automation outside any run | Public deployment URL plus PAT or service account token |
 
-Without consent the viewer JWT has limited scope, so privileged reads such as `GET /v4/users/self` (non-public route; may change in a future Domino version) can fail; prefer `/api/...` routes and request consent. Domino does not inject a public-URL variable such as `DOMINO_EXTERNAL_URL`; when the backend needs the deployment's public URL, configure it as a project environment variable.
+Until a viewer consents, Domino redirects every request, JSON included, to `/app-consent`. The bearer is the viewer's own credential: take the viewer from its `preferred_username` claim, never `domino-username` (not sent here; clients can forge it); never log or store the token, never call without it (`$DOMINO_API_HOST` runs header-less calls as the publisher). No browser links from `DOMINO_API_HOST` or `DOMINO_USER_HOST`; put the public URL in a project environment variable. Slash, routes, scripts: [API-EXTENSIONS.md](./API-EXTENSIONS.md#identity-urls-and-scripts).
 
 ## Reference files
 

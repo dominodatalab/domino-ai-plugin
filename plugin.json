@@ -35,9 +35,9 @@
         "supportURL": "https://support.domino.ai/",
         "privacyPolicyURL": "https://domino.ai/legal/privacy-policy",
         "defaultPrompt": [
-          "Help me deploy a Streamlit dashboard to Domino.",
+          "How do I deploy a Streamlit dashboard as a Domino App?",
           "Set up MLflow experiment tracking for my Domino project.",
-          "Run my training script every day at midnight as a Domino job."
+          "Show me how to schedule my training script as a nightly Domino Job."
         ],
         "composerIcon": "./assets/logo.svg",
         "logo": "./assets/logo.svg"

@@ -1,6 +1,6 @@
 # CI/CD for a React app on Domino with GitHub Actions
 
-A push to `uat` or `main` builds the app and deploys it to a Domino project through the Public API. Domino runs `app.sh` (which installs and builds) when the App starts; CI creates the App once, then creates and starts a new version on every push.
+A push to `uat` or `main` builds the app once in CI, commits the build on a commit tagged `build-<label>`, and deploys that tag to a Domino project through the Public API. `app.sh` only serves the build, so the App starts in seconds and needs neither npm nor registry access. CI creates the App once, then creates and starts a new version on every push, with the build label in the version's Version Notes. Build labels and rollback: [FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds).
 
 ## Architecture
 
@@ -16,27 +16,19 @@ main branch -> GitHub Action -> Prod project: new App version, started
 2. **Git credential for the service account.** Git credentials are per account. Because the service account starts every App instance, the admin adds a token Git credential that can read this repository to the service account itself (same page, "Add Git credentials to a service account"; API `POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/tokengitcredentials`). Use a read-only GitHub token.
 3. **Projects.** Create the UAT and production projects as Git-based projects whose main repository is this GitHub repository (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/link-github-account-to-domino for the human's own credential). Add the service account as a collaborator with edit rights on both projects. (`POST /api/projects/v2/projects` with `mainRepository.uri`, `serviceProvider` and `gitCredentialId` automates this; not covered here.)
 4. **Environment variables.** In each project add `MODEL_API_URL` and `MODEL_API_TOKEN` as Project environment variables (**Settings > Environment variables**, or `POST /v4/projects/{projectId}/environmentVariables` (non-public route; may change in a future Domino version) as [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store) shows; the token is a Model Access Token from the endpoint's **Settings > Invocation**). The App reads them at start; they never pass through GitHub.
-5. **IDs.** Note the Compute Environment ID (the environment must contain Node) and the Hardware Tier ID. `GET /api/environments/beta/environments` and `GET /api/hardwaretiers/v1/hardwaretiers` list them.
+5. **IDs.** Note the Compute Environment ID (the environment must contain `node` 18 or later; npm is not needed) and the Hardware Tier ID. `GET /api/environments/beta/environments` and `GET /api/hardwaretiers/v1/hardwaretiers` list them.
 
 ## Repository layout
 
 ```
 .
-├── app-code/                 # Vite app: src/, vite.config.js, package.json, server.js
-├── app.sh                    # Domino entry point; builds and serves app-code/
+├── app-code/                 # Vite app from the domino-app-init template: src/, vite.config.js,
+│                             #   package.json, server.js, app.sh, scripts/build-dist.sh, scripts/stamp.sh
 ├── cicd/deploy_app.py
 └── .github/workflows/deploy.yml
 ```
 
-```bash
-#!/bin/bash
-# app.sh (repo root); the Vite app lives in app-code/
-set -e
-cd "$(dirname "$0")/app-code"
-npm ci                  # needs npm registry egress or a private mirror in .npmrc
-npm run build
-node server.js          # or: npx serve -s dist -l 8888 --no-clipboard
-```
+The App's entry point is `app-code/app.sh`; it serves the build in `app-code/dist/<label>/` whose stamp matches the code and never builds.
 
 ## GitHub configuration
 
@@ -63,7 +55,7 @@ on:
     branches: [uat, main]
 
 permissions:
-  contents: read
+  contents: write   # pushes the build tag
 
 # One deploy per branch at a time, so two pushes cannot race createAndStart.
 concurrency:
@@ -83,11 +75,18 @@ jobs:
           cache: npm
           cache-dependency-path: app-code/package-lock.json
 
-      - name: Build (fail here, not inside Domino)
+      - name: Build once and tag it
         working-directory: app-code
         run: |
-          npm ci
-          npm run build
+          LABEL="$(date -u +%Y.%m.%d).${{ github.run_number }}"
+          DIST_DIR=dist KEEP_BUILDS=1 BUILD_LABEL="$LABEL" bash scripts/build-dist.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist
+          git commit -q -m "Build $LABEL of $GITHUB_SHA"
+          git tag "build-$LABEL"
+          git push origin "build-$LABEL"
+          echo "BUILD_LABEL=$LABEL" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v7
         with:
@@ -102,7 +101,8 @@ jobs:
           APP_NAME: ${{ vars.APP_NAME }}
           ENVIRONMENT_ID: ${{ vars.ENVIRONMENT_ID }}
           HARDWARE_TIER_ID: ${{ vars.HARDWARE_TIER_ID }}
-          GIT_BRANCH: ${{ github.ref_name }}
+          BUILD_TAG: build-${{ env.BUILD_LABEL }}
+          BUILD_LABEL: ${{ env.BUILD_LABEL }}
         run: |
           pip install requests
           python cicd/deploy_app.py
@@ -128,7 +128,8 @@ PROJECT_OWNER = os.environ["PROJECT_OWNER"]
 APP_NAME = os.environ["APP_NAME"]
 ENVIRONMENT_ID = os.environ["ENVIRONMENT_ID"]
 HARDWARE_TIER_ID = os.environ["HARDWARE_TIER_ID"]
-GIT_BRANCH = os.environ.get("GIT_BRANCH", "main")
+BUILD_TAG = os.environ["BUILD_TAG"]          # build-<label>: the source plus its build, never moved
+BUILD_LABEL = os.environ["BUILD_LABEL"]
 VISIBILITY = os.environ.get("APP_VISIBILITY", "AUTHENTICATED")  # AUTHENTICATED | GRANT_BASED | GRANT_BASED_STRICT | PUBLIC
 
 
@@ -158,7 +159,8 @@ def find_app(project_id):
 
 def version_spec():
     return {
-        "content": {"environmentId": ENVIRONMENT_ID, "gitRef": {"type": "branches", "value": GIT_BRANCH}},
+        "description": f"build {BUILD_LABEL}",   # shown as the version's Version Notes
+        "content": {"environmentId": ENVIRONMENT_ID, "gitRef": {"type": "tags", "value": BUILD_TAG}},
         "deployment": {"hardwareTierId": HARDWARE_TIER_ID},
     }
 
@@ -187,7 +189,7 @@ def main():
         app = call("POST", "/api/apps/v1/apps", json={
             "projectId": project_id,
             "name": APP_NAME,
-            "entryPoint": "app.sh",
+            "entryPoint": "app-code/app.sh",
             "visibility": VISIBILITY,
             "discoverable": True,
             "initialVersion": version_spec(),
@@ -209,12 +211,12 @@ if __name__ == "__main__":
     main()
 ```
 
-Pin a version to the exact pushed commit instead of the branch head with `{"type": "commitId", "value": os.environ["GITHUB_SHA"]}`.
+The build tag is pushed once and never moved, so every App version keeps a commit that holds both its source and its build; the commits stay off the branch, which never carries build output. CI keeps one build per commit (`KEEP_BUILDS=1`): rollbacks go through App versions, and a reverted commit is rebuilt by its own push.
 
 ## Monitoring and rollback
 
 - GitHub: the workflow log prints the status transitions and the App URL.
 - Domino: the App details page shows per-instance logs and resource use; the API equivalent is in [API-APPS.md](./API-APPS.md) (Logs).
-- Rollback: any published version can be deployed. In the UI select the earlier version on the App details page and **Deploy**; over the API, `POST /api/apps/v1/apps/{appId}/versions/{oldVersionId}/start` with `{}`, which stops the running version and restarts the old one on its original commit. A `git revert` pushed to the branch also produces a new version through the workflow.
+- Rollback: any published version can be deployed. In the UI select the earlier version on the App details page (its Version Notes name the build) and **Deploy**; over the API, `POST /api/apps/v1/apps/{appId}/versions/{oldVersionId}/start` with `{}`, which stops the running version and restarts the old one on its original tag. A `git revert` pushed to the branch also produces a new version through the workflow.
 
 Public example repository (older API usage, for layout reference only): https://github.com/dominodatalab/domino-blueprints/tree/main/React-app-deployment-with-CICD

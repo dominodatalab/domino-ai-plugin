@@ -87,7 +87,7 @@ The UI generates copy-ready snippets for any Data Source or Dataset: **Data > Da
 
 ## Authentication
 
-Inside a Workspace, Job, scheduled Job, Launcher or App the clients authenticate on their own
+Inside a Workspace, Job, scheduled Job, Launcher or App (as the publisher) the clients authenticate on their own
 from `token=` (if you pass one), `DOMINO_API_PROXY` (a short-lived JWT fetched from
 `$DOMINO_API_PROXY/access-token`), `DOMINO_TOKEN_FILE` (if that file exists) and
 `DOMINO_USER_API_KEY` (legacy API key, deprecated, never rely on it). The precedence differs
@@ -98,8 +98,11 @@ per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. Hosts come from
 - **Domino endpoints (model APIs)** get no automatic token. Store a service-account token as
   an environment variable on the endpoint and pass it: `DataSourceClient(token=os.environ["DATA_API_TOKEN"])`
   (`token=`, not the deprecated `api_key=`).
-- **Apps acting for the calling user**: use the bearer from the incoming request,
-  `DatasetClient(token=request.headers["Authorization"][7:])`.
+- **Apps acting for the calling user**: pass the incoming request's bearer token,
+  `DatasetClient(token=token)`, built per request. Without
+  extended identity propagation that token covers only Dataset file reads and Data Source
+  lookup by name. With no bearer or an empty one, answer 401; never pass `token=None`, which
+  uses the publisher's credentials.
 - **Outside Domino**: the Data Source proxy hosts are internal to the deployment, so run Data
   API code inside a Domino execution. If your admin exposes them, set `DOMINO_API_HOST` to the
   deployment URL, the two proxy host variables as the admin gives them, and pass `token=` a

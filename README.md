@@ -32,7 +32,7 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
-| `skills/` (34 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
+| `skills/` (35 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
 | Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; credentials from the env file, see [Your Domino URL and token](#your-domino-url-and-token)) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ✅ via `mcp_config.json` (stdio; credentials from `agy`'s environment or the env file) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
@@ -373,11 +373,11 @@ public release:
 
 ```bash
 git clone https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
-agy plugin validate ~/domino-ai-plugin   # optional: 34 skills, 3 agents, 2 MCP servers
+agy plugin validate ~/domino-ai-plugin   # optional: 35 skills, 3 agents, 2 MCP servers
 agy plugin install ~/domino-ai-plugin
 ```
 
-`agy plugin list` shows the import with its components (34 skills, 3 agents, 1 rule, 2 MCP servers). The
+`agy plugin list` shows the import with its components (35 skills, 3 agents, 1 rule, 2 MCP servers). The
 installed copy includes `rules/domino.md`, which Antigravity reads as an always-on rule
 (`trigger: always_on`). The bundled Domino MCP server (Antigravity shows it as
 `dominodatalab_domino_server`) needs `uv` on `PATH`; outside a Domino Workspace it reads
@@ -398,8 +398,8 @@ installed copy includes `rules/domino.md`, which Antigravity reads as an always-
 [OpenAI plugin submission portal](https://platform.openai.com/plugins):
 
 ```bash
-scripts/build-openai.sh                               # dist/dominodatalab-openai-skills-only-<ver>.zip
-scripts/build-openai.sh --mcp-url https://host/mcp    # dist/dominodatalab-openai-with-mcp-<ver>.zip
+scripts/build-openai.sh                                                # dist/dominodatalab-openai-skills-only-<ver>.zip
+scripts/build-openai.sh --mcp-url https://host/mcp --mcp-name NAME     # dist/dominodatalab-openai-with-mcp-<ver>.zip
 ```
 
 The script:
@@ -407,15 +407,22 @@ The script:
 1. Checks that `plugin.json` is in sync with `.claude-plugin/plugin.json` and that the listing
    fields fit the directory limits (`scripts/sync-manifests.py --check`).
 2. Lints every skill (`scripts/lint-skills.py`).
-3. Stages only portable components (`plugin.json`, `skills/`, `assets/`, `LICENSE`) and zips them
-   with the plugin root at the archive root.
+3. Packages only portable components that git tracks (`plugin.json`, `skills/`, `assets/`,
+   `LICENSE`), with the plugin root at the archive root, and warns about untracked files it leaves
+   out. Build a release from a clean checkout of its tag.
+4. Leaves `domino-modeling-assistant` out of the skills-only package: it is built around the
+   plugin's local MCP server, which a skills-only install doesn't have.
 
-Choose **Skills only** in the portal for the default ZIP. The **With MCP** path requires the
-Domino MCP server to be deployed at a public HTTPS endpoint using Streamable HTTP with OAuth 2.1;
-that deployment doesn't exist yet. Until it does, ship skills-only.
+The listing ships **Skills only**. OpenAI's
+[submission rules](https://developers.openai.com/plugins/deploy/submission) for an MCP server:
+a local stdio server such as `domino_server` needs the submitting organization allowlisted by
+OpenAI and makes the listing desktop-only; a remote server needs a public HTTPS endpoint with no
+authentication or OAuth (no Personal Access Tokens), and a listing connects at most one; and an
+MCP server can't be added to a listing first published skills-only. `--mcp-url` with `--mcp-name`
+builds the **With MCP** variant for a remote server.
 
 The listing icon is `assets/logo.svg`, used for both `logo` and `composerIcon`. It is the
-Domino pinwheel mark on a square `#2E2E38` tile,
+Domino pinwheel mark on a square `#2E2E38` tile with a 48×48 `viewBox`,
 because the portal requires square icons of at least 48×48. The build fails if any icon or
 screenshot path in `plugin.json` is missing or outside `assets/`.
 
@@ -553,6 +560,7 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-projects` | Git integration and project collaboration |
 | `domino-apps` | Deploy web apps (React, Streamlit, Dash) behind Domino's proxy |
 | `domino-app-init` | Scaffold a new Domino-ready app with framework templates |
+| `domino-rust-apps` | Build a Rust (axum) App: pinned toolchain in an environment, Clippy, nextest, cargo-deny, rust-analyzer, and a prebuilt binary that Apps start without compiling |
 | `domino-debug-proxy` | Diagnose reverse-proxy and routing issues in apps |
 | `domino-ui-bootstrap` | Bootstrap a Vite + React project on the Domino design system |
 | `domino-extensions` | Build and operate Domino UI Extensions |
@@ -621,7 +629,7 @@ domino-ai-plugin/
 ├── mcp_config.json              # MCP servers for Antigravity
 ├── rules/domino.md              # Always-on guidance for every host
 ├── assets/logo.svg              # OpenAI listing icon (square)
-├── skills/                      # Shared, provider-neutral skills (34)
+├── skills/                      # Shared, provider-neutral skills (35)
 ├── mcp-servers/domino_mcp_server/
 ├── evals/                       # claude plugin eval cases (not shipped to OpenAI)
 ├── agents/                      # Subagents: thin routers to skills (Claude Code; Cursor reads them too)

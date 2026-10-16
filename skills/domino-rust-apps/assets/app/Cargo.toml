@@ -1,0 +1,45 @@
+[package]
+name = "domino-rust-app"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+# One TLS stack for HTTP and Postgres: rustls with the ring provider and the OS certificate store.
+[dependencies]
+askama = "0.16.1"
+axum = "0.8.9"
+base64 = "0.22.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls-no-provider"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sqlx = { version = "0.9.0", default-features = false, features = ["postgres", "runtime-tokio", "tls-rustls-ring-native-roots"] }
+tokio = { version = "1.53.3", features = ["macros", "net", "rt-multi-thread", "signal"] }
+tower-http = { version = "0.7.1", features = ["fs", "trace"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["ansi", "fmt", "std", "tracing-log"] }
+
+[dev-dependencies]
+http-body-util = "0.1.5"
+tower = { version = "0.5.3", features = ["util"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# priority -1 lets single-lint overrides below the group take effect
+pedantic = { level = "warn", priority = -1 }
+
+# Keep debug info for this crate (debuggers, backtraces) but not for dependencies:
+# about a third less target/ on a Workspace volume.
+[profile.dev.package."*"]
+debug = false
+
+# The binary the App runs: cargo build --locked --profile dist (output in target/dist/).
+# Panics stay "unwind" so one failing request does not take down the server.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = true
