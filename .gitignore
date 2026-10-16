@@ -25,6 +25,8 @@ Thumbs.db
 
 # IDE
 .vscode/
+# Templates a skill copies into user projects ship their editor settings.
+!skills/*/assets/**/.vscode/
 .idea/
 
 *checkpoint*
