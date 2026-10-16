@@ -24,14 +24,16 @@ out="target/${CARGO_BUILD_TARGET:+$CARGO_BUILD_TARGET/}dist/$bin"
 
 mkdir -p "$root"
 # Label: today's UTC date; later builds that day add .2, .3, ... past the highest one in use, so a
-# label is never reused and version order (sort -V) is build order.
+# label is never reused and version order (sort -V) is build order. Folders count as well as stamps:
+# Domino storage keeps the folder of a deleted build as an empty placeholder.
 day=$(date -u +%Y.%m.%d)
 last=0
-for stamp in "$root/$day".stamp "$root/$day".*.stamp; do
-  [ -f "$stamp" ] || continue
-  n=${stamp#"$root/$day"}
+for entry in "$root/$day" "$root/$day".*; do
+  [ -e "$entry" ] || continue
+  n=${entry#"$root/$day"}
   n=${n%.stamp}
   n=${n#.}
+  case $n in *[!0-9]*) continue ;; esac
   if [ "${n:-1}" -gt "$last" ]; then last=${n:-1}; fi
 done
 label=$day
