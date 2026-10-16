@@ -17,7 +17,7 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 1. **Toolchain.** In the Workspace run `rustc --version` and `cargo nextest --version`. If Rust is missing or its version differs from `channel` in `rust-toolchain.toml`, add it to the Project's Compute Environment ([ENVIRONMENT.md](./ENVIRONMENT.md)), rebuild, and restart the Workspace on the new revision. If crates.io is reached through Artifactory or Nexus Repository, configure Cargo there too ([ENVIRONMENT.md](./ENVIRONMENT.md#package-registry-mirrors)).
 2. **Scaffold.** Copy this skill's `assets/app/` directory into the project root as is, dotfiles included. Rename the package (`name` in `Cargo.toml` and the `use` line in `src/main.rs`). Run `cargo generate-lockfile`, then commit everything, `Cargo.lock` included. Turn on the Git hook once per clone: `git config core.hooksPath .githooks`.
 3. **Develop.** Port 8888 belongs to the Workspace IDE, so run the server beside it with `PORT=8501 cargo run` and exercise it with `curl localhost:8501/healthz`. Run `bash scripts/check.sh` before every commit. Every URL the browser sees must be relative ([APP.md](./APP.md)).
-4. **Build the binary.** Commit the code, then run `bash scripts/build-dist.sh`. It runs `cargo build --locked --profile dist` and writes a dated build (`2026.10.15`, then `.2`) with its source stamp to `/mnt/artifacts/dist/`, keeping the previous build ([rollback, Version Notes](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)). Save with **File Changes > Sync All Changes**, which pushes the code to Git and the build to Domino storage.
+4. **Build the binary.** Commit the code, then run `bash scripts/build-dist.sh`. It runs `cargo build --locked --profile dist` and writes a dated build (`2026.10.15`, then `.2`) with its source stamp to `/mnt/artifacts/dist/<name>/`, keeping the previous build ([rollback, Version Notes](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)). Save with **File Changes > Sync All Changes**, which pushes the code to Git and the build to Domino storage.
 5. **Preview and publish** with `app.sh` as the App file ([domino-apps](../domino-apps/SKILL.md) covers Preview, publish and deploy). `app.sh` runs the newest build whose stamp matches the committed sources; if none does it exits with a message rather than compiling. Fix that by repeating step 4, not by editing `app.sh`.
 
 ## Rules
@@ -57,7 +57,7 @@ Keep `panic = "unwind"`: tokio and axum confine a panicking request to its conne
 
 ## Editors and coding agents
 
-The environment installs rust-analyzer (toolchain component and VS Code extension). Check it with `rust-analyzer --version` (`which` also finds a rustup stub). Per-agent LSP and hooks: [TOOLING.md](./TOOLING.md).
+The environment installs rust-analyzer (toolchain component and VS Code extension). Check it with `rust-analyzer --version`, not `which`. Per-agent LSP and hooks: [TOOLING.md](./TOOLING.md).
 
 ## DFS Projects
 

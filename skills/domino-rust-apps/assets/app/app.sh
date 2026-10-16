@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Domino App entry point. Runs a binary scripts/build-dist.sh produced; never compiles.
-# It picks the newest build, in /mnt/artifacts/dist (or $DIST_DIR) and then ./dist, whose stamp
+# It picks the newest build, in /mnt/artifacts/dist/<name> (or $DIST_DIR) and then ./dist, whose stamp
 # matches these sources and this node's CPU architecture.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -10,7 +10,7 @@ arch=$(uname -m)
 build=
 found=
 other_arch=
-roots=("${DIST_DIR:-/mnt/artifacts/dist}")
+roots=("${DIST_DIR:-/mnt/artifacts/dist/$bin}")
 [ "${roots[0]}" = dist ] || roots+=(dist)
 
 for root in "${roots[@]}"; do

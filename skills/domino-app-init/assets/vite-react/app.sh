@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Domino App entry point for a Vite + React app. Serves a build that scripts/build-dist.sh made, with
 # server.js (Node built-ins only); never installs or builds, so it starts in seconds and needs no npm.
-# It picks the newest build, in /mnt/artifacts/dist (or $DIST_DIR) and then ./dist, whose stamp
+# It picks the newest build, in /mnt/artifacts/dist/<package name> (or $DIST_DIR) and then ./dist, whose stamp
 # matches these sources.
 set -euo pipefail
 cd "$(dirname "$0")"
 want=$(bash scripts/stamp.sh)
 build=
 found=
-roots=("${DIST_DIR:-/mnt/artifacts/dist}")
+name=$(node -p "require('./package.json').name" | tr -c 'A-Za-z0-9._\n-' '-')
+roots=("${DIST_DIR:-/mnt/artifacts/dist/$name}")
 [ "${roots[0]}" = dist ] || roots+=(dist)
 
 for root in "${roots[@]}"; do

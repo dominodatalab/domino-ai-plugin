@@ -2,14 +2,16 @@
 # Build the Vite app once and store it as a dated build next to the previous one:
 #   <root>/2026.10.15/  and  <root>/2026.10.15.stamp   (.2, .3, ... for later builds that day)
 # Roots:
-#   Git-based Project (default): /mnt/artifacts/dist, saved to Domino storage and pinned by each App version
+#   Git-based Project (default): /mnt/artifacts/dist/<package name>, saved to Domino storage and pinned by each
+#                                App version; one folder per App, so Apps in one Project never prune each other
 #   DIST_DIR=dist:               inside the project (DFS Projects, or builds committed to Git by CI)
 # app.sh serves the newest build whose stamp matches the App's sources, so after a code revert the
 # previous build is served without a rebuild. KEEP_BUILDS (default 2) builds of different sources are
 # kept. BUILD_LABEL overrides the label (CI). Needs Node 20.19+ and npm; the App itself needs only node.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-root=${DIST_DIR:-/mnt/artifacts/dist}
+name=$(node -p "require('./package.json').name" | tr -c 'A-Za-z0-9._\n-' '-')
+root=${DIST_DIR:-/mnt/artifacts/dist/$name}
 keep=${KEEP_BUILDS:-2}
 
 command -v npm >/dev/null || { echo "npm not found: build with Node 20.19 or later and npm (see the domino-apps REACT-VITE-GUIDE.md)" >&2; exit 1; }

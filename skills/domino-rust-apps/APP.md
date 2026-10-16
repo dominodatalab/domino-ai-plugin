@@ -108,9 +108,9 @@ Write every outbound call anticipating that the trust store holds the organizati
 
 ## How the binary is shipped
 
-`scripts/build-dist.sh` runs `cargo build --locked --profile dist` and stores `target/dist/<name>` as a dated build: `<root>/<label>/<name>` with `<root>/<label>.stamp` beside it, where `<root>` is `$DIST_DIR` (default `/mnt/artifacts/dist`) and `<label>` is the UTC date (`2026.10.15`, then `2026.10.15.2` for a later build that day). It keeps the previous build, so a reverted commit starts again without a rebuild; labels, Version Notes and rollback: [domino-apps FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds). Stamp line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/`, `migrations/` and `pgo/`; then `build=`, `commit=`, `rustc --version`, `RUSTFLAGS=` and `arch=` (the build node's `uname -m`). `KEEP_BUILDS` changes how many builds stay (default 2) and `BUILD_LABEL` sets the label (CI).
+`scripts/build-dist.sh` runs `cargo build --locked --profile dist` and stores `target/dist/<name>` as a dated build: `<root>/<label>/<name>` with `<root>/<label>.stamp` beside it, where `<root>` is `$DIST_DIR` (default `/mnt/artifacts/dist/<name>`, one folder per App) and `<label>` is the UTC date (`2026.10.15`, then `2026.10.15.2` for a later build that day). It keeps the previous build, so a reverted commit starts again without a rebuild; labels, Version Notes and rollback: [domino-apps FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds). Stamp line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/`, `migrations/` and `pgo/`; then `build=`, `commit=`, `rustc --version`, `RUSTFLAGS=` and `arch=` (the build node's `uname -m`). `KEEP_BUILDS` changes how many builds stay (default 2) and `BUILD_LABEL` sets the label (CI).
 
-At start, `app.sh` recomputes the hash over the App's files and runs the newest build, in `/mnt/artifacts/dist` (or `$DIST_DIR`) and then `./dist`, whose stamp matches it and whose `arch=` matches the node. It copies that binary to a temporary directory, marks it executable, exports the label as `APP_BUILD` (logged, and reported by `/healthz`) and `exec`s it. With no match it prints which step to repeat and exits, and the App shows as failed in its logs. It never compiles.
+At start, `app.sh` recomputes the hash over the App's files and runs the newest build, in `/mnt/artifacts/dist/<name>` (or `$DIST_DIR`) and then `./dist`, whose stamp matches it and whose `arch=` matches the node. It copies that binary to a temporary directory, marks it executable, exports the label as `APP_BUILD` (logged, and reported by `/healthz`) and `exec`s it. With no match it prints which step to repeat and exits, and the App shows as failed in its logs. It never compiles.
 
 Hardware tiers can run on different node types: amd64 or arm64, and different CPU generations within one architecture. Build the binary on the App's own environment and hardware tier; a Job with that tier is the reliable way when the Workspace uses another. A binary for the wrong architecture cannot run at all; one built with `-C target-cpu` for a newer CPU crashes on older ones ([TOOLING.md](./TOOLING.md#target-cpu)).
 
@@ -120,7 +120,7 @@ Where the binary lives:
 
 | Project | Location | Saved by |
 |---|---|---|
-| Git-based (default) | `/mnt/artifacts/dist/` | **File Changes > Sync All Changes** (artifacts go to Domino storage, code to Git) |
+| Git-based (default) | `/mnt/artifacts/dist/<name>/` | **File Changes > Sync All Changes** (artifacts go to Domino storage, code to Git) |
 | Git-based, binary in Git | `dist/` in the repository (`DIST_DIR=dist`) | Commit and push the new `dist/<label>/` and its stamp, only for builds you publish |
 | DFS | `dist/` in the Project (`DIST_DIR=dist`) | **File Changes > Sync to Domino** |
 

@@ -20,7 +20,7 @@ export default defineConfig({
   },
 
   // Scratch output of `npm run build`, never served. scripts/build-dist.sh copies it into a dated
-  // build under dist/ (or /mnt/artifacts/dist), which `npm run build` therefore cannot empty.
+  // build under dist/ (or /mnt/artifacts/dist/<package name>), which `npm run build` cannot empty.
   build: {
     outDir: 'build',
     assetsDir: 'assets',

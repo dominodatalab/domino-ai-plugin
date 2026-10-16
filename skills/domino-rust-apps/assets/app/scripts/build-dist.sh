@@ -2,7 +2,8 @@
 # Build the shipping binary once and store it as a dated build next to the previous one:
 #   <root>/2026.10.15/<name>  and  <root>/2026.10.15.stamp   (.2, .3, ... for later builds that day)
 # Roots:
-#   Git-based Project (default): /mnt/artifacts/dist, saved to Domino storage and pinned by each App version
+#   Git-based Project (default): /mnt/artifacts/dist/<name>, saved to Domino storage and pinned by each App
+#                                version; one folder per App, so Apps in one Project never prune each other
 #   DIST_DIR=dist:               inside the repository (DFS Projects, or a binary committed to Git)
 # app.sh runs the newest build whose stamp matches the App's sources, so after a code revert the
 # previous build starts without a rebuild. KEEP_BUILDS (default 2) builds of different sources are kept.
@@ -10,7 +11,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bin=$(sed -n 's/^name *= *"\(.*\)"/\1/p' Cargo.toml | head -n1)
-root=${DIST_DIR:-/mnt/artifacts/dist}
+root=${DIST_DIR:-/mnt/artifacts/dist/$bin}
 keep=${KEEP_BUILDS:-2}
 
 if [ -n "$(git status --porcelain -- Cargo.toml Cargo.lock rust-toolchain.toml src 2>/dev/null)" ]; then
