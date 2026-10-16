@@ -129,5 +129,6 @@ A Job builds the same way and saves artifacts when it finishes: run `bash script
 ## Other UI approaches
 
 - **Vite + React frontend** for heavy client-side interaction or the Domino design system ([domino-ui-bootstrap](../domino-ui-bootstrap/SKILL.md)): build it with `base: './'` and `HashRouter`, serve `dist/` from axum with `.fallback_service(ServeDir::new("frontend/dist").redirect_to_trailing_slash(false))`, and keep JSON routes under `api/`. Add the frontend's `dist/` to `scripts/stamp.sh` inputs.
+- **Proa** for server-rendered pages written in Rust: the same build-once binary, with Domino-specific settings and a limit on interactive islands ([PROA.md](./PROA.md)).
 - **htmx** for partial page updates: copy `htmx.min.js` into `static/` instead of loading it from a CDN (the App's content security policy can block external scripts), and keep `hx-get="api/..."` URLs relative.
 - **Leptos or Dioxus** (Rust compiled to WebAssembly) only when the browser must run Rust. They need the `wasm32-unknown-unknown` target and their own build CLIs, compile twice, and default to root-absolute asset paths; Dioxus fixes its base path at build time.
