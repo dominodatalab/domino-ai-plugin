@@ -353,8 +353,8 @@ server yourself as the "Any other host" row of
 [OpenAI plugin submission portal](https://platform.openai.com/plugins):
 
 ```bash
-scripts/build-openai.sh                               # dist/dominodatalab-openai-skills-only-<ver>.zip
-scripts/build-openai.sh --mcp-url https://host/mcp    # dist/dominodatalab-openai-with-mcp-<ver>.zip
+scripts/build-openai.sh                                                # dist/dominodatalab-openai-skills-only-<ver>.zip
+scripts/build-openai.sh --mcp-url https://host/mcp --mcp-name NAME     # dist/dominodatalab-openai-with-mcp-<ver>.zip
 ```
 
 The script:
@@ -362,15 +362,22 @@ The script:
 1. Checks that `plugin.json` is in sync with `.claude-plugin/plugin.json` and that the listing
    fields fit the directory limits (`scripts/sync-manifests.py --check`).
 2. Lints every skill (`scripts/lint-skills.py`).
-3. Stages only portable components (`plugin.json`, `skills/`, `assets/`, `LICENSE`) and zips them
-   with the plugin root at the archive root.
+3. Packages only portable components that git tracks (`plugin.json`, `skills/`, `assets/`,
+   `LICENSE`), with the plugin root at the archive root, and warns about untracked files it leaves
+   out. Build a release from a clean checkout of its tag.
+4. Leaves `domino-modeling-assistant` out of the skills-only package: it is built around the
+   plugin's local MCP server, which a skills-only install doesn't have.
 
-Choose **Skills only** in the portal for the default ZIP. The **With MCP** path requires the
-Domino MCP server to be deployed at a public HTTPS endpoint using Streamable HTTP with OAuth 2.1;
-that deployment doesn't exist yet. Until it does, ship skills-only.
+The listing ships **Skills only**. OpenAI's
+[submission rules](https://developers.openai.com/plugins/deploy/submission) for an MCP server:
+a local stdio server such as `domino_server` needs the submitting organization allowlisted by
+OpenAI and makes the listing desktop-only; a remote server needs a public HTTPS endpoint with no
+authentication or OAuth (no Personal Access Tokens), and a listing connects at most one; and an
+MCP server can't be added to a listing first published skills-only. `--mcp-url` with `--mcp-name`
+builds the **With MCP** variant for a remote server.
 
 The listing icon is `assets/logo.svg`, used for both `logo` and `composerIcon`. It is the
-Domino pinwheel mark on a square `#2E2E38` tile,
+Domino pinwheel mark on a square `#2E2E38` tile with a 48×48 `viewBox`,
 because the portal requires square icons of at least 48×48. The build fails if any icon or
 screenshot path in `plugin.json` is missing or outside `assets/`.
 
