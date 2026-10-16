@@ -100,9 +100,10 @@ request to the App):
 
 ```python
 auth = request.headers.get("Authorization", "")
-if not auth.startswith("Bearer "):
-    abort(401)            # no viewer token: never fall back to the App's own (publisher) identity
-dataset = DatasetClient(token=auth[7:]).get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
+token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+if not token:
+    abort(401)            # never DatasetClient(token=None): that falls back to the publisher's identity
+dataset = DatasetClient(token=token).get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
 ```
 
 ## Errors

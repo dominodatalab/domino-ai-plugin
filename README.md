@@ -33,7 +33,7 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
 | `skills/` (35 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
-| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; Cursor asks for `DOMINO_HOST` and `DOMINO_TOKEN` at install) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ❌ not registered; `mcp_config.json` carries only the docs server (register it by hand as the server README shows) |
+| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; credentials from the env file, see [Your Domino URL and token](#your-domino-url-and-token)) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ✅ via `mcp_config.json` (stdio; credentials from `agy`'s environment or the env file) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
 | Subagents (`agents/`) | ✅ routers that preload their skills | ❌ | Routing prompts only: Cursor loads `agents/` without `skills:` or `tools:`, so nothing is preloaded | ❌ the files are `_`-prefixed, which Gemini CLI skips (its sub-agent schema differs) | Imported as prompts (`agy` reports 3 agents); `skills:` and `tools:` are Claude Code fields |
@@ -47,6 +47,56 @@ the Codex variant. CI enforces this; see [Skill rules](#skill-rules).
 
 ---
 
+## Your Domino URL and token
+
+Inside a Domino Workspace, Job or App, nothing is needed: the bundled MCP server calls Domino
+through `$DOMINO_API_PROXY`, which adds your identity. Leave the settings below empty there.
+
+Everywhere else (your laptop, CI), the MCP server needs two values:
+
+| Setting | What to enter | Where to get it |
+|---|---|---|
+| **Domino URL** (`DOMINO_HOST`) | The address you open Domino at in your browser: `https://` and the host name, no path, for example `https://domino.example.com` | Your browser's address bar while you use Domino. Not `DOMINO_API_HOST`, which inside Domino is an in-cluster address |
+| **Token** (`DOMINO_TOKEN`) | A Personal Access Token, or a service account token for automation | In Domino: **Account** > **Account settings** > **Personal Access Token** > **Generate new Token**, choose an expiry, copy it ([docs](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)). Legacy API keys don't work |
+
+Each host takes them its own way:
+
+| Host | How |
+|---|---|
+| Claude Code | Asks for both when you enable the plugin; the token goes to your system's secure credential store. Change them later in `/plugin` → **Installed** → **dominodatalab** → **Configure options**, then start a new session |
+| Gemini CLI | Asks at `gemini extensions install` (the token first, then the URL); the token goes to the system keychain. Change them with `gemini extensions config dominodatalab` |
+| Codex and the ChatGPT desktop app | Can't ask. Write the env file below at exactly `~/.config/domino-mcp-server/.env`: Codex starts the server with a stripped environment and passes no other location |
+| Cursor | Doesn't ask. Write the env file below. `.cursor-plugin/mcp.json` also forwards `DOMINO_HOST` and `DOMINO_TOKEN` from the environment Cursor runs in, which the Cursor CLI may not share with your shell |
+| Antigravity | Doesn't ask. Write the env file below, or start `agy` with `DOMINO_HOST` and `DOMINO_TOKEN` in its environment |
+| Any host | The env file below, or `DOMINO_HOST` and `DOMINO_TOKEN` in the environment the host starts the server with |
+
+**The env file** is `~/.config/domino-mcp-server/.env` (or `$XDG_CONFIG_HOME/domino-mcp-server/.env`,
+or the file `$DOMINO_MCP_ENV_FILE` names; under Codex only the first, since Codex passes the server
+neither variable). This writes it readable only by you, without the token
+appearing on screen or in your shell history:
+
+```bash
+bash -c 'mkdir -p ~/.config/domino-mcp-server && umask 077 &&
+  read -r -p "Domino URL (https://...): " host && read -rs -p "Domino token: " token && echo &&
+  printf "DOMINO_HOST=%s\nDOMINO_TOKEN=%s\n" "$host" "$token" > ~/.config/domino-mcp-server/.env'
+```
+
+When values come from more than one place, the host's own settings win, then the environment, then
+the env file.
+
+**Check it:** start a new session and ask "Which Domino user am I connected as?". The assistant
+calls the server's `get_domino_environment_info`, which reports where each value came from and the
+user the token belongs to, or exactly what to fix:
+
+| Message | Fix |
+|---|---|
+| `DOMINO_HOST is not set` or `DOMINO_TOKEN is not set` | The host passed nothing; set the values as the table above shows for your host |
+| `HTTP 401` | The token is wrong, expired or revoked; generate a new one |
+| `... failed: ...` (no HTTP response) | Check the URL against your browser's address bar, and your network (VPN, or `HTTPS_PROXY` on a corporate network) |
+| `uses http://` or `must be a URL starting with https://` | Use the `https://` address |
+| `returned a non-JSON response` | The URL points at a login page or another site; copy it from the address bar while you're in Domino |
+| `DOMINO_API_KEY is set` | Legacy API keys are not supported; use a Personal Access Token |
+
 ## Installation: Claude Code
 
 ### Prerequisites
@@ -55,9 +105,8 @@ the Codex variant. CI enforces this; see [Skill rules](#skill-rules).
   but the subagents need the `skills:` preload (2.0.43) and plugin skills reachable from a
   subagent through the Skill tool (2.1.133). Tested on 2.1.300.
 - Access to a Domino Data Lab instance
-- A Domino [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)
-  or service account token, only for the bundled MCP server when it runs outside a Domino Workspace
-  (see [Bundled MCP Server](#bundled-mcp-server))
+- Outside a Domino Workspace: your Domino URL and a Personal Access Token for the bundled MCP
+  server. Claude Code asks for both when you enable the plugin ([Your Domino URL and token](#your-domino-url-and-token))
 - **`uv`** package manager ([install guide](https://github.com/astral-sh/uv)) — required for the bundled Domino MCP server
 
 ### Recommended: install from GitHub
@@ -250,11 +299,8 @@ see the plugin there.
 
 > **MCP credentials:** the portable `mcp.json` can't carry secrets, and Codex starts the server
 > with a stripped environment. Inside a Domino Workspace nothing is needed: the server calls
-> `$DOMINO_API_PROXY` and recovers the Workspace's variables itself. On a laptop put `DOMINO_HOST`
-> and `DOMINO_TOKEN` (a Personal Access Token or service account token) in
-> `~/.config/domino-mcp-server/.env`, or in the file `$DOMINO_MCP_ENV_FILE` names, readable only by
-> you. Details and every host's registration:
-> [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
+> `$DOMINO_API_PROXY` and recovers the Workspace's variables itself. On a laptop write the env file
+> as [Your Domino URL and token](#your-domino-url-and-token) shows.
 
 ### From the public plugin directory
 
@@ -274,10 +320,9 @@ not yet tested in a logged-in Cursor; please report what you find.
 - **Local checkout:** clone (don't symlink) into `~/.cursor/plugins/local/dominodatalab` and run
   Developer: Reload Window, or run `agent --plugin-dir /path/to/domino-ai-plugin`.
 
-The bundled MCP server needs `uv` on `PATH` and, outside a Domino Workspace, `DOMINO_HOST` (your
-Domino URL) and `DOMINO_TOKEN` (a Personal Access Token or service account token, sent as a
-bearer). Cursor asks for both when you install the plugin; the CLI reads them from your shell.
-See [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
+The bundled MCP server needs `uv` on `PATH` and, outside a Domino Workspace, your Domino URL and a
+Personal Access Token. Cursor doesn't ask for them: write the env file
+([Your Domino URL and token](#your-domino-url-and-token)).
 
 If the plugin is also installed in Claude Code, Cursor may import that copy too (Settings → Agents →
 Third-Party Imports). Install it in Cursor only once.
@@ -294,9 +339,10 @@ gemini extensions install https://github.com/dominodatalab/domino-ai-plugin
 Gemini CLI installs the repository's latest GitHub Release when one exists and the default branch
 otherwise; add `--ref release-YYYY.XYY.N` to pin a release. `release-2026.603.5` is the first
 release that includes `gemini-extension.json`; earlier tags fail. Install asks a consent question
-first (`--consent` answers it, for a script). It then asks for the two settings the bundled MCP
-server needs outside a Domino Workspace: the Domino URL (`DOMINO_HOST`) and `DOMINO_TOKEN`, a
-Personal Access Token or service account token, kept in the system keychain (or in an encrypted
+first (`--consent` answers it, for a script; installing from a local path also asks whether to
+trust the folder, which `--consent` doesn't answer). It then asks for the two settings the bundled
+MCP server needs outside a Domino Workspace, the token first: `DOMINO_TOKEN`, a Personal Access
+Token or service account token, and the Domino URL (`DOMINO_HOST`), kept in the system keychain (or in an encrypted
 file where there is no keychain, such as a Domino Workspace). Inside a Workspace leave both empty,
 or pass `--skip-settings`: the server calls `$DOMINO_API_PROXY` and picks up the Workspace's own
 variables. Gemini CLI never hands your shell's `DOMINO_TOKEN` to an MCP server: it drops every
@@ -321,23 +367,22 @@ field); the skills, context file and MCP servers load, and nothing is logged.
 ## Installation: Antigravity
 
 Antigravity's `agy` CLI (tested on 1.3.5) installs a plugin from a **local directory**: it reads
-`plugin.json`, imports `skills/`, `agents/` and the Domino docs MCP server from
-`mcp_config.json`, and copies the whole checkout under `~/.gemini/config/plugins/dominodatalab`.
+`plugin.json`, imports `skills/`, `agents/` and both MCP servers from `mcp_config.json`, and copies the whole checkout under `~/.gemini/config/plugins/dominodatalab`.
 A git URL is rejected (`install target must be a directory`), so clone first; `main` is the
 public release:
 
 ```bash
 git clone https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
-agy plugin validate ~/domino-ai-plugin   # optional: 35 skills, 3 agents, 1 MCP server
+agy plugin validate ~/domino-ai-plugin   # optional: 35 skills, 3 agents, 2 MCP servers
 agy plugin install ~/domino-ai-plugin
 ```
 
-`agy plugin list` shows the import with its components (35 skills, 3 agents, 1 rule, 1 MCP server). The
+`agy plugin list` shows the import with its components (35 skills, 3 agents, 1 rule, 2 MCP servers). The
 installed copy includes `rules/domino.md`, which Antigravity reads as an always-on rule
-(`trigger: always_on`). The bundled Domino MCP server is not registered for Antigravity, by
-design: `mcp_config.json` carries only the docs server. For the Job and file tools, register the
-server yourself as the "Any other host" row of
-[mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md) describes.
+(`trigger: always_on`). The bundled Domino MCP server (Antigravity shows it as
+`dominodatalab_domino_server`) needs `uv` on `PATH`; outside a Domino Workspace it reads
+`DOMINO_HOST` and `DOMINO_TOKEN` from the environment `agy` starts with, else the env file
+([Your Domino URL and token](#your-domino-url-and-token)).
 
 - **Update:** the install is a copy and does not follow the clone, so pull and install again:
   `git -C ~/domino-ai-plugin pull && agy plugin install ~/domino-ai-plugin`.
@@ -353,8 +398,8 @@ server yourself as the "Any other host" row of
 [OpenAI plugin submission portal](https://platform.openai.com/plugins):
 
 ```bash
-scripts/build-openai.sh                               # dist/dominodatalab-openai-skills-only-<ver>.zip
-scripts/build-openai.sh --mcp-url https://host/mcp    # dist/dominodatalab-openai-with-mcp-<ver>.zip
+scripts/build-openai.sh                                                # dist/dominodatalab-openai-skills-only-<ver>.zip
+scripts/build-openai.sh --mcp-url https://host/mcp --mcp-name NAME     # dist/dominodatalab-openai-with-mcp-<ver>.zip
 ```
 
 The script:
@@ -362,15 +407,22 @@ The script:
 1. Checks that `plugin.json` is in sync with `.claude-plugin/plugin.json` and that the listing
    fields fit the directory limits (`scripts/sync-manifests.py --check`).
 2. Lints every skill (`scripts/lint-skills.py`).
-3. Stages only portable components (`plugin.json`, `skills/`, `assets/`, `LICENSE`) and zips them
-   with the plugin root at the archive root.
+3. Packages only portable components that git tracks (`plugin.json`, `skills/`, `assets/`,
+   `LICENSE`), with the plugin root at the archive root, and warns about untracked files it leaves
+   out. Build a release from a clean checkout of its tag.
+4. Leaves `domino-modeling-assistant` out of the skills-only package: it is built around the
+   plugin's local MCP server, which a skills-only install doesn't have.
 
-Choose **Skills only** in the portal for the default ZIP. The **With MCP** path requires the
-Domino MCP server to be deployed at a public HTTPS endpoint using Streamable HTTP with OAuth 2.1;
-that deployment doesn't exist yet. Until it does, ship skills-only.
+The listing ships **Skills only**. OpenAI's
+[submission rules](https://developers.openai.com/plugins/deploy/submission) for an MCP server:
+a local stdio server such as `domino_server` needs the submitting organization allowlisted by
+OpenAI and makes the listing desktop-only; a remote server needs a public HTTPS endpoint with no
+authentication or OAuth (no Personal Access Tokens), and a listing connects at most one; and an
+MCP server can't be added to a listing first published skills-only. `--mcp-url` with `--mcp-name`
+builds the **With MCP** variant for a remote server.
 
 The listing icon is `assets/logo.svg`, used for both `logo` and `composerIcon`. It is the
-Domino pinwheel mark on a square `#2E2E38` tile,
+Domino pinwheel mark on a square `#2E2E38` tile with a 48×48 `viewBox`,
 because the portal requires square icons of at least 48×48. The build fails if any icon or
 screenshot path in `plugin.json` is missing or outside `assets/`.
 
@@ -489,12 +541,9 @@ DFS-based projects.
 
 - **Inside a Domino execution (Workspace, Job, App):** nothing to configure. The server calls
   `$DOMINO_API_PROXY`, which adds your token, and reads the project from Domino's own variables.
-- **Outside Domino (laptop, CI):** set `DOMINO_HOST` (your Domino URL) and `DOMINO_TOKEN`, a
-  [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)
-  or service account token sent as `Authorization: Bearer`. Legacy API keys (`DOMINO_API_KEY`) are
-  no longer accepted; the server's error names `DOMINO_TOKEN`. Hosts that strip the environment
-  (Codex on a laptop) get the values from `$DOMINO_MCP_ENV_FILE`, else
-  `$XDG_CONFIG_HOME/domino-mcp-server/.env`, else `~/.config/domino-mcp-server/.env`.
+- **Outside Domino (laptop, CI):** your Domino URL (`DOMINO_HOST`) and a Personal Access Token or
+  service account token (`DOMINO_TOKEN`), sent as `Authorization: Bearer`. How each host takes
+  them, the env file, and how to check the connection: [Your Domino URL and token](#your-domino-url-and-token).
 
 Requires `uv`. Tools, routes and each host's registration are documented in
 [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
@@ -577,10 +626,10 @@ domino-ai-plugin/
 ├── gemini-extension.json        # Gemini CLI extension manifest (synced from the Claude manifest)
 ├── .mcp.json                    # Claude MCP config (stdio)
 ├── mcp.json                     # Portable MCP config (stdio) for Codex local installs
-├── mcp_config.json              # Docs MCP server for Antigravity
+├── mcp_config.json              # MCP servers for Antigravity
 ├── rules/domino.md              # Always-on guidance for every host
 ├── assets/logo.svg              # OpenAI listing icon (square)
-├── skills/                      # Shared, provider-neutral skills (34)
+├── skills/                      # Shared, provider-neutral skills (35)
 ├── mcp-servers/domino_mcp_server/
 ├── evals/                       # claude plugin eval cases (not shipped to OpenAI)
 ├── agents/                      # Subagents: thin routers to skills (Claude Code; Cursor reads them too)
@@ -652,7 +701,7 @@ and AGENTS.md "Testing new and updated skills".
 | `~` path not expanding | Always use absolute paths (e.g., `/home/ubuntu/...`) in marketplace commands and settings. |
 | "Failed to parse marketplace file" | Ensure `marketplace.json` has the `owner` object and `source` is a string path (e.g., `"./plugins/domino-claude-plugin"`), not a nested object. |
 | `domino_server` tools missing (ChatGPT / Codex) | The directory package is skills-only. Install from a local checkout, or register the server yourself ("How each host registers the server" in `mcp-servers/domino_mcp_server/README.md`). |
-| `domino_server` tools fail naming `DOMINO_TOKEN` | Outside Domino the server needs `DOMINO_HOST` and `DOMINO_TOKEN` (a Personal Access Token or service account token); `DOMINO_API_KEY` is no longer accepted. See [Bundled MCP Server](#bundled-mcp-server). |
+| `domino_server` tools fail naming `DOMINO_TOKEN` | Outside Domino the server needs `DOMINO_HOST` and `DOMINO_TOKEN` (a Personal Access Token or service account token); `DOMINO_API_KEY` is no longer accepted. See [Your Domino URL and token](#your-domino-url-and-token). |
 | CI: "out of sync with .claude-plugin/plugin.json" | Run `scripts/sync-manifests.py` and commit `plugin.json`, `.cursor-plugin/plugin.json` and `gemini-extension.json`. |
 
 ---

@@ -51,7 +51,7 @@ async function predict(req, res) {
 // token only when the App version has extended identity propagation.
 async function projects(req, res) {
   const auth = req.headers.authorization
-  if (!auth?.startsWith('Bearer ')) return json(res, 401, { error: 'no viewer token' })
+  if (!auth?.startsWith('Bearer ') || !auth.slice(7).trim()) return json(res, 401, { error: 'no viewer token' })
   const upstream = await fetch(process.env.DOMINO_API_HOST + '/api/projects/beta/projects?limit=20', {
     headers: { Authorization: auth },
   })

@@ -353,6 +353,39 @@ mod tests {
         assert!(
             body_text(response)
                 .await
+                .contains("open the App through Domino")
+        );
+    }
+
+    #[tokio::test]
+    async fn viewer_call_with_an_empty_token_is_401() {
+        let app = app_with_domino(Some(mock_domino().await), None);
+        let request = Request::get("/api/me")
+            .header(header::AUTHORIZATION, "Bearer ")
+            .body(Body::empty())
+            .unwrap();
+        let response = app.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn rejected_viewer_call_names_extended_identity_propagation() {
+        let failing = Router::new().fallback(|| async { StatusCode::INTERNAL_SERVER_ERROR });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, failing).await.unwrap() });
+        let request = Request::get("/api/me")
+            .header(header::AUTHORIZATION, "Bearer viewer-jwt")
+            .body(Body::empty())
+            .unwrap();
+        let response = app_with_domino(Some(url), None)
+            .oneshot(request)
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(
+            body_text(response)
+                .await
                 .contains("extended identity propagation")
         );
     }

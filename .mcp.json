@@ -9,8 +9,8 @@
         "domino_mcp_server.py"
       ],
       "env": {
-        "DOMINO_HOST": "${DOMINO_HOST}",
-        "DOMINO_TOKEN": "${DOMINO_TOKEN}"
+        "DOMINO_PLUGIN_HOST": "${user_config.domino_host}",
+        "DOMINO_PLUGIN_TOKEN": "${user_config.domino_token}"
       }
     },
     "domino_docs": {

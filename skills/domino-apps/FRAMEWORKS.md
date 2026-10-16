@@ -324,15 +324,17 @@ import requests
 
 
 def viewer_token(headers):
-    """The bearer token Domino forwards with each request, or None."""
+    """The bearer token Domino forwards with each request, or None (also for an empty one)."""
     auth = headers.get("Authorization", "")
-    return auth[7:] if auth.startswith("Bearer ") else None
+    token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+    return token or None
 
 
 def viewer_name(headers):
     """For display only: the token's preferred_username claim, or the domino-username header when
     the request carries no token. Not verified here; for access decisions verify the token
-    (verified_claims below) or call Domino as the viewer."""
+    (verified_claims below) or, on an App with extended identity propagation, call Domino as the
+    viewer."""
     token = viewer_token(headers)
     if token is None:
         return headers.get("domino-username")
@@ -357,7 +359,7 @@ def domino_get(path, headers=None):
 
 `headers` is Flask's or Dash's `request.headers`, FastAPI's `request.headers`, or Streamlit's `st.context.headers`.
 
-To trust the token's claims without calling Domino (for example to gate a page on the viewer's email), verify it. Pin the issuer, `https://<domino-domain>/auth/realms/DominoRealm`, stored as a Project environment variable; do not require audience `apps`, which tokens on Apps with extended identity propagation do not carry. If the App cannot reach the deployment's URL to fetch the keys, call `GET /api/users/v1/self` as the viewer instead.
+To trust the token's claims without calling Domino (for example to gate a page on the viewer's email), verify it. Pin the issuer, `https://<domino-domain>/auth/realms/DominoRealm`, stored as a Project environment variable; do not require audience `apps`, which tokens on Apps with extended identity propagation do not carry. If the App cannot reach the deployment's URL to fetch the keys and has extended identity propagation, call `GET /api/users/v1/self` as the viewer instead; without it Domino rejects the viewer's token there, so verifying is the only option.
 
 ```python
 import os

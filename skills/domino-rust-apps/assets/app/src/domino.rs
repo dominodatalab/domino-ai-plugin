@@ -29,8 +29,9 @@ pub enum NameSource {
 
 /// The viewer's Domino username from the forwarded token's `preferred_username` claim, or from the
 /// `domino-username` header when the request carries no token. Domino checked the token before
-/// forwarding the request; this function does not verify its signature itself, so for decisions that
-/// grant access, call the Domino API as the viewer, which does.
+/// forwarding the request; this function does not verify its signature itself. For decisions that
+/// grant access, verify the token, or, on an App with extended identity propagation, call the Domino
+/// API as the viewer; without it Domino rejects the viewer's token on most routes.
 #[must_use]
 pub fn viewer_name(headers: &HeaderMap) -> Option<(String, NameSource)> {
     if let Some(token) = bearer(headers) {
@@ -58,8 +59,11 @@ pub enum Identity {
 /// An error to return to the browser: a status and a message that says what to fix.
 pub type ApiError = (StatusCode, String);
 
-const NO_VIEWER_TOKEN: &str = "No viewer token. The App must be published with extended identity \
-     propagation, and the viewer must accept the consent prompt.";
+const NO_VIEWER_TOKEN: &str = "No viewer token: open the App through Domino. If it was, secure \
+     identity propagation is off on this deployment.";
+
+const VIEWER_REJECTED: &str = " Without extended identity propagation, most Domino API routes reject \
+     the viewer's token.";
 
 /// Domino API client configured from `DOMINO_API_HOST` and `DOMINO_API_PROXY`.
 #[derive(Clone)]
@@ -90,7 +94,7 @@ impl DominoApi {
     ///
     /// # Errors
     ///
-    /// 401 when the viewer token is missing, 503 when the base URL is not set, Domino's own status
+    /// 401 when the viewer token is missing or empty, 503 when the base URL is not set, Domino's own status
     /// when it rejects the call, and 502 when it cannot be reached or returns invalid JSON.
     pub async fn get(
         &self,
@@ -123,9 +127,15 @@ impl DominoApi {
         let status = response.status();
         if !status.is_success() {
             tracing::warn!(%status, ?identity, path, "Domino API rejected the call");
+            let hint = if identity == Identity::Viewer && matches!(status.as_u16(), 401 | 403 | 500)
+            {
+                VIEWER_REJECTED
+            } else {
+                ""
+            };
             return Err((
                 status,
-                format!("Domino API answered {status} for the {identity:?} identity"),
+                format!("Domino API answered {status} for the {identity:?} identity.{hint}"),
             ));
         }
         response.json::<Value>().await.map_err(|err| {
@@ -138,13 +148,15 @@ impl DominoApi {
     }
 }
 
-/// The viewer's token from `Authorization: Bearer <token>`.
+/// The viewer's token from `Authorization: Bearer <token>`; `None` when it is missing or empty.
 fn bearer(headers: &HeaderMap) -> Option<&str> {
     headers
         .get(AUTHORIZATION)?
         .to_str()
         .ok()?
         .strip_prefix("Bearer ")
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
 }
 
 fn unset(name: &str) -> ApiError {

@@ -4,24 +4,30 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/build-openai.sh [--mcp-url https://host/mcp] [--out dist]
+Usage: scripts/build-openai.sh [--mcp-url https://host/mcp --mcp-name NAME] [--out dist]
   default         skills-only package (portal path "Skills only"); MCP config is excluded
   --mcp-url URL   adds a streamable-http mcp.json for the portal path "With MCP"
+  --mcp-name NAME the server's name in that mcp.json (required with --mcp-url)
+Only files git tracks are packaged; build a release from a clean checkout of its tag.
 EOF
 }
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="$root/dist"
 mcp_url=""
+mcp_name=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --mcp-url) mcp_url="${2:?--mcp-url needs a value}"; shift 2 ;;
+    --mcp-name) mcp_name="${2:?--mcp-name needs a value}"; shift 2 ;;
     --out) out="${2:?--out needs a value}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
 case "$mcp_url" in ""|https://*) ;; *) echo "--mcp-url must be an https:// URL" >&2; exit 2 ;; esac
+# The name tells the model which server it is; a docs URL named domino_server would claim the job tools.
+[ -z "$mcp_url" ] || [ -n "$mcp_name" ] || { echo "--mcp-url needs --mcp-name (for example domino_docs)" >&2; exit 2; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 2; }
 command -v zip >/dev/null || { echo "zip is required" >&2; exit 2; }
 
@@ -55,15 +61,20 @@ rm -rf "$out/openai"
 mkdir -p "$stage"
 
 # Only portable components ship; agents, output styles, hooks, and Claude config stay behind.
-cp plugin.json LICENSE "$stage/"
-cp -R skills "$stage/skills"
-[ -d assets ] && cp -R assets "$stage/assets"
+# Only files git tracks are packaged, so untracked or ignored files in the working tree (target/,
+# node_modules/, a real .env) never reach the ZIP. Tracked files are taken as they are on disk.
+untracked="$(git ls-files --others --exclude-standard -- skills assets)"
+if [ -n "$untracked" ]; then
+  echo "::warning::not packaged because git does not track them (git add to include):" >&2
+  echo "$untracked" >&2
+fi
+git ls-files -z -- plugin.json LICENSE skills assets | tar --null -T - -cf - | tar -xf - -C "$stage"
 find "$stage" \( -name .DS_Store -o -name __pycache__ -o -name '*.pyc' \) -prune -exec rm -rf {} +
 
 if [ -n "$mcp_url" ]; then
-  jq -n --arg url "$mcp_url" '{
+  jq -n --arg url "$mcp_url" --arg name "$mcp_name" '{
     "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-    mcpServers: {domino_server: {type: "streamable-http", url: $url}}
+    mcpServers: {($name): {type: "streamable-http", url: $url}}
   }' > "$stage/mcp.json"
   kind="with-mcp"
 else
@@ -71,6 +82,10 @@ else
   if jq -e '.extensions["com.openai"].interface.screenshots // empty' plugin.json >/dev/null; then
     echo "::error::skills-only packages must not declare interface.screenshots" >&2; exit 1
   fi
+  # Skills built around the plugin's local MCP server have nothing to work with in a skills-only
+  # install, so they stay out of this package.
+  local_mcp_skills="domino-modeling-assistant"
+  for skill in $local_mcp_skills; do rm -rf "$stage/skills/$skill"; done
   kind="skills-only"
 fi
 

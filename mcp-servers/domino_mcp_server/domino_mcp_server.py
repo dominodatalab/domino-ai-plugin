@@ -36,7 +36,15 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 # Variables the server reads for its own configuration (not the ones Domino injects).
 _CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_MCP_ENV_FILE",
-                "DOMINO_INSECURE_HTTP")
+                "DOMINO_INSECURE_HTTP", "DOMINO_PLUGIN_HOST", "DOMINO_PLUGIN_TOKEN")
+
+# Values a host collects in its own settings UI and passes under these names (Claude Code plugin
+# options: `${user_config.domino_host}`, `${user_config.domino_token}`). They take precedence over
+# DOMINO_HOST and DOMINO_TOKEN from the environment, which take precedence over the env file.
+_PLUGIN_OPTIONS = (("DOMINO_PLUGIN_HOST", "DOMINO_HOST"), ("DOMINO_PLUGIN_TOKEN", "DOMINO_TOKEN"))
+
+# Where DOMINO_HOST and DOMINO_TOKEN came from, for get_domino_environment_info.
+_CONFIG_SOURCES: Dict[str, str] = {}
 
 
 def _drop_unset_placeholders(environ: Dict[str, str]) -> None:
@@ -54,7 +62,8 @@ def _drop_unset_placeholders(environ: Dict[str, str]) -> None:
 
 
 # Some hosts start stdio MCP servers with a minimal environment and give a plugin no way to
-# forward more: Codex passes only HOME, LANG, LC_ALL, LOGNAME, PATH, SHELL and USER, and drops a
+# forward more: Codex passes only HOME, LANG, LC_ALL, LOGNAME, PATH, SHELL, TERM, TMPDIR, TZ and USER
+# (plus __CF_USER_TEXT_ENCODING on macOS), and drops a
 # plugin server that declares env_vars. Inside a Domino Workspace or Job the Domino variables are
 # still set on the process that started the agent, so copy the ones this server reads from the
 # nearest ancestor that has them. Linux only; the kernel allows reading the environment of
@@ -117,11 +126,25 @@ def _env_file_path() -> Path:
 
 
 def _load_environment() -> None:
-    """Import-time environment handling, in order: placeholders, ancestor recovery, env file."""
+    """Import-time environment handling, in order: placeholders, plugin options, ancestor
+    recovery, env file. Records where DOMINO_HOST and DOMINO_TOKEN came from."""
     _drop_unset_placeholders(os.environ)
+    _CONFIG_SOURCES.clear()
+    for option, name in _PLUGIN_OPTIONS:
+        value = (os.environ.pop(option, None) or "").strip()
+        if value:
+            os.environ[name] = value
+            _CONFIG_SOURCES[name] = "plugin options"
     _recover_domino_env()
-    load_dotenv(_env_file_path(), override=False)
+    for name in ("DOMINO_HOST", "DOMINO_TOKEN"):
+        if os.environ.get(name) and name not in _CONFIG_SOURCES:
+            _CONFIG_SOURCES[name] = "environment"
+    env_file = _env_file_path()
+    load_dotenv(env_file, override=False)
     _drop_unset_placeholders(os.environ)
+    for name in ("DOMINO_HOST", "DOMINO_TOKEN"):
+        if os.environ.get(name) and name not in _CONFIG_SOURCES:
+            _CONFIG_SOURCES[name] = f"env file {env_file}"
     if os.environ.get("DOMINO_API_KEY") and not os.environ.get("DOMINO_TOKEN"):
         print("domino_mcp_server: DOMINO_API_KEY is set but legacy API keys are not supported by "
               "this server. Set DOMINO_TOKEN to a Personal Access Token or service account token.",
@@ -141,12 +164,16 @@ class DominoError(ToolError):
 
 def _auth_help() -> str:
     text = (
-        "Outside a Domino execution set DOMINO_HOST to your Domino URL (for example "
-        "https://domino.example.com) and DOMINO_TOKEN to a Personal Access Token (Account settings > "
-        "Personal Access Token) or a service account token, either in the environment the MCP host "
-        f"passes to this server or in the env file {_env_file_path()} (KEY=value lines, chmod 600; "
-        "the file is read when the host strips the environment, as Codex does). Inside a Domino "
-        "Workspace or Job the platform sets DOMINO_API_PROXY and no token is needed. See "
+        "Outside a Domino Workspace or Job this server needs your Domino URL and a token. "
+        "(1) DOMINO_HOST: the address you open Domino at in the browser, for example "
+        "https://domino.example.com. "
+        "(2) DOMINO_TOKEN: in Domino, Account > Account settings > Personal Access Token > Generate "
+        "new Token (a service account token also works; legacy API keys do not). "
+        "(3) Give both to the server: Claude Code asks for them when the plugin is enabled (change "
+        "them under /plugin > Installed > dominodatalab > Configure options); Gemini CLI asks at "
+        "install (change them with `gemini extensions config dominodatalab`); every other host, "
+        f"including Codex, Cursor and Antigravity, reads them from the env file {_env_file_path()} "
+        "as DOMINO_HOST=... and DOMINO_TOKEN=... lines (chmod 600). Then start a new session. Inside a Domino Workspace or Job nothing is needed. See "
         "https://docs.domino.ai/cloud/reference/api/domino-api-authentication."
     )
     legacy_dotenv = Path(__file__).resolve().parent / ".env"
@@ -323,7 +350,8 @@ def _describe_http_error(method: str, path: str, resp: requests.Response) -> str
     if resp.status_code in (401, 403) and not _is_domino_workspace():
         message += ". Check that DOMINO_TOKEN is a valid, unexpired Personal Access Token or " \
                    "service account token for DOMINO_HOST and that the token's user can access " \
-                   "this project."
+                   "this project; a new token comes from Account > Account settings > Personal " \
+                   "Access Token in Domino."
     return _redact(message)
 
 
@@ -1265,9 +1293,12 @@ def get_domino_environment_info() -> Dict[str, Any]:
     name, whether the project is Git-based or DFS, and which authentication is in use.
 
     Inside a Domino Workspace or Job everything comes from platform environment variables.
-    Outside Domino the response says what is configured (DOMINO_HOST, DOMINO_TOKEN) and what
-    is missing; project owner, project name and the DFS setting then come from the user or
-    from domino_project_settings.md.
+    Outside Domino the response says what is configured (DOMINO_HOST, DOMINO_TOKEN), where each
+    value came from (`credential_sources`: plugin options, environment, env file or not set) and
+    what is missing; when both are set, `connection` reports the Domino user the token belongs
+    to (`authenticated_as`) or the error to fix. Relay `error` and `connection.error` to the
+    user as written: they say which setting to change and where. Project owner, project name
+    and the DFS setting then come from the user or from domino_project_settings.md.
     """
     inside = _is_domino_workspace()
     info: Dict[str, Any] = {
@@ -1307,9 +1338,30 @@ def get_domino_environment_info() -> Dict[str, Any]:
         if os.environ.get("DOMINO_API_KEY"):
             info["warning"] = ("DOMINO_API_KEY is set but legacy API keys are not supported by this "
                                "server; set DOMINO_TOKEN instead.")
+        info["credential_sources"] = {name: _CONFIG_SOURCES.get(name, "not set")
+                                      for name in ("DOMINO_HOST", "DOMINO_TOKEN")}
+        if info["domino_host"] and info["auth_mode"] == "bearer_token":
+            info["connection"] = _check_connection()
         info["note"] = ("Running outside Domino. Take the project owner, project name and the "
                         "DFS setting from the user or from domino_project_settings.md.")
     return info
+
+
+def _check_connection() -> Dict[str, Any]:
+    """Prove DOMINO_HOST and DOMINO_TOKEN work by asking Domino who the token belongs to."""
+    try:
+        body = _api_json("GET", "/api/users/v1/self")
+    except DominoError as e:
+        error = str(e)
+        if " failed: " in error:   # no HTTP response at all
+            error += (" Check that DOMINO_HOST is the address you open Domino at and that this "
+                      "machine can reach it (VPN, or HTTPS_PROXY on a corporate network).")
+        return {"ok": False, "error": error}
+    user = (body or {}).get("user") or {}
+    if not user.get("userName"):
+        return {"ok": False, "error": "GET /api/users/v1/self answered without a user; check that "
+                                      "DOMINO_HOST is the address you open Domino at in the browser."}
+    return {"ok": True, "authenticated_as": user["userName"]}
 
 
 def _probe_git(working_dir: str) -> bool | None:
