@@ -29,8 +29,9 @@ pub enum NameSource {
 
 /// The viewer's Domino username from the forwarded token's `preferred_username` claim, or from the
 /// `domino-username` header when the request carries no token. Domino checked the token before
-/// forwarding the request; this function does not verify its signature itself, so for decisions that
-/// grant access, call the Domino API as the viewer, which does.
+/// forwarding the request; this function does not verify its signature itself. For decisions that
+/// grant access, verify the token, or, on an App with extended identity propagation, call the Domino
+/// API as the viewer; without it Domino rejects the viewer's token on most routes.
 #[must_use]
 pub fn viewer_name(headers: &HeaderMap) -> Option<(String, NameSource)> {
     if let Some(token) = bearer(headers) {
