@@ -15,7 +15,7 @@ the client's name and protocol version on stderr when the host first lists or ca
 
 | Tool | Kind | What it does | Domino route |
 |---|---|---|---|
-| `get_domino_environment_info` | read, local | Inside or outside Domino, project owner, name and id, Git-based or DFS, auth mode, what is missing | none (environment variables) |
+| `get_domino_environment_info` | read | Inside or outside Domino, project owner, name and id, Git-based or DFS, auth mode, what is missing; outside Domino also where `DOMINO_HOST` and `DOMINO_TOKEN` came from and the user the token belongs to | outside Domino with both set: `GET /api/users/v1/self`; otherwise none |
 | `run_domino_job` | write | Starts a Job with one command string; optional `commit_id`, `hardware_tier`, `environment_id`, `git_branch`; pins the commit after recent uploads; with `wait_seconds` waits on the server and returns the final status and the end of the stdout | `POST /api/jobs/v1/jobs`; `GET /api/hardwaretiers/v1/hardwaretiers` and `GET /api/environments/beta/environments` to validate the ids (Public API) |
 | `check_domino_job_run_status` | read | Execution status of a job (`Queued`, `Running`, `Succeeded`, `Failed`, ...); with `wait_seconds` waits on the server until it completes or the cap is reached | `GET /api/jobs/beta/jobs/{jobId}` (Public API) |
 | `check_domino_job_run_results` | read | Job output: `stdOut` by default, or `stdErr`, `prepareOutput`, `complete` | `GET /api/jobs/beta/jobs/{jobId}/logs` (Public API) |
@@ -154,6 +154,13 @@ variables above from the nearest ancestor process that has `DOMINO_API_PROXY` or
 |---|---|
 | `DOMINO_HOST` | Your Domino URL, for example `https://domino.example.com` (`DOMINO_API_HOST` is accepted as a fallback). `http://` is refused except for localhost, because it would send the token in clear text; set `DOMINO_INSECURE_HTTP=true` to allow it deliberately |
 | `DOMINO_TOKEN` | A [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication) (Account settings > Personal Access Token) or a service account token, sent as `Authorization: Bearer`. Surrounding whitespace is stripped; a value with whitespace inside is rejected. Ignored when `DOMINO_API_PROXY` is set. The token never appears in tool results, errors or logs. |
+| `DOMINO_PLUGIN_HOST`, `DOMINO_PLUGIN_TOKEN` | Set by a host from its own settings UI (Claude Code passes the plugin options `domino_host` and `domino_token`). Non-empty values take precedence over `DOMINO_HOST` and `DOMINO_TOKEN`; the server moves them into those names at start and removes them from its environment |
+
+Precedence: plugin options, then `DOMINO_HOST` and `DOMINO_TOKEN` from the environment, then the
+env file below. `get_domino_environment_info` reports where each value came from
+(`credential_sources`) and, when both are set, asks Domino who the token belongs to
+(`GET /api/users/v1/self`): `connection.authenticated_as`, or `connection.error` with the fix.
+User-facing setup steps for every host: the repository README, "Your Domino URL and token".
 
 Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated by Domino and not
 supported by this server: a PAT is rejected on that header, and a legacy key is not sent. If
@@ -175,7 +182,7 @@ and `DOMINO_HOST`; a missing variable names both and links the authentication pa
 
 | Host | File | Environment |
 |---|---|---|
-| Claude Code | `.mcp.json` (plugin root): `uv --directory ${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server run domino_mcp_server.py` | Inherits your shell; the `env` block forwards `DOMINO_HOST` and `DOMINO_TOKEN` as `${VAR}`. An unset variable arrives as the literal text `${DOMINO_TOKEN}` (documented Claude Code behaviour), which the server treats as unset. |
+| Claude Code | `.mcp.json` (plugin root): `uv --directory ${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server run domino_mcp_server.py` | The plugin declares two options in `.claude-plugin/plugin.json` (`userConfig`: `domino_host`, and `domino_token` marked `sensitive`, which Claude Code keeps in the system's secure credential store). Claude Code asks for them when the plugin is enabled; `/plugin` → Installed → dominodatalab → Configure options changes them. The `env` block passes them as `DOMINO_PLUGIN_HOST` and `DOMINO_PLUGIN_TOKEN` (`${user_config.…}`). The server also inherits Claude Code's environment, so `DOMINO_HOST` and `DOMINO_TOKEN` exported before starting Claude Code still work. An option that was never set arrives empty or as literal `${…}` text, which the server treats as unset. |
 | Codex and the ChatGPT desktop app (local marketplace) | `mcp.json` (Agent Plugins format, `${PLUGIN_ROOT}`) | No `env` block (the format forbids secrets there) and Codex strips the shell environment. Inside a Workspace the server recovers the Domino variables itself; on a laptop use the env file above. |
 | Cursor | `.cursor-plugin/mcp.json` (`${CURSOR_PLUGIN_ROOT}`) | `${env:DOMINO_HOST}` and `${env:DOMINO_TOKEN}`, resolved from your environment. Whether Cursor passes literal text or an empty string for an unset variable is not documented; the server treats both as unset. |
 | Any other host | register a stdio server with the same `uv --directory <path to this directory> run domino_mcp_server.py` command | pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file |

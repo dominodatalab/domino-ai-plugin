@@ -226,9 +226,10 @@ def test_http_error_body_is_redacted(server, clean_env, http):
     assert "SECRETPAT123" not in str(err.value)
 
 
-def test_environment_info_never_contains_the_token(server, clean_env, run):
+def test_environment_info_never_contains_the_token(server, clean_env, http, run):
     clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
     clean_env.setenv("DOMINO_TOKEN", "SECRETPAT123")
+    http.add("GET", "/api/users/v1/self", FakeResponse(401, {"message": "token SECRETPAT123 rejected"}))
     assert "SECRETPAT123" not in str(run(server.get_domino_environment_info()))
 
 
@@ -338,13 +339,70 @@ def test_environment_info_outside_domino_reports_missing_config(server, clean_en
     assert info["is_dfs_project"] is None
 
 
-def test_environment_info_outside_domino_with_token(server, clean_env, run):
+def test_environment_info_outside_domino_with_token(server, clean_env, http, run):
     clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
     clean_env.setenv("DOMINO_TOKEN", "t")
     clean_env.setenv("DOMINO_API_KEY", "legacy")
+    http.add("GET", "/api/users/v1/self", FakeResponse(200, {"user": {"userName": "jane"}}))
     info = run(server.get_domino_environment_info())
     assert info["auth_mode"] == "bearer_token" and info["domino_host"] == "https://domino.example.com"
     assert "error" not in info and "DOMINO_TOKEN" in info["warning"]
+    assert info["connection"] == {"ok": True, "authenticated_as": "jane"}
+
+
+def test_environment_info_connection_reports_a_rejected_token_with_the_fix(server, clean_env, http, run):
+    clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
+    clean_env.setenv("DOMINO_TOKEN", "expired")
+    http.add("GET", "/api/users/v1/self", FakeResponse(401, {"message": "Unauthorized"}))
+    connection = run(server.get_domino_environment_info())["connection"]
+    assert connection["ok"] is False
+    assert "401" in connection["error"] and "DOMINO_TOKEN" in connection["error"]
+    assert "Personal Access Token" in connection["error"]
+
+
+def test_environment_info_connection_reports_an_unreachable_host(server, clean_env, http, run):
+    clean_env.setenv("DOMINO_HOST", "https://wrong.example.com")
+    clean_env.setenv("DOMINO_TOKEN", "t")
+
+    def refuse(kwargs):
+        raise server.requests.ConnectionError("Name or service not known")
+    http.add("GET", "/api/users/v1/self", refuse)
+    connection = run(server.get_domino_environment_info())["connection"]
+    assert connection["ok"] is False and "reach" in connection["error"]
+
+
+def test_environment_info_makes_no_call_without_credentials(server, clean_env, http, run):
+    clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
+    info = run(server.get_domino_environment_info())
+    assert "connection" not in info and http.calls == []
+    assert info["credential_sources"] == {"DOMINO_HOST": "not set", "DOMINO_TOKEN": "not set"}
+
+
+def test_plugin_options_win_over_the_environment_and_leave_no_trace(clean_env, tmp_path):
+    env_file = tmp_path / "mcp.env"
+    env_file.write_text("DOMINO_HOST=https://from-file.example.com\nDOMINO_TOKEN=file-token\n")
+    clean_env.setenv("DOMINO_MCP_ENV_FILE", str(env_file))
+    clean_env.setenv("DOMINO_HOST", "https://from-shell.example.com")
+    clean_env.setenv("DOMINO_PLUGIN_HOST", " https://from-plugin.example.com ")
+    clean_env.setenv("DOMINO_PLUGIN_TOKEN", "plugin-token")
+    module = import_server()
+    assert module._get_domino_host() == "https://from-plugin.example.com"
+    assert module._get_auth_headers() == {"Authorization": "Bearer plugin-token"}
+    assert "DOMINO_PLUGIN_HOST" not in os.environ and "DOMINO_PLUGIN_TOKEN" not in os.environ
+    assert module._CONFIG_SOURCES == {"DOMINO_HOST": "plugin options", "DOMINO_TOKEN": "plugin options"}
+
+
+def test_unset_plugin_options_fall_back_to_environment_then_env_file(clean_env, tmp_path):
+    env_file = tmp_path / "mcp.env"
+    env_file.write_text("DOMINO_TOKEN=file-token\n")
+    clean_env.setenv("DOMINO_MCP_ENV_FILE", str(env_file))
+    clean_env.setenv("DOMINO_PLUGIN_HOST", "${user_config.domino_host}")   # option never set
+    clean_env.setenv("DOMINO_PLUGIN_TOKEN", "")                             # option left empty
+    clean_env.setenv("DOMINO_HOST", "https://from-shell.example.com")
+    module = import_server()
+    assert module._get_domino_host() == "https://from-shell.example.com"
+    assert module._get_auth_headers() == {"Authorization": "Bearer file-token"}
+    assert module._CONFIG_SOURCES == {"DOMINO_HOST": "environment", "DOMINO_TOKEN": f"env file {env_file}"}
 
 
 def test_open_web_browser_is_a_no_op_inside_domino(server, clean_env, monkeypatch, run):
