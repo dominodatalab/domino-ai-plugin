@@ -82,7 +82,7 @@ Write every URL the site emits as a root-absolute path through Proa's helpers, n
 
 ## Interactive islands
 
-Island scripts, their module preloads and the runtime's imports carry the prefix, so islands hydrate behind Domino's proxy. A site with an island builds only with `proa build`; plain `cargo build` stops with a link error that says so.
+Island scripts, their module preloads and the runtime's imports carry the prefix, so islands hydrate behind Domino's proxy. A site with an island builds only with `proa build` and runs only with `proa run`; plain `cargo build` and `cargo run` stop with a link error that says so. Beside the Workspace IDE, run it with `PORT=8501 proa run`.
 
 ## Build once
 
