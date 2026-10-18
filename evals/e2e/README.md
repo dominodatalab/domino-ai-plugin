@@ -131,8 +131,9 @@ Other tools (run them with `uv run tools/<tool>.py`; those that talk to Domino t
 | s15-rust-app-author-git | Git | pinned toolchain, Clippy pedantic, `target/` ignored, `app.sh` runs a binary without compiling, Clippy and tests pass; nothing started |
 | s16-rust-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` runs the prebuilt binary without compiling |
 | s17-vite-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` serves a prebuilt build with `node` and never runs npm, npx or a build; a dated build stamp exists |
+| s18-proa-app-publish-git | Git | App Running; its page, stylesheet and scripts answer 200 under the App's prefix (`app_assets_ok`); `site/app.sh` sets `PROA_BASE_PATH` from `DOMINO_RUN_HOST_PATH` and runs the prebuilt binary without compiling |
 
-s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.cargo`, linked into `~/.local/bin`), standing in for a Compute Environment with Rust. s17 installs Node 22 with npm the same way (nvm, linked into `~/.local/bin`), standing in for a Workspace that can build; the App still runs on the environment's own `node`.
+s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.cargo`, linked into `~/.local/bin`), standing in for a Compute Environment with Rust. s17 installs Node 22 with npm the same way (nvm, linked into `~/.local/bin`), standing in for a Workspace that can build; the App still runs on the environment's own `node`. s18 adds the Proa CLI from the pinned Proa commit, checked against its published SHA-256, as PROA.md installs it in the environment.
 
 ### Scenario format
 
@@ -171,6 +172,7 @@ Check types (`e2elib/checks.py`):
 | `job_succeeded` | a Job started in the session window Succeeded (`stdout_regex`; `finished_before_reply` requires completion before the session ended) |
 | `snapshot_created` | a snapshot of the named Dataset was created in the window and is active |
 | `app_running`, `app_url_ok` | the App is Running; its URL answers 200 |
+| `app_assets_ok` | the App page and every stylesheet, module preload and script it loads from the Apps host answer 200 (at least `min_assets`, default 1); icons are skipped because Domino's proxy injects a `/favicon.ico` link that 404s |
 | `model_api_healthy`, `model_api_predicts` | Running twice 60 s apart with `WSGI app 0 ... ready` and no crash loop; a prediction returns 200 |
 | `mlflow_runs`, `mlflow_traces` | runs with a metric, or traces, in experiments matching a pattern (queried in the Workspace) |
 | `ws_file`, `script_runs`, `source_regex` | a file exists where it should; a script the model wrote runs; its source matches or avoids patterns |

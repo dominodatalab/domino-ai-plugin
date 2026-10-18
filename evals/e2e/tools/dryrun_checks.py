@@ -16,8 +16,11 @@ from e2elib.runner import _tmpl
 T0 = time.time() - 120; T1 = time.time()
 class FakeD:
     host = "https://domino.example.com"
-    def __init__(s, jobs=None, hpc=None, wss=None, apps=None):
-        s._jobs, s._hpc, s._wss, s._apps = jobs or [], hpc or [], wss or [], apps or []
+    def __init__(s, jobs=None, hpc=None, wss=None, apps=None, pages=None):
+        s._jobs, s._hpc, s._wss, s._apps, s._pages = jobs or [], hpc or [], wss or [], apps or [], pages or {}
+    def fetch(s, url, accept="*/*"):   # app_assets_ok: {url: (status, body)}; unknown URLs are 404
+        code, body = s._pages.get(url, (404, ""))
+        return code, url, body
     def jobs(s, pid, n): return s._jobs
     def get(s, path, params=None, ok=None):
         if path.startswith("/api/hpc/v1/jobs"): return {"jobs": s._hpc, "totalCount": len(s._hpc)}
@@ -179,6 +182,33 @@ case("s17 next app not running", False, run("s17-vite-app-publish-dfs", "next", 
      r=vite()))
 case("s17 next skill not loaded", False, run("s17-vite-app-publish-dfs", "next", tr([], DONE17), d=FakeD(apps=RUNNING), r=vite()))
 case("s17 none good app", True, run("s17-vite-app-publish-dfs", "none", tr([], DONE17), d=FakeD(apps=RUNNING), r=vite(build="none")))
+
+# s18: the App page and its assets are served under /apps/x/; Domino's injected /favicon.ico link 404s and is skipped
+APP = "https://domino.example.com/apps/x/"
+def page(css="/apps/x/static/styles.css", js="/apps/x/rsjs-runtime.js"):
+    return (f'<html><head><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="{css}">'
+            f'<script type="module" src="{js}"></script></head><body>Proa E2E rdry</body></html>')
+GOOD_PAGES = {APP: (200, page()), APP + "static/styles.css": (200, "body{}"), APP + "rsjs-runtime.js": (200, "export {}")}
+ROOT_PAGES = {APP: (200, page(css="/static/styles.css", js="/rsjs-runtime.js"))}   # URLs that escape the prefix
+PROA_APP_SH = ('#!/usr/bin/env bash\nset -euo pipefail\ncd "$(dirname "$0")"\n# built with proa build in a Job\n'
+               'export PORT=8888 PROA_HOST=0.0.0.0 PROA_BASE_PATH="${DOMINO_RUN_HOST_PATH:-}" RUST_LOG=info\nexec "$run"\n')
+def proa(app_sh=PROA_APP_SH, build="next"):
+    return FakeR({f"/mnt/code/e2e-runs/s18-proa-app-publish-git-{build}-rdry/site/app.sh": app_sh})
+PROA_RUNNING = [{**RUNNING[0], "name": "e2e-proa-rdry"}]
+DONE18 = "Published e2e-proa-rdry; it is Running at https://apps.example/apps/x/."
+S18 = "s18-proa-app-publish-git"
+case("s18 next good site", True, run(S18, "next", tr([SK("domino-rust-apps")], DONE18), d=FakeD(apps=PROA_RUNNING, pages=GOOD_PAGES), r=proa()))
+case("s18 next assets escape the prefix", False, run(S18, "next", tr([SK("domino-rust-apps")], DONE18),
+     d=FakeD(apps=PROA_RUNNING, pages=ROOT_PAGES), r=proa()))
+case("s18 next only one asset", False, run(S18, "next", tr([SK("domino-rust-apps")], DONE18),
+     d=FakeD(apps=PROA_RUNNING, pages={APP: (200, '<link rel="stylesheet" href="/apps/x/s.css">'), APP + "s.css": (200, "")}), r=proa()))
+case("s18 next proa build in app.sh", False, run(S18, "next", tr([SK("domino-rust-apps")], DONE18), d=FakeD(apps=PROA_RUNNING, pages=GOOD_PAGES),
+     r=proa(app_sh=PROA_APP_SH.replace('exec "$run"', 'proa build --locked\nexec target/release/site'))))
+case("s18 next no base path", False, run(S18, "next", tr([SK("domino-rust-apps")], DONE18), d=FakeD(apps=PROA_RUNNING, pages=GOOD_PAGES),
+     r=proa(app_sh=PROA_APP_SH.replace(' PROA_BASE_PATH="${DOMINO_RUN_HOST_PATH:-}"', ''))))
+case("s18 next app not running", False, run(S18, "next", tr([SK("domino-rust-apps")], DONE18), d=FakeD(pages=GOOD_PAGES), r=proa()))
+case("s18 next skill not loaded", False, run(S18, "next", tr([], DONE18), d=FakeD(apps=PROA_RUNNING, pages=GOOD_PAGES), r=proa()))
+case("s18 none good site", True, run(S18, "none", tr([], DONE18), d=FakeD(apps=PROA_RUNNING, pages=GOOD_PAGES), r=proa(build="none")))
 
 bad = 0
 for name, expect, ok, detail in cases:

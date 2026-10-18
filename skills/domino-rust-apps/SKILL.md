@@ -1,6 +1,6 @@
 ---
 name: domino-rust-apps
-description: Build a Rust web app (axum) in Domino and ship it as a Domino App that starts from a prebuilt binary. Covers installing a pinned Rust toolchain into a Compute Environment with rustup, Cargo project defaults (edition 2024, rust-toolchain.toml, Cargo.lock, Clippy pedantic, rustfmt, cargo-nextest, cargo-deny), rust-analyzer for the IDE and coding agents, check hooks, calling Domino as the viewer with extended identity propagation, dev and release build profiles, keeping target/ out of Git and Domino storage, and an app.sh that runs the binary in App Preview and deployments without compiling. Use when the user wants a Rust app, API or dashboard on Domino, a performance-sensitive or correctness-critical App, or asks to set up Rust, cargo, Clippy, nextest or rust-analyzer in a Domino Workspace or environment.
+description: Build a Rust web app (axum) in Domino and ship it as a Domino App that starts from a prebuilt binary. Covers installing a pinned Rust toolchain into a Compute Environment with rustup, Cargo project defaults (edition 2024, rust-toolchain.toml, Cargo.lock, Clippy pedantic, rustfmt, cargo-nextest, cargo-deny), rust-analyzer for the IDE and coding agents, check hooks, calling Domino as the viewer with extended identity propagation, dev and release build profiles, keeping target/ out of Git and Domino storage, and an app.sh that runs the binary in App Preview and deployments without compiling. Use when the user wants a Rust app, API, dashboard or Proa site on Domino, a performance-sensitive or correctness-critical App, or asks to set up Rust, cargo, Clippy, nextest or rust-analyzer in a Domino Workspace or environment.
 compatibility: Domino 6.3 and Domino Cloud. Building needs a Compute Environment with the Rust toolchain and access to crates.io or a mirror; the App runs the prebuilt binary and needs no toolchain.
 ---
 
@@ -57,7 +57,7 @@ Keep `panic = "unwind"`: tokio and axum confine a panicking request to its conne
 
 ## Editors and coding agents
 
-The environment installs rust-analyzer (toolchain component and VS Code extension). Check it with `rust-analyzer --version`, not `which`. Per-agent LSP and hooks: [TOOLING.md](./TOOLING.md).
+The environment installs rust-analyzer. Check it with `rust-analyzer --version`, not `which`. Per-agent LSP and hooks: [TOOLING.md](./TOOLING.md).
 
 ## DFS Projects
 
@@ -67,10 +67,11 @@ The environment installs rust-analyzer (toolchain component and VS Code extensio
 
 ## Keeping the binary in Git instead
 
-Run `DIST_DIR=dist bash scripts/build-dist.sh` and commit the new `dist/<label>/` and `dist/<label>.stamp` with the sources, only for builds you publish. Every committed binary stays in history and in every clone (Domino does not support Git LFS), so keep `strip = true`; history grows a few MB per published build.
+Run `DIST_DIR=dist bash scripts/build-dist.sh` and commit the new `dist/<label>/` and `dist/<label>.stamp` with the sources, only for builds you publish. Every committed binary stays in history and in every clone (Domino does not support Git LFS), so keep `strip = true`.
 
 ## Reference files
 
 - [ENVIRONMENT.md](./ENVIRONMENT.md): Dockerfile instructions, upgrades, mirrors and offline builds
 - [APP.md](./APP.md): the axum template, proxy rules, identity, Postgres, model calls, outbound TLS and proxies, how the binary is shipped
 - [TOOLING.md](./TOOLING.md): lints, tests, cargo-deny, build profiles, `target/` size, LSP and hooks per IDE and agent
+- [PROA.md](./PROA.md): Proa sites (server-rendered pages and islands) as Domino Apps

@@ -74,6 +74,17 @@ class Domino:
         except json.JSONDecodeError:
             return txt
 
+    def fetch(self, url: str, accept: str = "*/*", timeout: int = 60):
+        """GET a full URL with the bearer token, following redirects: (status, final URL, body)."""
+        req = urllib.request.Request(url, headers={"Accept": accept, "Authorization": f"Bearer {self._token()}"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.status, r.geturl(), r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            return e.code, e.geturl() or url, e.read().decode("utf-8", "replace")
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            return 0, url, str(e)
+
     def get(self, path, **kw):
         return self.request("GET", path, **kw)
 

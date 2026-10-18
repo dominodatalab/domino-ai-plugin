@@ -1,0 +1,55 @@
+id: s18-proa-app-publish-git
+title: Build a Proa site with a client-side counter and publish it so its pages, assets and scripts load under the App's URL prefix (git Project)
+journey: apps (Rust, Proa)
+project_type: git
+expected_skills: [domino-rust-apps]
+timeout_s: 3600
+setup:
+  # Stands in for a Compute Environment with Rust and the Proa CLI (the toolchain as in s15, the CLI as PROA.md installs it).
+  - type: ws_file
+    path: '{{home}}/.e2e-proa-setup.sh'
+    content: |
+      set -e
+      if [ ! -x "$HOME/.cargo/bin/rustup" ]; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
+          --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src >/dev/null 2>&1
+      fi
+      if [ ! -x "$HOME/.cargo/bin/proa" ]; then
+        rev=7ab85e1447191325b46a07bc1353804bc2fcc676
+        f=proa-cli-0.1.3-main.$rev-x86_64-unknown-linux-gnu
+        cd /tmp
+        curl -fsSLO https://github.com/Proa-Labs/proa/releases/download/proa-cli-v0.1.3-main.$rev/$f.tar.gz
+        echo "7d46959428fdc8936d4a6deb1d1286e0a1a20a6f394b0757a235c0821c443944  $f.tar.gz" | sha256sum -c
+        tar -xzf $f.tar.gz -C "$HOME/.cargo/bin" --strip-components=1 $f/proa $f/cargo-proa
+      fi
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$HOME"/.cargo/bin/* "$HOME/.local/bin/"
+  - type: ws_shell
+    cmd: 'bash {{home}}/.e2e-proa-setup.sh && mkdir -p {{run_dir}}'
+prompt: |
+  Make a small website with Proa (https://proa.so) in a folder named `site` in this directory: a home page that
+  says "Proa E2E {{run_tag}}" and a button that counts clicks in the browser. Publish it as a Domino App named
+  `e2e-proa-{{run_tag}}` on the `{{job_tier}}` hardware tier so my teammates can open it. Make sure it starts,
+  then give me its URL.
+check:
+  - type: skill_loaded
+    skill_regex: 'domino-rust-apps'
+    only_builds: [next]
+  - type: app_running
+    name_regex: '{{run_tag}}'
+    wait_s: 900
+  - type: app_url_ok
+    name_regex: '{{run_tag}}'
+  - type: app_assets_ok            # the stylesheet and the counter's script load under the App's prefix, not from /
+    name_regex: '{{run_tag}}'
+    min_assets: 2
+  - type: script_lint
+    path: '{{run_dir}}/site/app.sh'
+    forbid:
+      compiles_at_start: '(?m)^[^#\n]*\b(cargo|proa)\s+(\+\S+\s+)?(build|run|install|dev)\b'
+    require:
+      runs_binary: '\bexec\b'
+      base_path_from_domino: 'PROA_BASE_PATH="?\$\{?DOMINO_RUN_HOST_PATH'
+cleanup:
+  - type: delete_apps
+    name_regex: '{{run_tag}}'

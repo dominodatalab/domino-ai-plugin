@@ -11,6 +11,7 @@ import json
 import re
 import shlex
 import time
+import urllib.parse
 import urllib.request
 
 from .domino import Domino, ts_ms
@@ -252,6 +253,51 @@ def check_app_url_ok(c: Ctx, spec):
         url = c.d.host + url
     code, body = c.d.request("GET", "", url=url, ok=None, raw=True, headers={"Accept": "text/html"})
     return _res(spec, code == 200, {"url": url, "http": code, "note": "fetched with the harness bearer token"})
+
+
+_TAG = re.compile(r"<(link|script)\b([^>]*)>", re.I)
+
+
+def _attr(attrs, name):
+    m = re.search(rf'\b{name}\s*=\s*["\']([^"\']+)["\']', attrs, re.I)
+    return m.group(1) if m else None
+
+
+def _page_assets(html):
+    """Stylesheets, module preloads and scripts the page loads. Icons are skipped: Domino's proxy inserts a
+    /favicon.ico link that returns 404 on the Apps host for every App."""
+    out = set()
+    for tag, attrs in _TAG.findall(html):
+        if tag.lower() == "script":
+            ref = _attr(attrs, "src")
+        else:
+            rel = (_attr(attrs, "rel") or "").lower().split()
+            ref = _attr(attrs, "href") if {"stylesheet", "modulepreload"} & set(rel) else None
+        if ref:
+            out.add(ref)
+    return sorted(out)
+
+
+def check_app_assets_ok(c: Ctx, spec):
+    """The App page and every same-host stylesheet, module preload and script it references return 200 through
+    Domino's App proxy. A page that loads but whose assets escape the App's URL prefix fails here."""
+    apps = [a for a in _apps(c, spec["name_regex"]) if _app_status(a) == "Running"]
+    if not apps:
+        return _res(spec, False, "no running app")
+    url = apps[0].get("url") or ""
+    if url.startswith("/"):
+        url = c.d.host + url
+    code, page, html = c.d.fetch(url, "text/html")
+    if code != 200:
+        return _res(spec, False, {"url": url, "http": code})
+    host = urllib.parse.urlsplit(page).netloc
+    assets = {}
+    for ref in _page_assets(html):
+        target = urllib.parse.urljoin(page, ref)
+        if urllib.parse.urlsplit(target).netloc == host:
+            assets[ref] = c.d.fetch(target)[0]
+    ok = len(assets) >= spec.get("min_assets", 1) and all(v == 200 for v in assets.values())
+    return _res(spec, ok, {"page": page, "assets": assets})
 
 
 def cleanup_delete_apps(c: Ctx, spec):
