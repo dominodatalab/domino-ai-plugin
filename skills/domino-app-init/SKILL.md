@@ -26,7 +26,7 @@ If the target directory already contains an app, stop and ask before overwriting
 
    | Framework | Files to copy |
    |---|---|
-   | `vite-react` | From `assets/vite-react/`: `vite.config.js`, `app.sh`, `server.js`, `scripts/build-dist.sh`, `scripts/stamp.sh`, `.env.example`, `.dominoignore` (run `npm create vite@latest` first if there is no Vite project yet; `server.js` needs no packages) |
+   | `vite-react` | From `assets/vite-react/`: `vite.config.js`, `app.sh`, `server.js`, `scripts/build-dist.sh`, `scripts/stamp.sh`, `.env.example`, `.dominoignore` (run `npm create vite@9.3.0` first if there is no Vite project yet; `server.js` needs no packages) |
    | `streamlit` | `assets/streamlit/app.sh`, and `assets/streamlit/app.py.template` saved as `app.py` |
    | `dash` | `assets/dash/app.sh`, and `assets/dash/app.py.template` saved as `app.py` |
    | `flask`, `gradio`, `fastapi` | No template; write the files from the snippets below |

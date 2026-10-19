@@ -49,8 +49,10 @@ Run `node -v` and `npm -v`. The current Vite scaffold needs Node `^20.19.0 || >=
 From the target directory:
 
 ```bash
-npm create vite@latest . -- --template react-ts
+npm create vite@9.3.0 . -- --template react-ts
 ```
+
+The version is pinned because the steps below depend on what that scaffold writes.
 
 Do not run `npm install` immediately afterward. The next step rewrites `package.json` so the install picks up the right versions in one pass.
 
@@ -79,10 +81,10 @@ You're enforcing constraints, not writing a fixed file. View the current `packag
 
 **Node-version branch — check this BEFORE leaving the scaffold's toolchain alone.**
 
-Run `node -v`. The current `npm create vite@latest` scaffold (create-vite 9) writes Vite 8, TypeScript 6, `oxlint` and `@types/node` 24. Vite 8 declares `engines.node` as `^20.19.0 || >=22.12.0`; on an older Node `npm install` succeeds but `npm run build` fails with a rolldown native-binding error. Domino Compute Environments do not guarantee a Node that new (Domino's own React example installs Node 22 with nvm first), so check before installing.
+Run `node -v`. The `npm create vite@9.3.0` scaffold writes Vite 8, TypeScript 7, `oxlint` and `@types/node` 24. Vite 8 declares `engines.node` as `^20.19.0 || >=22.12.0`; on an older Node `npm install` succeeds but `npm run build` fails with a rolldown native-binding error. Domino Compute Environments do not guarantee a Node that new (Domino's own React example installs a newer Node with nvm first), so check before installing.
 
 - **If Node satisfies `^20.19.0 || >=22.12.0`:** the scaffold's defaults are fine. Skip to "Leave alone" below.
-- **Otherwise, prefer a newer Node:** add Node 22+ to the Compute Environment (it persists for every Workspace, Job and App), or `nvm install 22` in the workspace for this session only, and keep the scaffold as is.
+- **Otherwise, prefer a newer Node:** add Node 24 (LTS) to the Compute Environment (it persists for every Workspace, Job and App), or `nvm install 24` in the workspace for this session only (installing nvm: [domino-apps REACT-VITE-GUIDE.md](../domino-apps/REACT-VITE-GUIDE.md)), and keep the scaffold as is.
 - **If Node cannot change,** pin a Vite 5 toolchain before installing:
   - `vite` — `^5.4.0`
   - `@vitejs/plugin-react` — `^4.3.4`

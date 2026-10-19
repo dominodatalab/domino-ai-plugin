@@ -27,7 +27,7 @@ If `build` fails:
 
 - **Rolldown native binding error** (`Cannot find module @rolldown/binding-*` or similar) → the Vite toolchain in `package.json` requires Node `^20.19.0 || >=22.12.0` but the workspace is on an older Node. Go back to Step 4's Node-version branch: install a newer Node or apply the Vite 5 set.
 - JSX runtime or React typing errors → React or `@types/react` versions don't match. Recheck Step 4.
-- TypeScript errors about `erasableSyntaxOnly` or missing `composite` → leftover from a TS-6 scaffold on a downgraded TS. Recheck the Node-version branch in Step 4 (TypeScript `~5.8.3` keeps the flag; add `composite: true` if `tsc -b` asks for it).
+- TypeScript errors about `erasableSyntaxOnly` or missing `composite` → leftover from a TypeScript 7 scaffold on a downgraded TypeScript. Recheck the Node-version branch in Step 4 (TypeScript `~5.8.3` keeps the flag; add `composite: true` if `tsc -b` asks for it).
 - Missing modules from `@dominodatalab/extensions-tools` → install didn't complete. Check `node_modules/@dominodatalab/extensions-tools/dist`.
 - TypeScript errors in the user's existing code (only relevant on retrofits) → don't try to fix them as part of this skill. Surface them to the user and let them decide.
 
