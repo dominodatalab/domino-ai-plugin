@@ -14,7 +14,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-cluste
 
 ## Is Slurm available here?
 
-Ask the platform, not the Workspace. `GET /v4/dataplanes/dataplanes` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)) lists the data planes with `status.supportsSlurm`; `GET /api/hpc/v1/jobs/submit-supported?projectId=&dataPlaneId=` says whether this Project can submit there. A Workspace without `sbatch` only means no cluster is attached. Offer to attach a cluster only when a Slurm-enabled plane exists; with none, Slurm is an administrator task.
+Ask the platform, not the Workspace. `GET /v4/dataplanes/dataplanes` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)) lists the data planes with `status.supportsSlurm`; `GET /api/hpc/v1/jobs/submit-supported?projectId=&dataPlaneId=` says whether this Project can submit there. Offer to attach a cluster only when a Slurm-enabled plane exists; with none, Slurm is an administrator task.
 
 ## Prerequisites
 
@@ -46,6 +46,9 @@ D=/domino/datasets/local/my-dataset     # a Dataset of the Project: ls $DOMINO_D
 
 The **HPC** tab on the Project's Jobs page lists every HPC Job. Its **Run** button and the API below need the `ShortLived.EnableHPCJobs` feature flag, set by the administrator; `sbatch` in a Workspace needs no flag.
 
+In Domino 6.3, direct submission of HPC jobs from UI/API is in preview. To use it, the administrator needs to 
+manually configure a Slurm partition for the Domino project.
+
 Call `submit-supported` first (`dataPlaneId` required); on `false` stop and report, do not start: a start there is a 500 `(503) Unexpected response code`, creates nothing and fails again on retry.
 
 | Route | Notes |
@@ -68,7 +71,7 @@ requests.post(f"{base}/api/hpc/v1/jobs", json={**q, "filePath": "hpc/sweep.sh", 
 ## Limitations
 
 - The cluster attaches at Workspace launch; a standard Job cannot carry a Slurm cluster; submit through `/api/hpc/v1/jobs`.
-- Workers reach Datasets only: no Data Sources, no NetApp Volumes.
+- Workers reach Datasets and NetApp volumes: no Data Sources.
 - No interactive or scheduled Slurm jobs; no external Slurm clusters.
 - Jobs of different users share worker nodes and one Unix group, unsandboxed, so every script sets `umask 077`.
 
