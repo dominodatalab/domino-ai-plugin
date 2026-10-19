@@ -34,6 +34,7 @@
         "websiteURL": "https://www.domino.ai",
         "supportURL": "https://support.domino.ai/",
         "privacyPolicyURL": "https://domino.ai/legal/privacy-policy",
+        "termsOfServiceURL": "https://domino.ai/legal/terms",
         "defaultPrompt": [
           "How do I deploy a Streamlit dashboard as a Domino App?",
           "Set up MLflow experiment tracking for my Domino project.",
