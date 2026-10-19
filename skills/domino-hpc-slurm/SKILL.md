@@ -31,7 +31,7 @@ Usernames have to be valid Linux usernames (`^[a-z_][a-z0-9_-]{0,31}`), or the l
 
 Terminal: `sinfo` (zero nodes when idle is normal), `sbatch job.sh` (prints the job id), `squeue -j <id>` (`PD` pending while workers provision, `R` running, empty = done), `scontrol show job <id>` while queued or running, `sacct -j <id>` after completion (filter by job, user or time, never `sacct -a`), `scancel <id>`.
 
-Resource requests go in `#SBATCH` header lines or as `sbatch` options (`--time`, `--cpus-per-task`, `--mem`), which override the header. Arrays: `--array=0-9` plus `$SLURM_ARRAY_TASK_ID` in each task's output path. Dependencies: `--dependency=afterok:<id>` (`afterany`, `afternotok`). Domino overrides `--output` and `--error` to collect the logs, so redirect inside the script to the Dataset; workers neither read nor write the Workspace files, so code and inputs live in the Dataset too. Write a real Dataset name (with several, the one holding the inputs or the Project's default; say which) and never leave `<...>` in a script: angle brackets are shell redirections, so it will not parse. Start every script with `umask 077`: worker nodes and their Unix group are shared between users, so files are readable by others otherwise.
+Resource requests go in `#SBATCH` header lines or as `sbatch` options (`--time`, `--cpus-per-task`, `--mem`), which override the header. Arrays: `--array=0-9` plus `$SLURM_ARRAY_TASK_ID` in each task's output path. Dependencies: `--dependency=afterok:<id>` (`afterany`, `afternotok`). Domino overrides `--output` and `--error` to collect the logs, so redirect inside the script to the Dataset; workers neither read nor write the Workspace files, so code and inputs live in the Dataset too. Write a real Dataset name (with several, the one holding the inputs or the Project's default; say which); never leave `<...>` in a script, since angle brackets are shell redirections. Start every script with `umask 077`: workers and their Unix group are shared between users, so files are otherwise readable by others.
 
 ```bash
 #!/bin/bash
@@ -46,8 +46,7 @@ D=/domino/datasets/local/my-dataset     # a Dataset of the Project: ls $DOMINO_D
 
 The **HPC** tab on the Project's Jobs page lists every HPC Job. Its **Run** button and the API below need the `ShortLived.EnableHPCJobs` feature flag, set by the administrator; `sbatch` in a Workspace needs no flag.
 
-In Domino 6.3, direct submission of HPC jobs from UI/API is in preview. To use it, the administrator needs to 
-manually configure a Slurm partition for the Domino project.
+On Domino 6.3 this is a preview feature: the administrator configures a Slurm partition for the Project.
 
 Call `submit-supported` first (`dataPlaneId` required); on `false` stop and report, do not start: a start there is a 500 `(503) Unexpected response code`, creates nothing and fails again on retry.
 
