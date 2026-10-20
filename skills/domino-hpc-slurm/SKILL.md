@@ -44,9 +44,7 @@ D=/domino/datasets/local/my-dataset     # a Dataset of the Project: ls $DOMINO_D
 
 ## Path 2: HPC Jobs through the API
 
-The **HPC** tab on the Project's Jobs page lists every HPC Job. Its **Run** button and the API below need the `ShortLived.EnableHPCJobs` feature flag, set by the administrator; `sbatch` in a Workspace needs no flag.
-
-On Domino 6.3 this is a preview feature: the administrator configures a Slurm partition for the Project.
+The **HPC** tab on the Project's Jobs page lists every HPC Job. Its **Run** button needs the `ShortLived.EnableHPCJobs` feature flag; it and the API below need a Slurm partition the administrator sets up for the Project on the target data plane (a preview on Domino 6.3). `sbatch` in a Workspace needs neither.
 
 Call `submit-supported` first (`dataPlaneId` required); on `false` stop and report, do not start: a start there is a 500 `(503) Unexpected response code`, creates nothing and fails again on retry.
 
@@ -70,7 +68,7 @@ requests.post(f"{base}/api/hpc/v1/jobs", json={**q, "filePath": "hpc/sweep.sh", 
 ## Limitations
 
 - The cluster attaches at Workspace launch; a standard Job cannot carry a Slurm cluster; submit through `/api/hpc/v1/jobs`.
-- Workers reach Datasets and NetApp volumes: no Data Sources.
+- Workers reach Datasets and NetApp Volumes: no Data Sources.
 - No interactive or scheduled Slurm jobs; no external Slurm clusters.
 - Jobs of different users share worker nodes and one Unix group, unsandboxed, so every script sets `umask 077`.
 
