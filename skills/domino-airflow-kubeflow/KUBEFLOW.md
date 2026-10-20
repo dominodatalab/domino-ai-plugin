@@ -25,8 +25,10 @@ created in Domino; the Secret is the pipeline's own copy, because its pods canno
 Project or user environment variables:
 
 ```bash
-kubectl -n <pipeline namespace> create secret generic domino-token --from-literal=token='<PAT or service-account token>'
+kubectl -n <pipeline namespace> create secret generic domino-token --from-file=token=<file holding the token>
 ```
+
+Reading the token from a file keeps it out of shell history and the process list; delete the file afterwards.
 
 Expose it to the task as an environment variable with `kfp-kubernetes`:
 

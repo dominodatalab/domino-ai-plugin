@@ -5,7 +5,7 @@ project_type: dfs
 expected_skills: [domino-app-init, domino-apps]
 timeout_s: 2700
 setup:
-  # Stands in for a Workspace that can build: Node 22 with npm on PATH. The App itself runs on the
+  # Stands in for a Workspace that can build: Node 24 (LTS) with npm on PATH. The App itself runs on the
   # environment's own node, which may be older and lack npm.
   - type: ws_file
     path: '{{home}}/.e2e-node-setup.sh'
@@ -13,14 +13,14 @@ setup:
       set -e
       export NVM_DIR="$HOME/.nvm"
       if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-        curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | PROFILE=/dev/null bash >/dev/null 2>&1
+        git clone --quiet --depth 1 --branch v0.40.8 https://github.com/nvm-sh/nvm.git "$NVM_DIR" >/dev/null 2>&1
       fi
       . "$NVM_DIR/nvm.sh"
-      nvm install 22 >/dev/null 2>&1
+      nvm install 24 >/dev/null 2>&1
       mkdir -p "$HOME/.local/bin"
-      ln -sf "$(nvm which 22)" "$HOME/.local/bin/node"
-      ln -sf "$(dirname "$(nvm which 22)")/npm" "$HOME/.local/bin/npm"
-      ln -sf "$(dirname "$(nvm which 22)")/npx" "$HOME/.local/bin/npx"
+      ln -sf "$(nvm which 24)" "$HOME/.local/bin/node"
+      ln -sf "$(dirname "$(nvm which 24)")/npm" "$HOME/.local/bin/npm"
+      ln -sf "$(dirname "$(nvm which 24)")/npx" "$HOME/.local/bin/npx"
   - type: ws_shell
     cmd: 'bash {{home}}/.e2e-node-setup.sh && mkdir -p {{run_dir}}'
 prompt: |

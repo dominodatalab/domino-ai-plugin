@@ -133,7 +133,7 @@ Other tools (run them with `uv run tools/<tool>.py`; those that talk to Domino t
 | s17-vite-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` serves a prebuilt build with `node` and never runs npm, npx or a build; a dated build stamp exists |
 | s18-proa-app-publish-git | Git | App Running; its page, stylesheet and scripts answer 200 under the App's prefix (`app_assets_ok`); `site/app.sh` sets `PROA_BASE_PATH` from `DOMINO_RUN_HOST_PATH` and runs the prebuilt binary without compiling |
 
-s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.cargo`, linked into `~/.local/bin`), standing in for a Compute Environment with Rust. s17 installs Node 22 with npm the same way (nvm, linked into `~/.local/bin`), standing in for a Workspace that can build; the App still runs on the environment's own `node`. s18 adds the Proa CLI from the pinned Proa commit, checked against its published SHA-256, as PROA.md installs it in the environment.
+s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.cargo`, linked into `~/.local/bin`), standing in for a Compute Environment with Rust. s17 installs Node 24 with npm the same way (nvm, linked into `~/.local/bin`), standing in for a Workspace that can build; the App still runs on the environment's own `node`. s18 adds the Proa CLI from the pinned Proa commit, checked against its published SHA-256, as PROA.md installs it in the environment.
 
 ### Scenario format
 

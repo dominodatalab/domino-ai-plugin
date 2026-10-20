@@ -6,7 +6,7 @@ How to put a pinned Rust toolchain and its tools into a Domino Compute Environme
 
 Add one revision to the Project's environment (based on the Domino Standard Environment, which provides `curl`, `gcc`, `git` and VS Code) with these Dockerfile instructions. They install, in one layer:
 
-- rustup and the toolchain pinned in `rust-toolchain.toml`, with Clippy, rustfmt, rust-analyzer and the standard library source;
+- rustup (`rustup-init`, checked against its published SHA-256) and the toolchain pinned in `rust-toolchain.toml`, with Clippy, rustfmt, rust-analyzer and the standard library source;
 - cargo-nextest and cargo-deny from their release archives, checked against the published SHA-256;
 - the rust-analyzer VS Code extension.
 
@@ -14,9 +14,13 @@ Add one revision to the Project's environment (based on the Domino Standard Envi
 USER root
 ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo PATH=/usr/local/cargo/bin:$PATH
 RUN set -eux; \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
-      --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src; \
     arch=$(uname -m); cd /tmp; \
+    r=https://static.rust-lang.org/rustup/dist/$arch-unknown-linux-gnu/rustup-init; \
+    curl --proto '=https' --tlsv1.2 -fsSLO $r; curl --proto '=https' --tlsv1.2 -fsSLO $r.sha256; \
+    sha256sum -c rustup-init.sha256; chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --profile minimal \
+      --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src; \
+    rm -f rustup-init rustup-init.sha256; \
     nv=0.9.148; f=cargo-nextest-$nv-$arch-unknown-linux-gnu; \
     curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-$nv/$f.tar.gz; \
     curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-$nv/$f.sha256; \
@@ -31,7 +35,7 @@ RUN set -eux; \
       code-server --install-extension rust-lang.rust-analyzer --extensions-dir /home/ubuntu/.local/share/code-server/extensions; \
       chown -R ubuntu:ubuntu /home/ubuntu/.local/share/code-server; \
     fi; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
+    chown -R ubuntu:ubuntu $RUSTUP_HOME $CARGO_HOME; \
     rustc --version; cargo nextest --version; cargo deny --version
 USER ubuntu
 ```
@@ -39,7 +43,7 @@ USER ubuntu
 Why each part:
 
 - `RUSTUP_HOME` and `CARGO_HOME` under `/usr/local` live in the image, so every Workspace, Job and App has the toolchain without reinstalling. `$HOME` (`/home/ubuntu`) is not kept between sessions unless Home Directory Persistence is on.
-- `chmod -R a+w` lets the run user (`ubuntu`) download crates into `CARGO_HOME`, add components, and let rustup install a toolchain that `rust-toolchain.toml` pins but the image lacks.
+- `chown -R ubuntu:ubuntu` lets the run user (`ubuntu`) download crates into `CARGO_HOME`, add components, and let rustup install a toolchain that `rust-toolchain.toml` pins but the image lacks, without making the toolchain writable for every user.
 - `--no-modify-path` skips shell profile edits; the `ENV PATH` line makes `cargo` visible to every process, including Apps and agents.
 - `gcc` and `libc6-dev` must stay in the image: Rust uses `cc` to drive the linker even though LLD is the default linker on x86_64 Linux. cargo-deny calls `git` to fetch the RustSec advisory database.
 - The VS Code extension bundles its own language server; listing `rust-analyzer` in `rust-toolchain.toml` components makes it use the toolchain's server instead.
@@ -108,7 +112,7 @@ ENV RUSTUP_DIST_SERVER=https://<host>/artifactory/<generic-repo-key> \
     RUSTUP_UPDATE_ROOT=https://<host>/artifactory/<generic-repo-key>/rustup
 ```
 
-No trailing slash on `RUSTUP_DIST_SERVER`; the mirror must use HTTPS. Download the installer from `$RUSTUP_UPDATE_ROOT/rustup-init.sh` instead of `sh.rustup.rs`. The pinned toolchain version also keeps the mirror's cache valid: a version's manifest never changes, while `stable` does. Mirror the nextest and cargo-deny release archives the same way, or install them with `cargo install --locked cargo-nextest cargo-deny` through the Cargo mirror (slower: it compiles them).
+No trailing slash on `RUSTUP_DIST_SERVER`; the mirror must use HTTPS. Download `rustup-init` and `rustup-init.sha256` from `$RUSTUP_UPDATE_ROOT/dist/<arch>-unknown-linux-gnu/` instead of `static.rust-lang.org`. The pinned toolchain version also keeps the mirror's cache valid: a version's manifest never changes, while `stable` does. Mirror the nextest and cargo-deny release archives the same way, or install them with `cargo install --locked cargo-nextest cargo-deny` through the Cargo mirror (slower: it compiles them).
 
 ### TLS inspection and HTTP proxies
 
