@@ -14,16 +14,17 @@ A flow is a Python function decorated with `@workflow` whose nodes are **tasks**
 
 | File | Use when |
 |------|----------|
-| [FLOW-BASICS.md](./FLOW-BASICS.md) | Task and flow definition, reading inputs and writing outputs, job configuration, launching, monitoring, caching |
-| [EXAMPLES.md](./EXAMPLES.md) | Complete data pipeline, training pipeline with Flow Artifacts and parallel branches, pinned production config, scheduled runs |
+| [FLOW-BASICS.md](./FLOW-BASICS.md) | Task definition, inputs and outputs, `/mnt` paths, job config and Git references, launching, re-runs and overrides, artifact export, caching |
+| [EXAMPLES.md](./EXAMPLES.md) | Data pipeline, training pipeline with artifacts exported to a Dataset and NetApp Volume, pinned production config, one script for Workspace and flow |
 
 ## Rules specific to Domino Flows
 
 - Define tasks with `DominoJobTask` + `DominoJobConfig` (`flytekitplugins.domino.task`) or the `run_domino_job_task` helper (`flytekitplugins.domino.helpers`). These are the task types documented for Domino Flows; plain Flyte `@task` functions are not documented, and dynamic workflows and map tasks are explicitly unsupported. `@workflow` comes from `flytekit`.
 - A task call returns one promise when it declares one output (pass it as is) and a namedtuple when it declares several (`res.name` or `a, b = task(...)`); `res["name"]` fails to compile for multi-output tasks and binds the wrong thing for single-output ones.
 - Task code reads each input from `/workflow/inputs/<name>` and must write each declared output to `/workflow/outputs/<name>`; a missing output fails the task. Non-file inputs (`str`, `int`, `float`, `bool`, `list`, `dict`) arrive as the value's text; file inputs are the file itself.
-- Flow jobs make no code commits or dataset snapshots at the end; results must be task outputs (or Flow Artifacts exported to a Dataset or NetApp Volume).
-- Only Dataset and NetApp Volume **snapshots** can be mounted (never version 0, the read-write view), one snapshot per dataset, read-only, at the usual `latest` path (`/mnt/data/<name>` Git-based, `/domino/datasets/local/<name>` DFS).
+- Flow jobs make no code commits or dataset snapshots at the end: files written to `/mnt/artifacts` or the working directory are lost. Results must be task outputs, or Flow Artifacts exported to a Dataset or NetApp Volume (FLOW-BASICS.md "Flow Artifacts and export").
+- Only Dataset and NetApp Volume **snapshots** can be mounted (never version 0, the read-write view), one snapshot per dataset, read-only, at the usual `latest` path (`/mnt/data/<name>` Git-based, `/domino/datasets/local/<name>` DFS). Code, imported repositories and data use Workspace paths (FLOW-BASICS.md "Data paths under `/mnt`"); `Input`/`Output` with `path=` under `/mnt/data` or `/mnt/netapp-volumes` lets a script keep them.
+- Git-based projects: `MainRepoGitRef` and `ImportedGitRepoOverrides` pin the main and imported repositories per task (`GitRef` types `head`, `branches`, `tags`, `commitId`, `custom`); a branch or tag is resolved once and reused on relaunch unless `UseLatestGitRef=True`. A Git override on **Re-run** needs the task's files at the new reference.
 - `use_latest=True` (or `use_project_defaults_for_omitted=True`) fills in the project's default environment, hardware tier and latest commit at launch. Both default to **False**, and then the task constructor raises unless the config is complete: `CommitId`, `HardwareTierId`, `EnvironmentId`, `EnvironmentRevisionSpec`, `VolumeSizeGiB`, `DatasetSnapshots`, `NetAppVolumeSnapshots`, `ExternalVolumeMountIds` (empty lists allowed) and, in a Git-based project, a commit-pinned `MainRepoGitRef`. Iterate with `use_latest=True`; pin everything for production.
 - Launch from a Workspace terminal or as a Job command with `pyflyte run --remote`; commit the flow file first so the registered version is traceable. Re-run, recover, stop and archive runs from the Flows UI or, inside a Workspace or Job, with the Flyte API at `$FLYTE_PLATFORM_URL_HTTP` (FLOW-BASICS.md "Re-run, recover, stop and archive"); a changed definition must be launched from the CLI again.
 - Stopping one of a flow's Jobs in the Jobs UI stops the whole flow. `DOMINO_IS_WORKFLOW_JOB` is set inside flow jobs.
