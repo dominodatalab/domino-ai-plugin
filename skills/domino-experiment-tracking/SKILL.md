@@ -62,7 +62,7 @@ Framework auto-logging: `mlflow.sklearn.autolog()`, `mlflow.tensorflow.autolog()
 | `DOMINO_HARDWARE_TIER_ID` | Hardware tier id (there is no `DOMINO_HARDWARE_TIER_NAME`) |
 | `MLFLOW_TRACKING_URI` | Preconfigured; do not override |
 
-Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables
+Full list: https://docs.domino.ai/cloud/reference/environment-variables
 
 ## Large artifacts
 

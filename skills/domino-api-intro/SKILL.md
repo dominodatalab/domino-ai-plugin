@@ -100,7 +100,7 @@ base = base_url                                 # examples in other skills use e
 
 `DOMINO_RUN_ID`, `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME`
 and `DOMINO_API_HOST` are injected into every execution (glossary:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables). Inside a run
+https://docs.domino.ai/cloud/reference/environment-variables). Inside a run
 `DOMINO_API_HOST` can be an in-pod address: never build links for users from it.
 
 ## Route types
