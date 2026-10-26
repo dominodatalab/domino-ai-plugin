@@ -90,8 +90,8 @@ if (in_run && nzchar(Sys.getenv("DOMINO_API_PROXY"))) {
 } else if (in_run) {
   tok  <- content(GET("http://localhost:8899/access-token"), as = "text")
   base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", tok))
-} else {                                                           # laptop: export DOMINO_API_HOST=<deployment URL> and a Personal Access Token
-  base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", Sys.getenv("DOMINO_PAT")))
+} else {                                                           # laptop: export DOMINO_API_HOST=<deployment URL> and DOMINO_API_TOKEN=<Personal Access Token>
+  base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", Sys.getenv("DOMINO_API_TOKEN")))
 }
 
 r <- POST(paste0(base, "/api/jobs/v1/jobs"), auth, encode = "json",

@@ -35,7 +35,7 @@ The App's entry point is `app-code/app.sh`; it serves the build in `app-code/dis
 | Kind | Name | Value |
 |---|---|---|
 | Secret | `DOMINO_TOKEN` | Service account token (or a PAT) |
-| Variable | `DOMINO_URL` | Public URL of the deployment (what you open in the browser), no trailing slash |
+| Variable | `DOMINO_API_HOST` | Public URL of the deployment (what you open in the browser), no trailing slash |
 | Variable | `PROJECT_NAME` | Domino project name (`-uat` suffix in the UAT environment) |
 | Variable | `PROJECT_OWNER` | Username of the project owner |
 | Variable | `APP_NAME` | App name inside that project |
@@ -94,7 +94,7 @@ jobs:
 
       - name: Deploy to Domino
         env:
-          DOMINO_URL: ${{ vars.DOMINO_URL }}
+          DOMINO_API_HOST: ${{ vars.DOMINO_API_HOST }}
           DOMINO_TOKEN: ${{ secrets.DOMINO_TOKEN }}
           PROJECT_NAME: ${{ vars.PROJECT_NAME }}
           PROJECT_OWNER: ${{ vars.PROJECT_OWNER }}
@@ -121,7 +121,7 @@ import time
 
 import requests
 
-BASE = os.environ["DOMINO_URL"].rstrip("/")
+BASE = os.environ["DOMINO_API_HOST"].rstrip("/")
 HEADERS = {"Authorization": f"Bearer {os.environ['DOMINO_TOKEN']}", "Content-Type": "application/json"}
 PROJECT_NAME = os.environ["PROJECT_NAME"]
 PROJECT_OWNER = os.environ["PROJECT_OWNER"]

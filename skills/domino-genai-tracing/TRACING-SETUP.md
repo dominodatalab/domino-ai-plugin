@@ -153,11 +153,10 @@ anthropic_key = os.environ["ANTHROPIC_API_KEY"]
 |----------|---------|
 | `MLFLOW_TRACKING_URI` | Set by Domino in every execution; required by the SDK |
 | `DOMINO_API_HOST` | Set by Domino; the SDK reads `GET $DOMINO_API_HOST/version` to check the platform is 6.2 or later |
-| `DOMINO_AGENT_CONFIG_PATH` | Default agent config path when `agent_config_path` is not passed (`./agent_config.yaml` if unset) |
 | `DOMINO_AGENT_IS_PROD` | `true` in a deployed agent: traces go to the agent experiment and inline evaluators are skipped |
 | `DOMINO_APP_ID` | The deployed agent's id; with `DOMINO_AGENT_IS_PROD` selects `agent_experiment_<id>` |
 
-Also set by Domino: `DOMINO_STARTING_USERNAME`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_ID`, `DOMINO_RUN_ID`.
+Also set by Domino: `DOMINO_STARTING_USERNAME`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_ID`, `DOMINO_RUN_ID`. A deployed agent also receives `DOMINO_URL`, the public deployment origin for browser-facing links; it is not an API base.
 
 ## Project structure
 
