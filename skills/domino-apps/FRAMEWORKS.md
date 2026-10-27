@@ -1,6 +1,6 @@
 # Framework configurations for Domino Apps
 
-Every framework must bind `0.0.0.0:8888`; an App that does not fails to start. Where a framework needs its URL prefix, read `DOMINO_RUN_HOST_PATH`. Domino's own minimal examples: https://docs.domino.ai/cloud/platform-capabilities/features/apps/common-app-frameworks (same content under `/6.3/`).
+Every framework must bind `0.0.0.0:8888`; an App that does not fails to start. Where a framework needs its URL prefix, read `DOMINO_RUN_HOST_PATH`. Domino's own minimal examples: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/develop-and-test/app-frameworks (same content under `/6.3/`).
 
 ## Calling a model endpoint from any framework
 
@@ -281,7 +281,7 @@ result <- POST(
 output$result <- renderText(content(result, "text"))
 ```
 
-Identity headers reach Shiny only under Shiny Server Pro. R is single-process, so Shiny Apps serve a handful of concurrent users; see https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning/app-scalability-performance .
+Identity headers reach Shiny only under Shiny Server Pro. R is single-process, so Shiny Apps serve a handful of concurrent users; see https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/deploy#size-and-scale-an-app .
 
 ## Dependencies
 
@@ -394,7 +394,7 @@ Domino runs the entry point again on every restart, App Preview live sync, deplo
 
 1. **Make startup read-only.** Read configuration, open connections, load models, serve. Run schema migrations, seeding and Dataset preparation as a Job (or a Flow step) before you publish, and pin the Job's outputs as the App's inputs.
 2. **If startup must write, make it idempotent and safe to run concurrently.** Idempotent alone is not enough: "check whether the table exists, then create it" still races between two replicas. Use operations that are atomic on their own: `CREATE TABLE IF NOT EXISTS`, upserts on a unique key, a database advisory lock around migrations, or write to a temporary file and `rename` it into place.
-3. **Writes while serving** (user uploads, results, logs of user actions) follow https://docs.domino.ai/cloud/platform-capabilities/features/apps/persist-data-in-apps : Datasets, databases or object storage, never the project's files, with concurrent writers in mind.
+3. **Writes while serving** (user uploads, results, logs of user actions) follow https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps#persist-what-the-app-writes : Datasets, databases or object storage, never the project's files, with concurrent writers in mind.
 
 ## Build once and version builds
 
@@ -416,4 +416,4 @@ Scripts: `scripts/build-dist.sh`, `scripts/stamp.sh` and `app.sh` in the `domino
 
 ## Environment variables
 
-Injected by Domino: `DOMINO_RUN_HOST_PATH` (the current URL prefix, with a trailing slash), `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_STARTING_USERNAME` (the publisher), `DOMINO_WORKING_DIR`, `DOMINO_API_HOST` and `DOMINO_API_PROXY` (in-cluster addresses for API calls; never use them in browser links) (full glossary: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables). Set by you as Project or user environment variables (UI or API: [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)): `MODEL_API_URL`, `MODEL_API_TOKEN`.
+Injected by Domino: `DOMINO_RUN_HOST_PATH` (the current URL prefix, with a trailing slash), `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_STARTING_USERNAME` (the publisher), `DOMINO_WORKING_DIR`, `DOMINO_API_HOST` and `DOMINO_API_PROXY` (in-cluster addresses for API calls; never use them in browser links) (full glossary: https://docs.domino.ai/cloud/reference/environment-variables). Set by you as Project or user environment variables (UI or API: [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)): `MODEL_API_URL`, `MODEL_API_TOKEN`.
