@@ -40,7 +40,7 @@ Check three things before publishing. **Builds**: Vite and Rust Apps start a bui
 
 ## Environment variables and headers
 
-Injected at start: `DOMINO_RUN_HOST_PATH` (URL prefix), `DOMINO_URL` (public origin for browser links, not the App URL or API base), project/run identifiers, `DOMINO_STARTING_USERNAME` (publisher), `DOMINO_API_HOST` and `DOMINO_API_PROXY` (API addresses, never browser links), plus project and user variables ([full list](./FRAMEWORKS.md#environment-variables)). The viewer is the token's `preferred_username` claim; read `domino-username` only when no token arrives (Apps with extended identity propagation never get it, and there a client can send its own).
+Injected at start: `DOMINO_RUN_HOST_PATH` (URL prefix), project/run identifiers, `DOMINO_STARTING_USERNAME` (publisher), `DOMINO_API_HOST` and `DOMINO_API_PROXY` (API addresses, never browser links), plus project and user variables ([full list](./FRAMEWORKS.md#environment-variables)). The viewer is the token's `preferred_username` claim; read `domino-username` only when no token arrives (Apps with extended identity propagation never get it, and there a client can send its own).
 
 ## Calling Domino APIs and model endpoints from an App
 

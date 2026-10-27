@@ -196,7 +196,7 @@ requests.put(f"{base}/models/{model_api_id}/access/{token_id}/name", headers=hea
 
 Two inputs: the prediction URL and an access token.
 
-- **The prediction URL.** The deployment's external URL plus `/models/{modelId}/latest/model`, shown on the endpoint's **Overview** tab under "Calling your endpoint". No API field returns it. Outside Domino the external URL is the one you sign in at and send API calls to. Workspaces, Apps and deployed Agents receive the platform-managed `DOMINO_URL` for browser-facing links, not API requests; Jobs and Model Endpoints do not receive it. `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...` (404), so portable code reads the external origin from a user-defined `DEPLOYMENT_URL` or asks the user.
+- **The prediction URL.** The deployment's external URL plus `/models/{modelId}/latest/model`, shown on the endpoint's **Overview** tab under "Calling your endpoint". No API field returns it. Outside Domino the external URL is the one you sign in at and send API calls to. `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...` (404), so portable code reads the external origin from a user-defined `DEPLOYMENT_URL` or asks the user.
 - **The access token.** The user's, or one you create and store ("Access tokens" above).
 
 Keep all three in Project or user environment variables (`DEPLOYMENT_URL`, `MODEL_ID`, `MODEL_API_TOKEN`) so later runs can read them. Alternatives: the user runs the call from the **Tester** tab, or sets the endpoint to **Unrestricted** under **Settings** > **Invocation**, after which only the URL is needed.

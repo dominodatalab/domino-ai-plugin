@@ -30,7 +30,7 @@ datasets = Path("/mnt/data") if git_based else Path("/domino/datasets/local")
 df = pd.read_csv(datasets / "my-dataset" / "data.csv")
 ```
 
-Domino also sets `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_USER_NAME`, `DOMINO_HARDWARE_TIER_ID` and `DOMINO_API_PROXY`; project, user and environment variables you define appear in the same `os.environ`. `DOMINO_URL` is the public deployment origin for browser-facing links, not an API base. Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables
+Domino also sets `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_USER_NAME`, `DOMINO_HARDWARE_TIER_ID` and `DOMINO_API_PROXY`; project, user and environment variables you define appear in the same `os.environ`. Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables
 
 ## External data and the Domino API from a notebook
 

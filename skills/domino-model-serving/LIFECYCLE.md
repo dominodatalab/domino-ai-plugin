@@ -116,7 +116,7 @@ sync_url = f"{deployment_url}/models/{model_api_id}/latest/model"
 async_url = f"{deployment_url}/api/modelApis/async/v1/{model_api_id}"
 ```
 
-Sync calls use `auth=(token, token)`; async calls use `Authorization: Bearer <token>`; the token is an endpoint access token, not your API token (a user bearer token or PAT gets 401 even on a Public endpoint). The deployment URL is external only: no API field returns it, and `DOMINO_API_HOST` and `DOMINO_API_PROXY` return 404 for `/models/...` inside a run. Workspaces, Apps and deployed Agents receive the platform-managed `DOMINO_URL` for browser-facing links, not API requests; Jobs and Model Endpoints do not receive it. Portable code reads the origin from a user-defined `DEPLOYMENT_URL`, or asks the user. The token: the user's, or create one and store it as an environment variable without printing it ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`). Request formats are in `domino-model-endpoints`.
+Sync calls use `auth=(token, token)`; async calls use `Authorization: Bearer <token>`; the token is an endpoint access token, not your API token (a user bearer token or PAT gets 401 even on a Public endpoint). The deployment URL is external only: no API field returns it, and `DOMINO_API_HOST` and `DOMINO_API_PROXY` return 404 for `/models/...` inside a run. Portable code reads the origin from a user-defined `DEPLOYMENT_URL`, or asks the user. The token: the user's, or create one and store it as an environment variable without printing it ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`). Request formats are in `domino-model-endpoints`.
 
 ## New version
 

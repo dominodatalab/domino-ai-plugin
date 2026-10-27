@@ -4,10 +4,9 @@ Base URL and credential for each place code runs: [SKILL.md](./SKILL.md#authenti
 
 Do not derive the deployment URL from a JWT claim, and do not copy hostnames out of one
 execution into another. For API calls, read `DOMINO_API_HOST` or `DOMINO_API_PROXY` where the
-call runs. For links a user opens, use `DOMINO_URL` in Workspaces, Apps and deployed Agents,
-or use a URL an API response returns or the deployment URL the user gives you elsewhere.
-`DOMINO_URL` is not an API base and is not injected into Jobs or Model Endpoints. In a run,
-`DOMINO_API_HOST` and `DOMINO_USER_HOST` can be in-cluster or in-pod addresses.
+call runs. For links a user opens, use a URL an API response returns or the deployment URL the
+user gives you: inside a run `DOMINO_API_HOST` and `DOMINO_USER_HOST` can be in-cluster or
+in-pod addresses.
 
 ## One base for the Public API
 

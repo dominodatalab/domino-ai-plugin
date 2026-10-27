@@ -71,7 +71,7 @@ curl -s -u "$MODEL_API_TOKEN:$MODEL_API_TOKEN" -H "Content-Type: application/jso
 
 Async endpoints use `Authorization: Bearer $MODEL_API_TOKEN` at `.../api/modelApis/async/v1/$MODEL_ID` and return an `asyncPredictionId` to poll.
 
-`DEPLOYMENT_URL` is a user-defined external origin; `MODEL_ID` is the endpoint id. Both are on the Overview tab. Platform-managed `DOMINO_URL` is for browser links in Workspaces, Apps and deployed Agents, not API requests; Jobs and Model Endpoints do not receive it. In-run API hosts do not route `/models/...`. Use the user's endpoint token, or create and store one without printing it (DEPLOY-ENDPOINT.md "Access tokens"); a Domino API token gets 401 even on a Public endpoint. Never put tokens in browser code.
+`DEPLOYMENT_URL` is a user-defined external origin; `MODEL_ID` is the endpoint id. Both are on the Overview tab. In-run API hosts do not route `/models/...`. Use the user's endpoint token, or create and store one without printing it (DEPLOY-ENDPOINT.md "Access tokens"); a Domino API token gets 401 even on a Public endpoint. Never put tokens in browser code.
 
 ## Versions and routing
 
