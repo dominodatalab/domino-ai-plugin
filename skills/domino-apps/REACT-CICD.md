@@ -44,7 +44,7 @@ The App's entry point is `app-code/app.sh`; it serves the build in `app-code/dis
 
 Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate. The runner is outside Domino and cannot read Domino Project or user environment variables, so the GitHub secret is its own copy of a token created in Domino (**Account Settings > Personal Access Token**, or a service account token).
 
-Domino 7.0 provides `DOMINO_URL` to Apps. The GitHub Actions runner is outside Domino, so configure its `DOMINO_URL` GitHub variable explicitly.
+The GitHub Actions runner is outside Domino, so configure its `DOMINO_URL` GitHub variable explicitly.
 
 ## Workflow
 
