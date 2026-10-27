@@ -366,7 +366,7 @@ import os
 
 import jwt  # pip install "pyjwt[crypto]"
 
-ISSUER = os.environ["DOMINO_TOKEN_ISSUER"].rstrip("/")  # https://<domino-domain>/auth/realms/DominoRealm
+ISSUER = os.environ["OIDC_ISSUER_URL"].rstrip("/")  # https://<domino-domain>/auth/realms/DominoRealm
 JWKS = jwt.PyJWKClient(ISSUER + "/protocol/openid-connect/certs")
 
 
@@ -416,4 +416,4 @@ Scripts: `scripts/build-dist.sh`, `scripts/stamp.sh` and `app.sh` in the `domino
 
 ## Environment variables
 
-Injected by Domino: `DOMINO_RUN_HOST_PATH` (the current URL prefix, with a trailing slash), `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_STARTING_USERNAME` (the publisher), `DOMINO_WORKING_DIR`, `DOMINO_API_HOST` and `DOMINO_API_PROXY` (in-cluster addresses for API calls; never use them in browser links) (full glossary: https://docs.domino.ai/cloud/reference/environment-variables). Set by you as Project or user environment variables (UI or API: [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)): `MODEL_API_URL`, `MODEL_API_TOKEN`.
+Injected by Domino: `DOMINO_RUN_HOST_PATH` (the current URL prefix, with a trailing slash), `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_RUN_ID`, `DOMINO_STARTING_USERNAME` (the publisher), `DOMINO_WORKING_DIR`, `DOMINO_API_HOST` and `DOMINO_API_PROXY` (in-cluster addresses for API calls; never use them in browser links) (full glossary: https://docs.domino.ai/cloud/reference/environment-variables). Set by you as Project or user environment variables (UI or API: [domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)): `MODEL_API_URL`, `MODEL_API_TOKEN`, `OIDC_ISSUER_URL`.

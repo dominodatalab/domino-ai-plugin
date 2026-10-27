@@ -11,8 +11,8 @@ Connectivity check:
 ```bash
 # in a Domino run: the proxy adds the credential
 curl -s "$DOMINO_API_PROXY/api/apps/v1/apps?limit=1"
-# outside a run: deployment URL and a Personal Access Token or service account token
-curl -s -H "Authorization: Bearer $DOMINO_API_TOKEN" "$DOMINO_API_HOST/api/apps/v1/apps?limit=1"
+# outside a run: DOMINO_API_HOST is the deployment URL, PAT a Personal Access Token or service account token
+curl -s -H "Authorization: Bearer $PAT" "$DOMINO_API_HOST/api/apps/v1/apps?limit=1"
 ```
 
 The examples below use the in-run form; outside a run add the `Authorization` header and use the deployment URL.

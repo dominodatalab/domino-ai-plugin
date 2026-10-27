@@ -75,8 +75,8 @@ curl -s "$DOMINO_API_PROXY/api/users/v1/self"
 curl -s -H "Authorization: Bearer $(curl -s http://localhost:8899/access-token)" \
   "$DOMINO_API_HOST/api/users/v1/self"
 
-# Outside Domino: DOMINO_API_HOST is the deployment URL, DOMINO_API_TOKEN a PAT or SA token
-curl -s -H "Authorization: Bearer $DOMINO_API_TOKEN" "$DOMINO_API_HOST/api/users/v1/self"
+# Outside Domino: DOMINO_API_HOST is the deployment URL, PAT a Personal Access Token or service account token
+curl -s -H "Authorization: Bearer $PAT" "$DOMINO_API_HOST/api/users/v1/self"
 ```
 
 Python setup block used by every example in the API skills:
@@ -94,7 +94,7 @@ elif os.environ.get("DOMINO_RUN_ID"):           # inside a run, proxy not inject
     headers = {"Authorization": f"Bearer {token}"}
 else:                                           # outside Domino: PAT or service account token
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
-    headers = {"Authorization": f"Bearer {os.environ['DOMINO_API_TOKEN']}"}
+    headers = {"Authorization": f"Bearer {os.environ['PAT']}"}
 base = base_url                                 # examples in other skills use either name
 ```
 

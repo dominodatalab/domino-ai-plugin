@@ -196,10 +196,10 @@ requests.put(f"{base}/models/{model_api_id}/access/{token_id}/name", headers=hea
 
 Two inputs: the prediction URL and an access token.
 
-- **The prediction URL.** The deployment's external URL plus `/models/{modelId}/latest/model`, shown on the endpoint's **Overview** tab under "Calling your endpoint". No API field returns it. Outside Domino the external URL is the one you sign in at and send API calls to. Inside a run no injected variable holds it, and `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...` (404), so read it from a stored variable or ask the user.
+- **The prediction URL.** The deployment's external URL plus `/models/{modelId}/latest/model`, shown on the endpoint's **Overview** tab under "Calling your endpoint". No API field returns it. Outside Domino the external URL is the one you sign in at and send API calls to. `DOMINO_API_HOST` and `DOMINO_API_PROXY` do not route `/models/...` (404), so portable code reads the external origin from a user-defined `DEPLOYMENT_URL` or asks the user.
 - **The access token.** The user's, or one you create and store ("Access tokens" above).
 
-Keep all three in Project or user environment variables (`DOMINO_URL`, `MODEL_ID`, `MODEL_API_TOKEN`) so later runs can read them. Alternatives: the user runs the call from the **Tester** tab, or sets the endpoint to **Unrestricted** under **Settings** > **Invocation**, after which only the URL is needed.
+Keep all three in Project or user environment variables (`DEPLOYMENT_URL`, `MODEL_ID`, `MODEL_API_TOKEN`) so later runs can read them. Alternatives: the user runs the call from the **Tester** tab, or sets the endpoint to **Unrestricted** under **Settings** > **Invocation**, after which only the URL is needed.
 
 Restricted endpoints: HTTP Basic with the endpoint access token as **both** username and password (not a Bearer header). Unrestricted endpoints: no credentials.
 
@@ -207,12 +207,12 @@ Restricted endpoints: HTTP Basic with the endpoint access token as **both** user
 import os
 import requests
 
-DOMINO_URL = os.environ["DOMINO_URL"]        # external deployment URL (Overview tab); not injected by Domino
+DEPLOYMENT_URL = os.environ["DEPLOYMENT_URL"]  # external deployment URL from the Overview tab
 MODEL_ID = os.environ["MODEL_ID"]            # from the Overview tab or the create response
 TOKEN = os.environ["MODEL_API_TOKEN"]        # stored by you ("Access tokens") or by the user; keep it out of source and browser bundles
 
 resp = requests.post(
-    f"{DOMINO_URL}/models/{MODEL_ID}/latest/model",
+    f"{DEPLOYMENT_URL}/models/{MODEL_ID}/latest/model",
     auth=(TOKEN, TOKEN),
     json={"data": {"features": [[5.1, 3.5, 1.4, 0.2]]}},
 )
@@ -222,7 +222,7 @@ print(resp.json()["result"])
 
 ```bash
 curl -s -u "$MODEL_API_TOKEN:$MODEL_API_TOKEN" -H "Content-Type: application/json" \
-  -d '{"data": {"features": [[5.1, 3.5, 1.4, 0.2]]}}' "$DOMINO_URL/models/$MODEL_ID/latest/model"
+  -d '{"data": {"features": [[5.1, 3.5, 1.4, 0.2]]}}' "$DEPLOYMENT_URL/models/$MODEL_ID/latest/model"
 ```
 
 The JSON body carries the function's return value under `result`.
@@ -235,7 +235,7 @@ Async endpoints queue the request and you poll for the result. Limits: request a
 import time
 import requests
 
-base = f"{DOMINO_URL}/api/modelApis/async/v1/{MODEL_ID}"
+base = f"{DEPLOYMENT_URL}/api/modelApis/async/v1/{MODEL_ID}"
 headers = {"Authorization": f"Bearer {TOKEN}"}
 
 created = requests.post(base, headers=headers,

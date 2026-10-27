@@ -254,7 +254,7 @@ from domino import Domino
 from domino.exceptions import RunFailedException
 
 domino = Domino("team/ml-project", host=os.environ["DOMINO_API_HOST"],
-                auth_token=os.environ["DOMINO_API_TOKEN"])   # service account token
+                auth_token=os.environ["SA_TOKEN"])   # service account token
 try:
     final = domino.job_start_blocking(command="python train.py", hardware_tier_id="small-k8s")
 except RunFailedException as exc:               # executionStatus == "Failed"
