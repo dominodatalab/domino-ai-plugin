@@ -1,6 +1,6 @@
 # Domino Flows examples
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows and `.../define-flow-artifacts`. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows and `.../define-flow-artifacts`. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`, `/mnt/imported/code/<repo>`); in a DFS project use `/mnt`, `/domino/datasets/local/<dataset>` and `/repos/<repo>` ([FLOW-BASICS.md](./FLOW-BASICS.md#data-paths-under-mnt)). Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
 
 ## Example 1: data pipeline (load, clean, features)
 
@@ -99,12 +99,15 @@ pyflyte run --remote --name data-pipeline-1 flows/data_pipeline.py data_pipeline
 `flows/training_pipeline.py`:
 
 ```python
+from datetime import timedelta
 from typing import TypeVar
 from flytekit import workflow
 from flytekit.types.file import FlyteFile
 from flytekitplugins.domino.helpers import Input, Output, run_domino_job_task
 from flytekitplugins.domino.artifact import (
-    Artifact, DATA, MODEL, REPORT, ExportArtifactToDatasetsSpec, run_launch_export_artifacts_task,
+    Artifact, DATA, MODEL, REPORT,
+    ExportArtifactToDatasetsSpec, ExportArtifactToNetAppVolumesSpec, FileCollisionSetting,
+    run_launch_export_artifacts_task,
 )
 
 CSV = FlyteFile[TypeVar("csv")]
@@ -150,12 +153,21 @@ def training_pipeline(features_path: str, test_size: float = 0.2) -> ModelArtifa
         output_specs=[Output(name="roc", type=ReportArtifact.File(name="roc.png"))],
         use_project_defaults_for_omitted=True,
     )
-    # Copy the split files into a Domino Dataset once the run finishes (separate export execution)
+    # Copy the split files into a Domino Dataset and a NetApp Volume once the run finishes (separate export execution)
     run_launch_export_artifacts_task(
-        spec_list=[ExportArtifactToDatasetsSpec(artifact=DataArtifact, dataset_id="681d3030ae3a706ef9c7f08b")],
+        spec_list=[
+            ExportArtifactToDatasetsSpec(artifact=DataArtifact, dataset_id="681d3030ae3a706ef9c7f08b"),
+            ExportArtifactToNetAppVolumesSpec(
+                artifact=DataArtifact,
+                netapp_volume_id="5d1204c2-24c8-47df-a47f-69185efa602b",
+                target_relative_path="churn/splits",                    # directory on the Volume
+                file_collision_setting=FileCollisionSetting.OVERWRITE,  # replace last run's files
+            ),
+        ],
         environment_name="Domino Standard Environment",
         hardware_tier_id="small-k8s",
         use_project_defaults_for_omitted=True,
+        timeout=timedelta(hours=6),               # must outlast the whole run; default 3 hours
     )
     return train
 ```
@@ -244,7 +256,7 @@ Launch:
 pyflyte run --remote flows/training_pipeline.py training_pipeline --features_path /mnt/data/features/latest.csv
 ```
 
-Flow Artifacts show up under the run with lineage; DATA artifacts can also be assigned to a Dataset from the UI (**Examine Flow Artifacts**); that action is not scriptable (its route needs signed URLs only the Flows backend supplies), so use the UI or the `run_launch_export_artifacts_task` export above. The export task launches a separate execution that waits for the run to finish, so its node may appear early in the graph.
+Flow Artifacts show up under the run with lineage; DATA artifacts can also be assigned to a Dataset from the UI (**Examine Flow Artifacts**); that action is not scriptable (its route needs signed URLs only the Flows backend supplies), so use the UI or the `run_launch_export_artifacts_task` export above. The export task launches a separate execution that waits for the run to finish, so its node may appear early in the graph; its logs link to the export execution, where each copied file is logged. The exported files land in the Dataset and under `churn/splits/` on the Volume (`/mnt/netapp-volumes/<volume>/churn/splits/` in a Workspace of a Git-based project); the dataset id and the volume UUID are placeholders. Parameters of both specs: [FLOW-BASICS.md](./FLOW-BASICS.md#flow-artifacts-and-export).
 
 ## Example 3: production pinning and an approval gate
 
@@ -264,6 +276,7 @@ from flytekitplugins.domino.task import (
     EnvironmentRevisionSpecification,
     EnvironmentRevisionType,
     GitRef,
+    ImportedGitRepoOverride,
 )
 
 CSV = FlyteFile[TypeVar("csv")]
@@ -272,6 +285,9 @@ PKL = FlyteFile[TypeVar("pkl")]
 PINNED = dict(
     CommitId="4e6f2ee71e3bd64eaa90ce826c7d523b29f179cd",        # Git-based: artifacts commit; DFS: code commit
     MainRepoGitRef=GitRef(Type="commitId", Value="2f1cb9bf696921f0858e4a1c0b3d7f2a9c5e8d41"),  # Git-based only; must be commit-pinned
+    ImportedGitRepoOverrides=[                                    # Git-based only; one per imported repo the tasks use
+        ImportedGitRepoOverride(Name="shared-utils", Ref=GitRef(Type="commitId", Value="9b1f0c7d2e3a4b5c6d7e8f9012345678abcdef01")),   # mounted at /mnt/imported/code/shared-utils
+    ],
     EnvironmentId="66b5324c495c6c124cfb0a28",
     EnvironmentRevisionSpec=EnvironmentRevisionSpecification(
         EnvironmentRevisionType.SomeRevision, "6659daf5fc8de1a2b3c4d5e6"   # revision id, not the revision number
@@ -324,7 +340,7 @@ Path("/workflow/outputs").mkdir(parents=True, exist_ok=True)
 shutil.copyfile("/workflow/inputs/model", "/workflow/outputs/bundle")
 ```
 
-In a DFS project drop `MainRepoGitRef` (it is only checked for Git-based projects). To run the flow nightly, create a scheduled Job in the project with this command:
+In a DFS project drop `MainRepoGitRef` and `ImportedGitRepoOverrides` (both are Git-based only); drop `ImportedGitRepoOverrides` as well when the project imports no repositories. A branch or tag reference here would be resolved once and reused on UI relaunches (unless `UseLatestGitRef=True`); a `commitId` makes the pin explicit. To run the flow nightly, create a scheduled Job in the project with this command:
 
 ```bash
 pyflyte run --remote flows/release_pipeline.py release_pipeline --features_path /mnt/data/features/latest.csv
@@ -347,3 +363,44 @@ curl -s -X POST "$FLYTE_PLATFORM_URL_HTTP/api/v1/executions/recover" -H 'Content
 ```
 
 The other calls (re-launch, re-run with new inputs, stop, archive) and why they work only from inside Domino are in [FLOW-BASICS.md](./FLOW-BASICS.md#re-run-recover-stop-and-archive). Once the code changes, launch from the CLI again so a new version is registered.
+
+## Example 5: one script, same Dataset paths in a Workspace and in a flow
+
+A script that already reads and writes a project Dataset at its Workspace path (`/mnt/data/<dataset>/...`) runs in a flow unchanged when the task maps its input and output to those paths. Dataset `sales` has at least one snapshot (version 0 cannot be mounted in a flow).
+
+`flows/stages/aggregate.py`, run by hand in a Workspace as `python flows/stages/aggregate.py`:
+
+```python
+import pandas as pd
+
+df = pd.read_csv("/mnt/data/sales/raw/orders.csv")
+monthly = df.groupby(df["order_date"].str[:7])["amount"].sum().reset_index()
+monthly.to_csv("/mnt/data/sales/monthly/totals.csv", index=False)
+```
+
+`flows/aggregate_flow.py`:
+
+```python
+from typing import TypeVar
+from flytekit import workflow
+from flytekit.types.file import FlyteFile
+from flytekitplugins.domino.helpers import Input, Output, run_domino_job_task
+
+CSV = FlyteFile[TypeVar("csv")]
+
+@workflow
+def aggregate_flow(orders: CSV) -> CSV:
+    return run_domino_job_task(
+        flyte_task_name="Monthly totals",
+        command="python flows/stages/aggregate.py",
+        inputs=[Input(name="orders", type=CSV, value=orders, path="/mnt/data/sales/raw/orders.csv")],
+        output_specs=[Output(name="totals", type=CSV, path="/mnt/data/sales/monthly/totals.csv")],
+        use_project_defaults_for_omitted=True,
+    )
+```
+
+```bash
+pyflyte run --remote flows/aggregate_flow.py aggregate_flow --orders /mnt/data/sales/raw/orders.csv
+```
+
+The task receives `orders` at `/mnt/data/sales/raw/orders.csv` instead of `/workflow/inputs/orders`, and collects `totals` from `/mnt/data/sales/monthly/totals.csv` instead of `/workflow/outputs/totals`. The output is versioned in Flow blob storage like any other, so a downstream task gets it as a normal input, and Domino can record a new snapshot of `sales` at the end of the run. In a DFS project the script would use `/domino/datasets/local/sales/...`; the `path` mapping applies to `/mnt/data/...` and `/mnt/netapp-volumes/...` paths. Without `path`, the same script needs the `/workflow/...` paths from Example 1.
