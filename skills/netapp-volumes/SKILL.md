@@ -21,14 +21,14 @@ Auth: [domino-api-intro](../domino-api-intro/SKILL.md#authentication); in a run 
 NetApp Volumes cover nearly the same ground as Datasets and are recommended wherever the
 organization runs ONTAP. Differences:
 
-- Snapshots are near-instant regardless of size (about 3 seconds) and use
-  redirect-on-write, so they consume no extra storage at creation; a Dataset snapshot
-  duplicates the data.
+- Snapshots are near-instant regardless of size (about 3 seconds) and redirect-on-write,
+  so they consume no extra storage at creation; a Dataset snapshot duplicates the data.
 - Datasets can be cloned from a snapshot into a new Dataset; a NetApp Volume snapshot
   cannot be cloned into a new volume (volumes can be copied for Project Templates).
 - NetApp Volumes need ONTAP infrastructure and an administrator-registered filesystem;
-  Domino sets no volume size limit (the ONTAP volume type does). There are limits on
-  snapshots per volume (`maxSnapshots` on the volume record) and volumes per filesystem.
+  Domino sets no volume size limit (the ONTAP volume type does). Limits exist on snapshots
+  per volume (`maxSnapshots` on the volume) and volumes per filesystem (`maxVolumes`, 490
+  by default from 6.4).
 
 Comparison and examples: [DATA-ACCESS.md](./DATA-ACCESS.md).
 
@@ -46,11 +46,13 @@ From Domino (then add it to projects manually) or from inside a project (auto-at
 1. **Data > NetApp Volumes** (toolbar, or a project's left panel).
 2. **Add NetApp Volume > Create Volume**.
 3. **Name** (letters, numbers, underscores, hyphens), **Description**, **Data Plane**,
-   **NetApp Filesystem**, **Capacity**. Click **Next**.
+   **Capacity**; 6.3, or 6.4 with manual selection enabled, also asks for the **NetApp
+   Filesystem** ([TROUBLESHOOTING.md](./TROUBLESHOOTING.md#409-filesystem-full)). **Next**.
 4. Add users or organizations with a **Reader**, **Editor** or **Owner** role. **Finish**.
 
-REST: `POST /remotefs/v1/volumes` with `name`, `filesystemId`, `capacity` (bytes) and
-`grants` ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#create-a-volume)).
+REST: `POST /remotefs/v1/volumes` with `name`, `capacity` (bytes), `grants` and
+`filesystemId`, or (6.4+) `dataPlaneId` for automatic placement
+([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#create-a-volume)).
 
 ## Attach, detach, delete
 
@@ -59,8 +61,8 @@ REST: `POST /remotefs/v1/volumes` with `name`, `filesystemId`, `capacity` (bytes
 - **Detach**: in the project, **Data > NetApp Volumes**, **Remove from project**. Only the
   attachment goes; data and other projects are unaffected. REST:
   `POST /remotefs/v1/rpc/detach-volume-from-project`.
-- **Delete**: **Delete Volume** (if your admin enabled it for your role) or **Mark for
-  deletion** (requests that an admin delete it). Deletion is permanent. REST:
+- **Delete**: **Delete Volume** (if enabled for your role) or **Mark for deletion**
+  (asks an admin to delete it). Deletion is permanent. REST:
   `POST /remotefs/v1/rpc/delete-volume` (no need to mark first) or
   `/rpc/mark-volume-for-deletion` (undo: `/rpc/restore-volume`).
 
@@ -74,10 +76,10 @@ Paths mirror the Dataset scheme; volumes are global, so there is no local/import
 | Git-based | `/mnt/netapp-volumes/<name>` | `/mnt/netapp-volumes/snapshots/<name>/<number>` | `/mnt/netapp-volumes/snapshot-tags/<name>/<tag>` |
 
 `<number>` is the snapshot's `version` from the API. Owners and Editors mount read-write;
-Readers mount read-only; Apps mount with the App owner's permission. If a snapshot has several tags, only the most
-recently added tag is mounted. Renaming a volume changes its mount path. At launch you can
-pin a volume to one snapshot (**Data Plane & Hardware** tab); it then mounts read-only at
-the read-write path and `snapshots/<name>` is disabled. Details:
+Readers mount read-only; Apps mount with the App owner's permission. With several tags on
+a snapshot only the newest is mounted. Renaming a volume changes its mount path. At launch
+you can pin a volume to one snapshot (**Data Plane & Hardware** tab); it then mounts
+read-only at the read-write path and `snapshots/<name>` is disabled. Details:
 [DATA-ACCESS.md](./DATA-ACCESS.md).
 
 ## Snapshots and tags
@@ -85,9 +87,8 @@ the read-write path and `snapshots/<name>` is disabled. Details:
 Owners and Editors take snapshots: open the volume, **Files** tab, **Take Snapshot**
 (all files or selected files), optionally add a commit message and one or more tags.
 Tag names: letters, numbers, underscores and hyphens only (no dots), unique within the
-volume. The button is unavailable once the volume
-reaches its maximum snapshot count. Deleting a snapshot is permanent and needs delete
-permission on the volume. Docs:
+volume. The button is unavailable at the volume's snapshot limit. Deleting a snapshot is
+permanent and needs delete permission on the volume. Docs:
 https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/version-data-with-snapshots.
 
 REST: `POST /remotefs/v1/snapshots` (`volumeId`, `description` as the commit message,
@@ -113,14 +114,14 @@ details page. REST: `PUT /remotefs/v1/volumes/{id}/grants`.
 
 `POST /api/jobs/v1/jobs` takes `netAppVolumeIds` (volume ids to mount) and
 `snapshotNetAppVolumesOnCompletion: true` to snapshot every mounted volume when the job
-ends; the latter needs a deployment feature flag and is rejected with 400 where it is
-off. Body: [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#mount-volumes-in-a-job).
+ends; the latter needs a feature flag (400 where off). Body:
+[API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#mount-volumes-in-a-job).
 
 ## Reference files
 
 - [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md): REST API with request bodies (volumes, filesystems, attach/detach, snapshots, tags, grants, deletion, listing, files, jobs)
 - [DATA-ACCESS.md](./DATA-ACCESS.md): comparison with Datasets, mount paths, snapshot mounting, read/write examples, best practices
-- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): missing mounts, permission errors, tag paths, no filesystems, slow reads
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): missing mounts, permission errors, tag paths, missing or full filesystems (409), slow reads
 
 ## Documentation
 

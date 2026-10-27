@@ -1,7 +1,7 @@
 # NetApp Volumes troubleshooting
 
 Symptoms and fixes for missing mounts, permission errors, snapshot paths, missing
-filesystems and slow reads. Mount path rules: [DATA-ACCESS.md](./DATA-ACCESS.md).
+filesystems, full filesystems and slow reads. Mount path rules: [DATA-ACCESS.md](./DATA-ACCESS.md).
 
 ## Volume not found at the mount path
 
@@ -33,6 +33,30 @@ Volumes are created inside an administrator-registered ONTAP filesystem.
 `GET /remotefs/v1/filesystems` returning an empty `data` array means none is registered
 for your data plane; ask your Domino administrator
 (https://docs.domino.ai/cloud/admin/data-administration/netapp-volumes).
+
+## 409 filesystem full
+
+Domino 6.4 caps volumes per filesystem (`maxVolumes` on the filesystem record, 490 by
+default; `numVolumes` is the current count).
+
+- `POST /remotefs/v1/volumes` with a `filesystemId` returns
+  `409 filesystem has reached its maximum number of volumes`: pick another filesystem on
+  the same data plane, or omit `filesystemId` and send `dataPlaneId` so the service
+  places the volume automatically.
+- `409 no filesystem on the data plane has capacity for another volume` from automatic
+  placement: every filesystem on that data plane is full; an administrator registers
+  another one or raises `maxVolumes` with `PUT /remotefs/v1/filesystems/{id}`.
+- `bulk-copy-volumes-to-project` reports a full `targetFilesystemId` as `status: 409` on
+  that item only; drop `targetFilesystemId` to let the copy fall back to an automatically
+  selected filesystem.
+- `400 filesystem does not belong to the specified data plane`: `filesystemId` and
+  `dataPlaneId` disagree; send one of them, or matching values.
+- In the UI (Create Volume, Create Template Data step, Create Project from a template)
+  the filesystem is chosen automatically. A **NetApp Filesystem** picker (default
+  **Automatic**, full filesystems listed as "(full)" and disabled, Create blocked while a
+  template copy points at a full one) appears only after an administrator sets the
+  Central Config key `com.cerebro.domino.netApp.manualFilesystemSelection.enabled` to
+  `true` and restarts nucleus.
 
 ## Take Snapshot is unavailable
 
