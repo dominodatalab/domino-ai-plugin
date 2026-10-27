@@ -34,7 +34,7 @@ fi
 ```
 
 Outside Domino, `BASE="$DOMINO_API_HOST/api/taxonomy/v1"` with
-`H="Authorization: Bearer $PERSONAL_ACCESS_TOKEN"` (a PAT or service account token). The
+`H="Authorization: Bearer $PAT"` (a PAT or service account token). The
 examples pass `-H "$H"`; with the proxy it is only an `Accept` header. Never use
 `DOMINO_USER_API_KEY`.
 

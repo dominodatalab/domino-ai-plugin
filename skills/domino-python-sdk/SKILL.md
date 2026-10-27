@@ -62,7 +62,7 @@ token; `auth_token` is sent as `Authorization: Bearer`:
 domino = Domino(
     "owner/project-name",
     host=os.environ["DOMINO_API_HOST"],          # deployment URL
-    auth_token=os.environ["PERSONAL_ACCESS_TOKEN"],   # PAT or service account token
+    auth_token=os.environ["PAT"],                # PAT or service account token
 )
 ```
 

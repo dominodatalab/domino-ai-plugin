@@ -67,8 +67,6 @@ variables are not readable; the external system holds its own copy of a token cr
 Domino. Docs: https://docs.domino.ai/cloud/admin/security-and-compliance/protecting-tokens-api-keys
 (same under `/6.3/`).
 
-Set your PAT in the user-defined `PERSONAL_ACCESS_TOKEN` variable.
-
 ```bash
 # Inside a run (preferred)
 curl -s "$DOMINO_API_PROXY/api/users/v1/self"
@@ -77,8 +75,8 @@ curl -s "$DOMINO_API_PROXY/api/users/v1/self"
 curl -s -H "Authorization: Bearer $(curl -s http://localhost:8899/access-token)" \
   "$DOMINO_API_HOST/api/users/v1/self"
 
-# Outside Domino: set DOMINO_API_HOST to the deployment URL and PERSONAL_ACCESS_TOKEN to your PAT
-curl -s -H "Authorization: Bearer $PERSONAL_ACCESS_TOKEN" "$DOMINO_API_HOST/api/users/v1/self"
+# Outside Domino: DOMINO_API_HOST is the deployment URL, PAT a Personal Access Token or service account token
+curl -s -H "Authorization: Bearer $PAT" "$DOMINO_API_HOST/api/users/v1/self"
 ```
 
 Python setup block used by every example in the API skills:
@@ -94,9 +92,9 @@ elif os.environ.get("DOMINO_RUN_ID"):           # inside a run, proxy not inject
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
     token = requests.get("http://localhost:8899/access-token").text.strip()
     headers = {"Authorization": f"Bearer {token}"}
-else:                                           # outside Domino: user-supplied PAT
+else:                                           # outside Domino: PAT or service account token
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
-    headers = {"Authorization": f"Bearer {os.environ['PERSONAL_ACCESS_TOKEN']}"}
+    headers = {"Authorization": f"Bearer {os.environ['PAT']}"}
 base = base_url                                 # examples in other skills use either name
 ```
 
