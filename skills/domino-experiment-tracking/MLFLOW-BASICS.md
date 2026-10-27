@@ -44,7 +44,7 @@ def log_domino_context():
     })
 ```
 
-Domino injects `DOMINO_HARDWARE_TIER_ID`; it does not inject the tier name. Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables
+Domino injects `DOMINO_HARDWARE_TIER_ID`. Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables
 
 ## Auto-Logging
 

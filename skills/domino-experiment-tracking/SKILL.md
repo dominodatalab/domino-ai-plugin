@@ -59,7 +59,7 @@ Framework auto-logging: `mlflow.sklearn.autolog()`, `mlflow.tensorflow.autolog()
 | `DOMINO_STARTING_USERNAME` | User who started the run |
 | `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_ID` | Project identity |
 | `DOMINO_RUN_ID`, `DOMINO_RUN_NUMBER` | The Domino execution |
-| `DOMINO_HARDWARE_TIER_ID` | Hardware tier id; Domino does not inject the tier name |
+| `DOMINO_HARDWARE_TIER_ID` | Hardware tier id |
 | `MLFLOW_TRACKING_URI` | Preconfigured; do not override |
 
 Full list: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables

@@ -248,17 +248,13 @@ the Public API equivalent is `POST /api/modelServing/v1/modelApis`
 
 ### CI/CD trigger (outside Domino)
 
-For a pipeline acting as you, supply `PERSONAL_ACCESS_TOKEN` from the CI system's secret
-store. For unattended automation, pass a service account token as `auth_token` instead
-([authentication](../domino-api-intro/SKILL.md#authentication)).
-
 ```python
 import os, sys
 from domino import Domino
 from domino.exceptions import RunFailedException
 
 domino = Domino("team/ml-project", host=os.environ["DOMINO_API_HOST"],
-                auth_token=os.environ["PERSONAL_ACCESS_TOKEN"])   # user-supplied PAT
+                auth_token=os.environ["SA_TOKEN"])   # service account token
 try:
     final = domino.job_start_blocking(command="python train.py", hardware_tier_id="small-k8s")
 except RunFailedException as exc:               # executionStatus == "Failed"

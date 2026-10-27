@@ -158,7 +158,7 @@ jobs:
       DOMINO_API_HOST: ${{ vars.DOMINO_API_HOST }}        # https://<deployment URL>
       DOMINO_TOKEN: ${{ secrets.DOMINO_TOKEN }}           # PAT or service-account token, sent as Bearer
       PROJECT_ID: ${{ vars.DOMINO_PROJECT_ID }}
-      ENVIRONMENT_ID: ${{ vars.ENVIRONMENT_ID }}
+      ENVIRONMENT_ID: ${{ vars.DOMINO_ENVIRONMENT_ID }}
       REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       TAG: ${{ github.sha }}

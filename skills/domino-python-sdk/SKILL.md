@@ -56,14 +56,13 @@ else:
 `domino.authenticate(auth_token=...)` refreshes the token on a long-running client.
 
 Outside Domino, pass the deployment URL and a Personal Access Token or service account
-token; `auth_token` is sent as `Authorization: Bearer`. This example reads your PAT from
-the user-defined `PERSONAL_ACCESS_TOKEN` environment variable:
+token; `auth_token` is sent as `Authorization: Bearer`:
 
 ```python
 domino = Domino(
     "owner/project-name",
     host=os.environ["DOMINO_API_HOST"],          # deployment URL
-    auth_token=os.environ["PERSONAL_ACCESS_TOKEN"],   # user-supplied PAT
+    auth_token=os.environ["PERSONAL_ACCESS_TOKEN"],   # PAT or service account token
 )
 ```
 

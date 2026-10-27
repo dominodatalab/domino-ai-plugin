@@ -15,7 +15,7 @@ There is **no `run_name` parameter**; passing one raises `TypeError`. The object
 |-----------|---------|
 | `experiment_name` | Name of an **existing** MLflow experiment to log to. The SDK raises `Could not find experiment with name ...` if it does not exist. Simplest: call `mlflow.set_experiment(name)` first (it creates the experiment if needed and makes it active) and omit this argument; the run then goes to the active experiment. |
 | `run_id` | Continue logging to an existing run instead of starting a new one. |
-| `agent_config_path` | YAML file to log as parameters. Pass the path explicitly; when no override is configured, the SDK defaults to `./agent_config.yaml`. A missing file logs a warning and no parameters. |
+| `agent_config_path` | YAML file to log as parameters. Omitted: `DOMINO_AGENT_CONFIG_PATH`, else `./agent_config.yaml`. A missing file logs a warning and no parameters. |
 | `custom_summary_metrics` | List of `(metric_name, statistic)` tuples; statistics are `mean`, `median`, `stdev`, `max`, `min`. Omitted: the mean of every evaluator metric found. |
 
 Not thread-safe: use one context per thread; parallel work inside one context is fine.
