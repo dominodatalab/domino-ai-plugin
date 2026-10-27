@@ -91,8 +91,9 @@ Inside a Workspace, Job, scheduled Job, Launcher or App (as the publisher) the c
 from `token=` (if you pass one), `DOMINO_API_PROXY` (a short-lived JWT fetched from
 `$DOMINO_API_PROXY/access-token`), `DOMINO_TOKEN_FILE` (if that file exists) and
 `DOMINO_USER_API_KEY` (legacy API key, deprecated, never rely on it). The precedence differs
-per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. The clients discover the
-platform and Data Source proxy hosts from the execution environment.
+per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. Hosts come from
+`DOMINO_API_PROXY`, else `DOMINO_API_HOST`, plus `DOMINO_DATASOURCE_PROXY_HOST` and
+`DOMINO_DATASOURCE_PROXY_FLIGHT_HOST` for the Data Source proxy; Domino injects all of them.
 
 - **Domino endpoints (model APIs)** get no automatic token. Store a service-account token as
   an environment variable on the endpoint and pass it: `DataSourceClient(token=os.environ["DATA_API_TOKEN"])`
@@ -103,9 +104,9 @@ platform and Data Source proxy hosts from the execution environment.
   lookup by name. With no bearer or an empty one, answer 401; never pass `token=None`, which
   uses the publisher's credentials.
 - **Outside Domino**: the Data Source proxy hosts are internal to the deployment, so run Data
-  API code inside a Domino execution. If your admin exposes them, follow the connection
-  settings they provide and pass `token=` a Personal Access Token
-  (https://docs.domino.ai/cloud/reference/api/domino-api-authentication).
+  API code inside a Domino execution. If your admin exposes them, set `DOMINO_API_HOST` to the
+  deployment URL, the two proxy host variables as the admin gives them, and pass `token=` a
+  Personal Access Token (https://docs.domino.ai/cloud/reference/api/domino-api-authentication).
 
 Docs: https://docs.domino.ai/cloud/reference/api/data_api/authentication.
 
