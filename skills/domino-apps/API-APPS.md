@@ -95,4 +95,4 @@ Management calls go to the platform API base above. Viewers open the `url` field
 | 422 on publish or start | Entry point or configuration type differs from `targetAppId`; `vanityUrl` or `renderIFrame` override on a draft start |
 | Deploy blocked | A governance policy gates **Deploy** until approvals are complete; see the `domino-governance` skill |
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/publish-and-deploy-app-versions (same content under `/6.3/`).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/publish (same content under `/6.3/`).

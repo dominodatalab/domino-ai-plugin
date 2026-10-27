@@ -69,7 +69,7 @@ Extended identity propagation:
 - Without it, Domino rejects the viewer's token on most routes, often with a 500; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
 - Scripts and other non-browser clients call the App with a Personal Access Token as the bearer; the App receives that token and acts with it. Consent must already exist for that user (granted once in a browser): until then every request, JSON included, gets a 302 to `/app-consent`, and a request with no credentials gets a 302 to the sign-in page. Tokens from the Domino CLI login are refused where `DOMINO_API_HOST` is the local gateway (403).
 - Never log or return the token. `TraceLayer` does not log headers.
-- Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/authentication-and-identity/app-security
+- Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/identity
 
 ## Streaming, WebSockets and limits
 

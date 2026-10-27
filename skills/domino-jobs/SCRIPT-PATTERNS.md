@@ -22,7 +22,7 @@ bash -c 'python train.py "$@"; rc=$?; [ $rc -eq 0 ] || [ $rc -eq 2 ]' _ --epochs
 
 ## Environment variables in a Job
 
-Documented defaults (full glossary: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables):
+Documented defaults (full glossary: https://docs.domino.ai/cloud/reference/environment-variables):
 
 ```python
 import os
