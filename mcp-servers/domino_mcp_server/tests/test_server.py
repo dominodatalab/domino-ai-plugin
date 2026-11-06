@@ -383,12 +383,12 @@ def test_plugin_options_win_over_the_environment_and_leave_no_trace(clean_env, t
     env_file.write_text("DOMINO_HOST=https://from-file.example.com\nDOMINO_TOKEN=file-token\n")
     clean_env.setenv("DOMINO_MCP_ENV_FILE", str(env_file))
     clean_env.setenv("DOMINO_HOST", "https://from-shell.example.com")
-    clean_env.setenv("DOMINO_PLUGIN_HOST", " https://from-plugin.example.com ")
-    clean_env.setenv("DOMINO_PLUGIN_TOKEN", "plugin-token")
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", " https://from-plugin.example.com ")
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "plugin-token")
     module = import_server()
     assert module._get_domino_host() == "https://from-plugin.example.com"
     assert module._get_auth_headers() == {"Authorization": "Bearer plugin-token"}
-    assert "DOMINO_PLUGIN_HOST" not in os.environ and "DOMINO_PLUGIN_TOKEN" not in os.environ
+    assert "CLAUDE_PLUGIN_OPTION_DOMINO_HOST" not in os.environ and "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN" not in os.environ
     assert module._CONFIG_SOURCES == {"DOMINO_HOST": "plugin options", "DOMINO_TOKEN": "plugin options"}
 
 
@@ -396,8 +396,8 @@ def test_unset_plugin_options_fall_back_to_environment_then_env_file(clean_env, 
     env_file = tmp_path / "mcp.env"
     env_file.write_text("DOMINO_TOKEN=file-token\n")
     clean_env.setenv("DOMINO_MCP_ENV_FILE", str(env_file))
-    clean_env.setenv("DOMINO_PLUGIN_HOST", "${user_config.domino_host}")   # option never set
-    clean_env.setenv("DOMINO_PLUGIN_TOKEN", "")                             # option left empty
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", "${user_config.domino_host}")   # option never set
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "")                             # option left empty
     clean_env.setenv("DOMINO_HOST", "https://from-shell.example.com")
     module = import_server()
     assert module._get_domino_host() == "https://from-shell.example.com"

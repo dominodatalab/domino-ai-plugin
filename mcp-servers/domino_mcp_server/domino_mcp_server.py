@@ -36,12 +36,14 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 # Variables the server reads for its own configuration (not the ones Domino injects).
 _CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_MCP_ENV_FILE",
-                "DOMINO_INSECURE_HTTP", "DOMINO_PLUGIN_HOST", "DOMINO_PLUGIN_TOKEN")
+                "DOMINO_INSECURE_HTTP", "CLAUDE_PLUGIN_OPTION_DOMINO_HOST",
+                "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN")
 
 # Values a host collects in its own settings UI and passes under these names (Claude Code plugin
 # options: `${user_config.domino_host}`, `${user_config.domino_token}`). They take precedence over
 # DOMINO_HOST and DOMINO_TOKEN from the environment, which take precedence over the env file.
-_PLUGIN_OPTIONS = (("DOMINO_PLUGIN_HOST", "DOMINO_HOST"), ("DOMINO_PLUGIN_TOKEN", "DOMINO_TOKEN"))
+_PLUGIN_OPTIONS = (("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", "DOMINO_HOST"),
+                   ("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "DOMINO_TOKEN"))
 
 # Where DOMINO_HOST and DOMINO_TOKEN came from, for get_domino_environment_info.
 _CONFIG_SOURCES: Dict[str, str] = {}
