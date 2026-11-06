@@ -1,4 +1,32 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: build-launcher-form
+description: 'Launchers: ${param} placeholders in the command, the real UI control types, results via Jobs and email; no YAML spec, no /v4/launchers API.'
+tags: [trigger, domino-launchers, launchers]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    report.py takes --start-date, --end-date and --region. Set up a Domino Launcher so analysts can run
+    it from a form without touching code, and tell me which input types I can offer them and how they
+    get the results. Put the code in your reply, not in files.
+graders:
+- name: no-v4-launchers
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: /v4/launchers/\w+/run|\.runs_get_results\(
+- name: placeholders
+  type: regex
+  target: last_message
+  pattern: \$\{\w+\}
+- name: real-controls
+  type: llm
+  criteria: |
+    PASS if the reply (a) builds the launcher in the Domino UI with a command such as `python report.py --start-date ${start_date} --end-date ${end_date} --region ${region}`, (b) names the parameter controls Domino actually offers (Text, Select, Multi-select, Date, Checkbox, Upload files; naming at least three of these and none that Domino lacks), and (c) says results are delivered through the Job created by the run and the email notification (an `email.html` written by the script becomes the email body).
+    FAIL if it presents a YAML or JSON launcher definition file as something Domino reads, offers a "number" or "integer" parameter type, or runs the launcher through a `/v4/launchers/.../run` style REST call.
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-launchers)"'

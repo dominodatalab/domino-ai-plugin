@@ -1,0 +1,36 @@
+schema_version: '1.1'
+name: r-package-run-and-download
+description: 'Domino R package: library(domino), domino.get, domino.run with arguments, domino.download; the CLI underneath.'
+tags: [trigger, domino-cli, cli]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    From an R session on my laptop, pull my Domino project alice/churn, run fit.R in Domino with the
+    arguments 0.05 and 200, and bring the results back into R. Put the code in your reply, not in files.
+graders:
+- name: cli-underneath
+  type: llm
+  criteria: |
+    PASS if the reply uses the Domino R package (`library(domino)`, `domino.get`, `domino.run("fit.R", 0.05, 200)`, `domino.download()`) and says the package drives the installed Domino CLI, so the CLI must be installed and signed in first (`domino login`, or the device-code flow).
+    FAIL if it invents R functions outside the package (for example `domino.jobs_start`, `domino_api(...)`) or tells the user to pass an API key.
+- name: download
+  type: regex
+  target: last_message
+  pattern: domino\.download\(
+- name: get
+  type: regex
+  target: last_message
+  pattern: domino\.get\(
+- name: library
+  type: regex
+  target: last_message
+  pattern: library\(domino\)
+- name: run
+  type: regex
+  target: last_message
+  pattern: domino\.run\(\s*[\x27"]fit\.R[\x27"]
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-cli)"'

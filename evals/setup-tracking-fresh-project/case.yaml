@@ -1,4 +1,35 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: setup-tracking-fresh-project
+description: a from-scratch experiment-tracking setup loads domino-experiment-setup and writes a deployment-unique experiment name.
+tags: [trigger, domino-experiment-setup, experiments]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    This project has no experiment tracking yet. Set it up so every training run lands in Domino's
+    Experiment Manager under a name that will not collide with other users' experiments, with
+    autologging on. Put the helper code in experiment_setup.py and wire it into train.py.
+graders:
+- name: autolog
+  type: regex
+  target: {source: file, path: experiment_setup.py}
+  pattern: autolog
+- name: no-wrong-env-var
+  type: regex
+  target: {source: file, path: experiment_setup.py}
+  match: not_contains
+  pattern: environ(\.get)?\(\s*[\x27"]DOMINO_HARDWARE_TIER_NAME|environ\[\s*[\x27"]DOMINO_HARDWARE_TIER_NAME|getenv\(\s*[\x27"]DOMINO_HARDWARE_TIER_NAME
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-experiment-setup)"'
+- name: unique-name
+  type: regex
+  target: {source: file, path: experiment_setup.py}
+  pattern: DOMINO_STARTING_USERNAME|DOMINO_PROJECT_NAME
+- name: wired
+  type: regex
+  target: {source: file, path: train.py}
+  pattern: experiment_setup|set_experiment

@@ -141,7 +141,8 @@ claude --plugin-dir .                                 # load this checkout in pl
 /reload-plugins                                       # inside a session, after editing a skill
 ```
 
-Behaviour tests live in `evals/` (one directory per case) and run with `claude plugin eval`.
+Behaviour tests live in `evals/` (one directory per case, each a single `case.yaml`) and run with
+`claude plugin eval`.
 Each run is a real model call on your account, so iterate with one arm and one run:
 
 ```bash

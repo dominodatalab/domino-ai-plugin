@@ -1,0 +1,31 @@
+schema_version: '1.1'
+name: choose-collaborator-role
+description: 'Projects: real collaborator roles (Owner, Contributor, Results Consumer, Launcher User, Project Importer) and Searchable vs Private visibility.'
+tags: [trigger, domino-projects, projects]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    A colleague needs to run the launchers in my Domino project and see their results, but must not be
+    able to edit code. Which collaborator role do I give them, what are the other roles, and how do I
+    make the project discoverable in search without letting non-collaborators read it?
+graders:
+- name: launcher-user
+  type: regex
+  target: last_message
+  flags: i
+  pattern: Launcher User
+- name: roles-and-visibility
+  type: llm
+  criteria: |
+    PASS if the reply recommends the Launcher User role, lists only roles that exist in Domino (Owner, Contributor, Results Consumer, Launcher User, Project Importer), and answers the visibility question with the Searchable setting (as opposed to Private). Saying Public visibility is unavailable on Domino Cloud, or omitting Public, is fine.
+    FAIL if it invents roles such as Admin, Editor, Viewer or Reader as project collaborator roles, or offers an "Organization" visibility setting.
+- name: searchable
+  type: regex
+  target: last_message
+  flags: i
+  pattern: Searchable
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-projects)"'

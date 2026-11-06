@@ -1,0 +1,30 @@
+schema_version: '1.1'
+name: mcp-server-from-laptop
+description: 'Modeling assistant: outside Domino the MCP server authenticates with a Personal Access Token or service-account token, not a legacy API key.'
+tags: [trigger, domino-modeling-assistant, mcp]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I want my coding assistant on my laptop (outside Domino) to run jobs in my Domino project
+    `alice/churn` through the Domino MCP server. What do I configure, and which credential should it
+    use?
+graders:
+- name: domino-token
+  type: regex
+  target: last_message
+  pattern: DOMINO_TOKEN
+- name: laptop-auth
+  type: llm
+  criteria: |
+    PASS if the reply configures the Domino MCP server for the user's assistant (the plugin's bundled server, or its registration steps) with the deployment URL in `DOMINO_HOST` and a Personal Access Token (or a Domino service-account token) in `DOMINO_TOKEN`, which the server sends as `Authorization: Bearer`, for project `alice/churn`.
+    FAIL if it instructs the user to generate and export a legacy Domino API key (`DOMINO_API_KEY` / `X-Domino-Api-Key`) as the credential, or says the server accepts no token outside Domino.
+- name: pat-or-sa
+  type: regex
+  target: last_message
+  flags: i
+  pattern: Personal Access Token|\bPAT\b|service account
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-modeling-assistant)"'

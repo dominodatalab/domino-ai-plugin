@@ -1,0 +1,43 @@
+schema_version: '1.1'
+name: connect-ray-and-dask-cluster
+description: 'Distributed computing: connect with the RAY_HEAD_SERVICE_* and DASK_SCHEDULER_SERVICE_* variables Domino injects; no ray.init(address=auto), no SDK cluster_config.'
+tags: [trigger, domino-distributed-computing, clusters]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I launched a Domino workspace with an on-demand Ray cluster attached. Show me how to connect to it
+    from Python and run a trivial parallel task. Then show the equivalent connection for a Dask cluster.
+    Put the code in your reply, not in files.
+graders:
+- name: dask-host-var
+  type: regex
+  target: last_message
+  pattern: DASK_SCHEDULER_SERVICE_HOST
+- name: no-bare-dask-client
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: =\s*Client\(\)
+- name: no-invented-sdk
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \.workspace_start\(|cluster_config\s*=
+- name: no-ray-auto
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: ray\.init\(\s*(address\s*=\s*)?[\x27"]auto[\x27"]
+- name: ray-host-var
+  type: regex
+  target: last_message
+  pattern: RAY_HEAD_SERVICE_HOST
+- name: ray-port-var
+  type: regex
+  target: last_message
+  pattern: RAY_HEAD_SERVICE_PORT
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-distributed-computing)"'

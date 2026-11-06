@@ -1,0 +1,43 @@
+schema_version: '1.1'
+name: create-governance-bundle-rest
+description: 'Governance: /api/governance/v1 bundle creation with projectId, name and policyId, attachments and findings, base-URL and auth rules.'
+tags: [trigger, domino-governance, governance]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    From a Job in my project, use the REST API to create a governance bundle named `churn-model-2026`
+    for policy id 64a1b2c3d4e5f60718293a4b, attach registered model `churn-clf` version 3 as evidence,
+    and then list the bundle's findings. Show the calls. Put the code in your reply, not in files.
+graders:
+- name: attachments-route
+  type: regex
+  target: last_message
+  pattern: /attachments
+- name: bundle-calls
+  type: llm
+  criteria: |
+    PASS if (a) the bundle is created with `POST .../api/governance/v1/bundles` and a body containing `projectId` (from `DOMINO_PROJECT_ID`), `name` and `policyId`; (b) evidence is attached with `POST .../bundles/{bundleId}/attachments` using an attachment `type` of ModelVersion with an `identifier` naming the registered model and version; (c) findings are read with `GET .../bundles/{bundleId}/findings`; and (d) the base URL and auth follow the in-run rule: `$DOMINO_API_PROXY` with no Authorization header, or the platform host with a bearer from `http://localhost:8899/access-token`. Mentioning a fallback to the public deployment URL with a PAT is fine but not required.
+    FAIL if it uses an API key header or derives the host from the JWT `iss` claim.
+- name: bundles-route
+  type: regex
+  target: last_message
+  pattern: /api/governance/v1/bundles
+- name: findings-route
+  type: regex
+  target: last_message
+  pattern: /findings
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: no-jwt-iss
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \[\\?[\x27"]iss\\?[\x27"]\]|/auth/realms|\.iss\b
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-governance)"'

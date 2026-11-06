@@ -1,0 +1,52 @@
+schema_version: '1.1'
+name: netapp-volume-paths-and-snapshot
+description: 'NetApp volumes: DFS mount paths incl. numbered snapshots, and POST /remotefs/v1/snapshots with volumeId and description.'
+tags: [trigger, netapp-volumes, data, disambiguation]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    We attached a NetApp volume named `genomics` to my DFS-based Domino project. Where is it mounted in
+    a workspace, where do I read snapshot number 3, and how do I create a snapshot with a message from a
+    script using the API? Put the code in your reply, not in files.
+graders:
+- name: live-path
+  type: regex
+  target: last_message
+  pattern: /domino/netapp-volumes/genomics
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: not-data-sdk
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-data-sdk)"'
+  min: 0
+  max: 0
+  arm: both
+- name: not-datasets
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-datasets)"'
+  min: 0
+  max: 0
+  arm: both
+- name: remotefs-route
+  type: regex
+  target: last_message
+  pattern: /remotefs/v1/snapshots
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(netapp-volumes)"'
+- name: snapshot-call
+  type: llm
+  criteria: |
+    PASS if the API call is `POST .../remotefs/v1/snapshots` with a JSON body containing `volumeId` and the message in `description` (optionally `tagNames`), sent to `$DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT`, `$DOMINO_API_PROXY` (no header) or the platform host, authenticated by the proxy or with a bearer token from `http://localhost:8899/access-token`.
+    FAIL if it uses a `/v4/...` route for the snapshot, an API key header, or derives the host from a JWT claim.
+- name: snapshot-path
+  type: regex
+  target: last_message
+  pattern: /domino/netapp-volumes/snapshots/genomics

@@ -1,0 +1,36 @@
+schema_version: '1.1'
+name: authenticate-in-run-and-ci
+description: 'API intro: auth inside a run uses DOMINO_API_PROXY or the local access-token endpoint; outside a run a PAT or service-account bearer; never API keys.'
+tags: [trigger, domino-api-intro, api]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I am writing one Python script that calls the Domino REST API. It will run inside a Domino Job and
+    also from a CI pipeline outside Domino. How should it authenticate in each case? Show the code for
+    both. Put the code in your reply, not in files.
+graders:
+- name: bearer
+  type: regex
+  target: last_message
+  pattern: Bearer
+- name: in-run-auth
+  type: regex
+  target: last_message
+  pattern: DOMINO_API_PROXY|localhost:8899/access-token
+- name: no-api-key-code
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=|api_key\s*=
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-api-intro|domino-python-sdk)"'
+- name: two-contexts
+  type: llm
+  criteria: |
+    PASS if the reply distinguishes the two contexts correctly:
+    - Inside a Domino run: call `$DOMINO_API_PROXY/<path>` with no Authorization header, or fetch a short-lived token from `http://localhost:8899/access-token` and send it as `Authorization: Bearer`.
+    - Outside Domino (CI): use a Personal Access Token or a Domino service-account token as `Authorization: Bearer` against the deployment's public URL.
+    FAIL if it recommends the legacy API key (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`) for either context, or tells the user to derive the host from a JWT claim.

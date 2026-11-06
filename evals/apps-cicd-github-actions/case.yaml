@@ -1,0 +1,49 @@
+schema_version: '1.1'
+name: apps-cicd-github-actions
+description: 'Disambiguation: app CI/CD loads domino-apps and automates with /api/apps/v1 and a PAT or service-account secret.'
+tags: [trigger, domino-apps, apps, disambiguation]
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    Write a GitHub Actions workflow to .github/workflows/publish-domino-app.yml that publishes a new
+    version of my existing Domino App (app id 68b1c2d3e4f5a6b7c8d9e0f1) on every push to main, using the
+    Domino REST API.
+graders:
+- name: apps-v1-route
+  type: regex
+  target: {source: file, path: .github/workflows/publish-domino-app.yml}
+  pattern: /api/apps/v1
+- name: bearer
+  type: regex
+  target: {source: file, path: .github/workflows/publish-domino-app.yml}
+  pattern: Bearer
+- name: cicd-auth
+  type: llm
+  focus: {source: file, path: .github/workflows/publish-domino-app.yml}
+  criteria: |
+    PASS if the workflow reads a Domino Personal Access Token or service-account token from a GitHub secret and sends it as `Authorization: Bearer`, targets the deployment's public URL, and uses `/api/apps/v1/apps/{appId}/...` routes (for example POST `/api/apps/v1/apps/{appId}/versions` or `.../versions/createAndStart`, then a start call) rather than `/api/apps/beta` for the write path.
+    FAIL if it uses an API key header, relies on `DOMINO_API_PROXY` or `localhost:8899` from GitHub Actions, or leaves the deployment step as a placeholder that prints success without calling the API.
+- name: no-api-key
+  type: regex
+  target: {source: file, path: .github/workflows/publish-domino-app.yml}
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: not-app-init
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-app-init)"'
+  min: 0
+  max: 0
+  arm: both
+- name: not-debug-proxy
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-debug-proxy)"'
+  min: 0
+  max: 0
+  arm: both
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-apps)"'
