@@ -34,7 +34,7 @@ The prebuilt CLI runs on x86_64 Linux with glibc 2.34 or later; other architectu
 proa new site my-site --template minimal --database none --ui none --styling css --deploy none --no-git --no-vscode --yes
 ```
 
-Use the `minimal` template. The default `app` template runs SQLite migrations at start and writes `data/<name>.db` into the project; App startup must not write, and App files are not saved ([domino-apps](../domino-apps/FRAMEWORKS.md#startup-must-not-change-state)). A site created by the crates.io 0.1.3 CLI does not read `PROA_BASE_PATH`: scaffold a new site with the CLI above and carry over its `src/config.rs`, `src/routes.rs` and `src/static_assets.rs` and the layout's `cx.request().url(...)` calls.
+Use the `minimal` template. The default `app` template runs SQLite migrations at start and writes `data/<name>.db` into the project; App startup must not write, and App files are not saved ([domino-apps](../domino-apps/FRAMEWORKS.md#make-the-app-idempotent)). A site created by the crates.io 0.1.3 CLI does not read `PROA_BASE_PATH`: scaffold a new site with the CLI above and carry over its `src/config.rs`, `src/routes.rs` and `src/static_assets.rs` and the layout's `cx.request().url(...)` calls.
 
 Then make the project follow this skill:
 

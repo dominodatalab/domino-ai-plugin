@@ -388,13 +388,14 @@ def verified_claims(token):
 - **Iframe-only deployments.** Some deployments serve Apps only inside Domino's iframe; opening the App URL directly then returns 400. Open the App from its page in Domino.
 - **Scripts and other non-browser clients.** A request without credentials gets a 302 to the sign-in page. On an App with extended identity propagation, a script sends a Personal Access Token as `Authorization: Bearer`, and its user must have consented to the App once in a browser: without consent every request, JSON included, gets a 302 to `/app-consent?appId=...&callback=...`. Do not follow redirects (`curl` without `-L`, `requests` with `allow_redirects=False`) and treat a 302 as "sign in or consent first".
 
-## Startup must not change state
+## Make the App idempotent
 
-Domino runs the entry point again on every restart, App Preview live sync, deployment and rollback, and once per replica when autoscaling; replicas share the App's disk and can start together. Startup that writes (creates tables, seeds rows, fills a Dataset, downloads into the project) races with itself or repeats work.
+An App restarts at any time and can run as several replicas: Domino runs the entry point again on every restart, App Preview live sync, deployment and rollback, and once per replica when autoscaling. Replicas share the App's disk and can start together. Running the App twice, or twice at once, must leave the same result as running it once.
 
-1. **Make startup read-only.** Read configuration, open connections, load models, serve. Run schema migrations, seeding and Dataset preparation as a Job (or a Flow step) before you publish, and pin the Job's outputs as the App's inputs.
+1. **Make startup read-only.** Read configuration, open connections, load models, serve. Run schema migrations, seeding and Dataset preparation as a Job (or a Flow step) before you publish, and pin the Job's outputs as the App's inputs. Startup that writes (creates tables, seeds rows, fills a Dataset, downloads into the project) races with itself or repeats work.
 2. **If startup must write, make it idempotent and safe to run concurrently.** Idempotent alone is not enough: "check whether the table exists, then create it" still races between two replicas. Use operations that are atomic on their own: `CREATE TABLE IF NOT EXISTS`, upserts on a unique key, a database advisory lock around migrations, or write to a temporary file and `rename` it into place.
-3. **Writes while serving** (user uploads, results, logs of user actions) follow https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps#persist-what-the-app-writes : Datasets, databases or object storage, never the project's files, with concurrent writers in mind.
+3. **Make writes while serving safe to retry.** A request can arrive twice, after a restart or a timeout. Upsert on a natural key, or have the client send an idempotency key the table stores under a unique constraint (`INSERT ... ON CONFLICT DO NOTHING`), rather than appending a row per request.
+4. **Keep state out of the process.** Memory and the App's disk are lost on restart, and memory differs between replicas, so sessions, queues, caches the App cannot rebuild and user data live in a database or Dataset. Writes follow https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps#persist-what-the-app-writes : Datasets, databases or object storage, never the project's files, with concurrent writers in mind.
 
 ## Build once and version builds
 
