@@ -4,7 +4,7 @@ Catalog of the `/api/apps/beta/apps` routes. For
 the v1 publish chain (`/api/apps/v1/apps`, drafts, `createAndStart`, `liveSync`) and the
 app lifecycle, use [domino-apps/API-APPS.md](../domino-apps/API-APPS.md); prefer v1 routes
 for new automation. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/features/apps.
+https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps.
 
 ## Authentication
 

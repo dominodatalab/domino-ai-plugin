@@ -1,9 +1,11 @@
-# Keeps the SHA-pinned GitHub Actions current. Python dependencies of the MCP server are added
-# here once the server has a lockfile (the server is being redesigned; see the MCP plan).
+# Keeps pinned versions current between the per-release pin refresh (AGENTS.md "Branches and
+# versions"): the SHA-pinned GitHub Actions and the MCP server's uv.lock. Version updates target
+# develop, so they ship with the next release; dependabot reads this file from the default branch.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
     groups:
@@ -11,3 +13,13 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "ci"
+  - package-ecosystem: uv
+    directory: /mcp-servers/domino_mcp_server
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      mcp-server:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"

@@ -1,0 +1,23 @@
+schema_version: '1.1'
+name: call-llm-from-domino-cloud
+description: 'LLM access on Domino Cloud: provider key in a Domino env var or LLM Gateway 2.0, never the removed AI Gateway routes.'
+tags: [trigger, domino-llm-access, llms]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    We are on Domino Cloud. I want to call OpenAI from a Domino Job and later from an agent. How should
+    I set up LLM access and where do the credentials go? Keep it practical.
+graders:
+- name: env-var-or-gateway-2
+  type: llm
+  criteria: |
+    The user is on Domino Cloud, where the legacy AI Gateway has been removed.
+    PASS if the reply does BOTH of these:
+    1. Tells the user to store the provider API key as a Domino environment variable (Project or User settings) and read it in code (for example `os.environ["OPENAI_API_KEY"]`), or to use a Domino-hosted model endpoint; and
+    2. Does not present the legacy AI Gateway (the "Gateway LLMs" UI, `/api/aigateway/v1` routes, or the MLflow Deployments client) as a working option on Domino Cloud. Mentioning LLM Gateway 2.0 as a separately deployed app available through Domino is fine.
+    FAIL if it tells the user to create an AI Gateway endpoint, or if it hard-codes the key in the code or in git.
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-llm-access)"'

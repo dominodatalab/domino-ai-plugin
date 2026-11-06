@@ -1,4 +1,68 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: define-two-task-flow
+description: 'Flows: DominoJobTask + DominoJobConfig under @workflow in flow.py, launched with pyflyte run --remote.'
+tags: [trigger, domino-flows, flows]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    Create a Domino Flow in flow.py that runs stages/prep.py and then stages/train.py as two tasks,
+    passing the path prep produces into train, and tell me how to launch it.
+graders:
+- name: data-dependency
+  type: llm
+  focus: {source: file, path: flow.py}
+  criteria: |
+    The file must define a Domino Flow with two tasks that run in sequence with a real data dependency.
+    PASS if ALL hold:
+    1. There are two Domino tasks, built with `DominoJobTask` + `DominoJobConfig` or with `run_domino_job_task`, and both are actually called inside the `@workflow` function (not only defined, not only mentioned in comments).
+    2. The first task's command runs `stages/prep.py` and declares an output (for example `prepared_path`); the second task's command runs `stages/train.py` and declares an input with a matching name.
+    3. The second task is called with the first task's result as that input. When the first task declares exactly one output, the result is passed directly (`train_task(prepared_path=prep_result)`). Only when the first task declares more than one output may the value be selected by attribute access (`prep_result.prepared_path`) or tuple unpacking.
+    FAIL if the workflow body makes no task calls, if the second task's input is a literal or a workflow parameter instead of the first task's result, if a task result is indexed with a string (`prep_result["prepared_path"]`, which fails to compile for multi-output tasks and binds the wrong thing for single-output tasks), if attribute access or unpacking is applied to a single-output result, or if Flyte `@task` functions replace the Domino tasks.
+- name: domino-job-config
+  type: regex
+  target: {source: file, path: flow.py}
+  flags: m
+  pattern: ^(?!\s*#)[^\n]*\b(DominoJobConfig|run_domino_job_task)\(
+- name: no-native-task
+  type: regex
+  target: {source: file, path: flow.py}
+  match: not_contains
+  flags: m
+  pattern: ^\s*@task\b
+- name: no-string-index-on-result
+  type: regex
+  target: {source: file, path: flow.py}
+  match: not_contains
+  flags: m
+  pattern: ^(?!\s*#)[^\n]*\)\s*\[\s*[\x27"]\w+[\x27"]\s*\]
+- name: prep-command
+  type: regex
+  target: {source: file, path: flow.py}
+  flags: m
+  pattern: ^(?!\s*#)[^\n]*[Cc]ommand\s*=\s*f?[\x27"][^\x27"\n]*prep\.py
+- name: pyflyte-remote
+  type: regex
+  target: last_message
+  pattern: pyflyte run --remote
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-flows)"'
+- name: train-command
+  type: regex
+  target: {source: file, path: flow.py}
+  flags: m
+  pattern: ^(?!\s*#)[^\n]*[Cc]ommand\s*=\s*f?[\x27"][^\x27"\n]*train\.py
+- name: two-task-invocations
+  type: regex
+  target: {source: file, path: flow.py}
+  flags: m
+  pattern: ^(?!\s*#)[^\n]*\b(DominoJobTask|run_domino_job_task)\([\s\S]*?^(?!\s*#)[^\n]*\b(DominoJobTask|run_domino_job_task)\(
+- name: workflow-decorator
+  type: regex
+  target: {source: file, path: flow.py}
+  flags: m
+  pattern: ^\s*@workflow\b

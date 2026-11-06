@@ -1,0 +1,48 @@
+schema_version: '1.1'
+name: export-model-image-from-ci
+description: 'Model delivery: build a model image and export it to a registry from CI via the Model Export API (/v4/models, internal), with a bearer token.'
+tags: [trigger, domino-model-delivery, model-delivery]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    From a GitHub Actions job, build the Domino model `fraud-clf` in project id 64f0c0ffee11223344556677
+    into a container image, push it to our registry registry.example.com/ml/fraud-clf, and tell me what
+    to watch while it builds. We will run the image on our own Kubernetes, not as a Domino endpoint. Put
+    the code in your reply, not in files.
+graders:
+- name: bearer
+  type: regex
+  target: last_message
+  pattern: Bearer
+- name: build-route
+  type: regex
+  target: last_message
+  pattern: buildModelImage
+- name: export-flow
+  type: llm
+  criteria: |
+    PASS if the pipeline calls `POST /v4/models/buildModelImage`, polls `GET /v4/models/{modelId}/{modelVersionId}/getBuildStatus` until the build is Complete (or Failed), then calls `POST /v4/models/{modelId}/{modelVersionId}/exportImageToRegistry` with the registry details and polls `GET /v4/models/{exportId}/getExportImageStatus` (optionally fetching `getExportLogs`), authenticating with a Personal Access Token or service-account token from a GitHub secret as `Authorization: Bearer`, and reading registry credentials from secrets rather than the workflow source.
+    FAIL if it uses the legacy `X-Domino-Api-Key` header, deploys a Domino endpoint (`/api/modelServing/...`) instead of exporting an image, or exports before the build has completed.
+- name: export-route
+  type: regex
+  target: last_message
+  pattern: exportImageToRegistry
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: no-in-run-auth
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \$\{?DOMINO_API_PROXY\}?/|environ(\.get)?\(\s*[\x27"]DOMINO_API_PROXY|environ\[\s*[\x27"]DOMINO_API_PROXY|getenv\(\s*[\x27"]DOMINO_API_PROXY|[\x27"]https?://localhost:8899|curl[^\n]*localhost:8899
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-delivery)"'
+- name: status-routes
+  type: regex
+  target: last_message
+  pattern: getBuildStatus|getExportImageStatus

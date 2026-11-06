@@ -1,4 +1,43 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: publish-existing-flask-app
+description: 'Apps: an existing Flask app is adapted for Domino''s proxy: app.sh entry point, bind 0.0.0.0, port 8888.'
+tags: [trigger, domino-apps, apps, disambiguation]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    This Flask app runs on my laptop. I want to publish it as a Domino App. Keep app.py unchanged and
+    put everything Domino needs into app.sh in this folder; then tell me what else I must do to publish
+    it.
+graders:
+- name: binds-all-interfaces
+  type: regex
+  target: {source: file, path: app.sh}
+  pattern: 0\.0\.0\.0
+- name: no-localhost
+  type: regex
+  target: {source: file, path: app.sh}
+  match: not_contains
+  pattern: --host[= ]+(localhost|127\.0\.0\.1)|-b\s+(localhost|127\.0\.0\.1)|--bind[= ]+(localhost|127\.0\.0\.1)|host=[\x27"]?(localhost|127\.0\.0\.1)|--port[= ]+5000|-p\s+5000|-l\s+5000|port=5000
+- name: not-debug-proxy
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-debug-proxy)"'
+  min: 0
+  max: 0
+  arm: both
+- name: port-8888
+  type: regex
+  target: {source: file, path: app.sh}
+  pattern: '8888'
+- name: proxy-requirements
+  type: llm
+  criteria: |
+    PASS if the reply says the app must listen on 0.0.0.0 and port 8888 for Domino's proxy to reach it (so the laptop's 127.0.0.1:5000 setting cannot be used as is), and treats app.sh as the script Domino executes to start the App when it is published (describing what app.sh runs is enough).
+    FAIL if it says any port is acceptable, or keeps `localhost` / `127.0.0.1` / port 5000 as the configuration to publish.
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-apps)"'

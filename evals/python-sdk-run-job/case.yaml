@@ -1,4 +1,37 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: python-sdk-run-job
+description: 'python-domino: Domino(project) without api_key, job_start / job_start_blocking, job_status; no invented methods.'
+tags: [trigger, domino-python-sdk, api]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Using the python-domino library from inside my Domino workspace, start a job that runs train.py in
+    my project `alice/churn`, wait for it to finish, and print its final status. Put the code in your
+    reply, not in files.
+graders:
+- name: no-api-key-kwarg
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: Domino\([^)]*api_key\s*=
+- name: no-invented-methods
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \.(runs_wait|runs_get_logs|runs_stop|workspace_start|datasets_snapshot|project_get)\(
+- name: real-start-method
+  type: regex
+  target: last_message
+  pattern: job_start|runs_start
+- name: sdk-usage
+  type: llm
+  criteria: |
+    PASS if the code constructs `Domino("alice/churn")` (a project argument, with no `api_key=`; relying on the API proxy / injected environment inside the workspace), starts the job with `job_start`, `job_start_blocking`, `runs_start` or `runs_start_blocking`, and waits using `job_start_blocking`/`runs_start_blocking` or by polling `job_status`/`runs_status`.
+    FAIL if it calls python-domino methods that do not exist (for example runs_wait, runs_get_logs, runs_stop, workspace_start), passes an API key, or constructs `Domino()` with no project.
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-python-sdk)"'

@@ -1,4 +1,36 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: instrument-agent-from-scratch
+description: instrumenting an un-traced LLM script loads domino-trace-setup and uses the real SDK import and package.
+tags: [trigger, domino-trace-setup, genai]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    Instrument qa.py in place with Domino tracing from scratch so I can see each call in Domino's
+    Experiments. Add whatever helper or config files your setup needs, and tell me what to install.
+graders:
+- name: add-tracing-decorator
+  type: regex
+  target: {source: file, path: qa.py}
+  pattern: add_tracing
+- name: no-run-id-attr
+  type: regex
+  target: {source: file, path: qa.py}
+  match: not_contains
+  flags: m
+  pattern: ^(?!\s*#).*(?<!\.info)\.run_id\b
+- name: no-run-name-kwarg
+  type: regex
+  target: {source: file, path: qa.py}
+  match: not_contains
+  pattern: Domino(Run|AgentContext)\(\s*run_name
+- name: sdk-package
+  type: regex
+  target: last_message
+  pattern: dominodatalab\[[^\]]*agents[^\]]*\]|dominodatalab.{0,40}agents
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-trace-setup)"'

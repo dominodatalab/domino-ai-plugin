@@ -69,7 +69,7 @@ Extended identity propagation:
 - Without it, Domino rejects the viewer's token on most routes, often with a 500; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
 - Scripts and other non-browser clients call the App with a Personal Access Token as the bearer; the App receives that token and acts with it. Consent must already exist for that user (granted once in a browser): until then every request, JSON included, gets a 302 to `/app-consent`, and a request with no credentials gets a 302 to the sign-in page. Tokens from the Domino CLI login are refused where `DOMINO_API_HOST` is the local gateway (403).
 - Never log or return the token. `TraceLayer` does not log headers.
-- Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/authentication-and-identity/app-security
+- Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/identity
 
 ## Streaming, WebSockets and limits
 
@@ -88,7 +88,7 @@ Extended identity propagation:
 - The pool is created with `connect_lazy`: startup parses the URL and connects to nothing, so the App starts while the database is down, and each request waits at most 5 seconds for a connection.
 - TLS: `sslmode=verify-full` checks the server's certificate chain and host name against the OS certificate store; `sslrootcert=/path/ca.pem` in the URL adds a CA for a database with a private one. `require` encrypts without checking the certificate. The `PGSSLMODE` and `PGSSLROOTCERT` environment variables work too. Postgres connections never use an HTTP proxy.
 - Pass values as bind parameters (`sqlx::query("SELECT name FROM items WHERE id = $1").bind(id)`), never by formatting SQL strings. The template uses the runtime query API; sqlx's `query!` macros check SQL at compile time but need a database or committed `.sqlx` query data during every build, so add them only with that in place.
-- Create tables and load data with a Job before publishing, never at App start ([domino-apps](../domino-apps/FRAMEWORKS.md#startup-must-not-change-state)).
+- Create tables and load data with a Job before publishing, never at App start ([domino-apps](../domino-apps/FRAMEWORKS.md#make-the-app-idempotent)).
 
 ## Outbound TLS and HTTP proxies
 
@@ -123,6 +123,8 @@ Where the binary lives:
 | Git-based (default) | `/mnt/artifacts/dist/<name>/` | **File Changes > Sync All Changes** (artifacts go to Domino storage, code to Git) |
 | Git-based, binary in Git | `dist/` in the repository (`DIST_DIR=dist`) | Commit and push the new `dist/<label>/` and its stamp, only for builds you publish |
 | DFS | `dist/` in the Project (`DIST_DIR=dist`) | **File Changes > Sync to Domino** |
+
+A binary kept in Git stays in history and in every clone (Domino does not support Git LFS), so commit only builds you publish and keep `strip = true`.
 
 A Job builds the same way and saves artifacts when it finishes: run `bash scripts/build-dist.sh` as the Job command on the App's environment and hardware tier. Use a Job when you want the binary built from the committed code rather than from a Workspace's working tree.
 

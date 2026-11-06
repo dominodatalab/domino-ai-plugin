@@ -1,6 +1,6 @@
 {
   "name": "dominodatalab",
-  "version": "2026.603.9",
+  "version": "2026.603.10",
   "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, GenAI tracing, Flows, Spark/Ray/Dask clusters, governance, and the Domino APIs and SDKs",
   "contextFileName": "rules/domino.md",
   "settings": [
@@ -20,9 +20,10 @@
     "domino_server": {
       "command": "uv",
       "args": [
+        "run",
+        "--frozen",
         "--directory",
         "${extensionPath}${/}mcp-servers${/}domino_mcp_server",
-        "run",
         "domino_mcp_server.py"
       ]
     },

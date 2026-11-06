@@ -12,12 +12,12 @@ A Domino App runs project code in a container behind Domino's reverse proxy. The
 
 ## Rules every App must satisfy
 
-1. **Serve on `0.0.0.0:8888`.** An App that does not expose a server on that address and port fails to start. Port 8888 is mandatory, not a default.
-2. **The entry point is a launch file** in the project (`app.sh`, or a Python or R script). It is fixed for the life of the App; create a new App to change it.
-3. **Read the URL prefix from `DOMINO_RUN_HOST_PATH`** wherever a framework needs its base path (Dash `requests_pathname_prefix`, Gradio `root_path`). Never assemble it from the project owner, name and run ID; the prefix is not derived from them.
-4. **Use relative URLs** for assets and API calls (Vite `base: './'`, `new URL('api/', document.baseURI)`), never root-absolute `/assets/...` or `fetch('/api/...')`. They break when the App URL lacks its trailing slash; add it ([details](./FRAMEWORKS.md#behind-dominos-app-proxy)).
-5. **Keep secrets on the server.** Model endpoint tokens live in project or user environment variables and are read by backend code. Anything in a `VITE_`-prefixed variable is compiled into the browser bundle.
-6. **Starting the App changes nothing.** Restarts, live sync, deploys and replicas rerun the entry point, sometimes at once: migrate, seed and prepare data in a Job before publishing ([details](./FRAMEWORKS.md#startup-must-not-change-state)).
+1. **Make the App idempotent.** It restarts at any time and can run as several replicas at once: startup changes nothing (migrate and seed in a Job before publishing), each write is an upsert or carries an idempotency key under a unique constraint, so a retry stores it once, and state lives in a Dataset or database, not in memory or on the App's disk ([details](./FRAMEWORKS.md#make-the-app-idempotent)).
+2. **Serve on `0.0.0.0:8888`.** An App that does not expose a server on that address and port fails to start. Port 8888 is mandatory, not a default.
+3. **The entry point is a launch file** in the project (`app.sh`, or a Python or R script). It is fixed for the life of the App; create a new App to change it.
+4. **Read the URL prefix from `DOMINO_RUN_HOST_PATH`** wherever a framework needs its base path (Dash `requests_pathname_prefix`, Gradio `root_path`). Never assemble it from the project owner, name and run ID; the prefix is not derived from them.
+5. **Use relative URLs** for assets and API calls (Vite `base: './'`, `new URL('api/', document.baseURI)`), never root-absolute `/assets/...` or `fetch('/api/...')`. They break when the App URL lacks its trailing slash; add it ([details](./FRAMEWORKS.md#behind-dominos-app-proxy)).
+6. **Keep secrets on the server.** Model endpoint tokens live in project or user environment variables and are read by backend code. Anything in a `VITE_`-prefixed variable is compiled into the browser bundle.
 
 ## Quick start
 
@@ -30,7 +30,7 @@ A Domino App runs project code in a container behind Domino's reverse proxy. The
 | Shiny | `R -e 'shiny::runApp("./", port=8888, host="0.0.0.0")'` | [FRAMEWORKS.md](./FRAMEWORKS.md) |
 | Rust (axum) | the prebuilt binary; never compiles | [domino-rust-apps](../domino-rust-apps/SKILL.md) |
 
-Vite: `base: './'` and `HashRouter`. Routes after `#` never reach the server and relative assets resolve on every route; `BrowserRouter` breaks nested routes.
+Vite: `base: './'` and `HashRouter`; `BrowserRouter` breaks nested routes.
 
 ## Lifecycle
 
@@ -48,7 +48,7 @@ Injected at start: `DOMINO_RUN_HOST_PATH` (URL prefix, trailing `/`), the `DOMIN
 - **As the viewer**: the request's bearer token on `$DOMINO_API_HOST`. Without extended identity propagation (published by a SysAdmin or CloudAdmin; viewer consent) most routes reject it, often with 500 ([details](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)). No token: return 401, since `$DOMINO_API_HOST` runs calls without `Authorization` as the publisher.
 - **Model endpoints**: from backend code only, with `MODEL_API_URL` and `MODEL_API_TOKEN` from Project environment variables; HTTP Basic with the token as username and password for synchronous endpoints, a bearer for asynchronous ones ([details](./FRAMEWORKS.md#calling-a-model-endpoint-from-any-framework)).
 
-Authentication reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication . Legacy API keys (`DOMINO_USER_API_KEY`, `X-Domino-Api-Key`) are deprecated; do not use them.
+Auth: https://docs.domino.ai/cloud/reference/api/domino-api-authentication ; legacy API keys (`X-Domino-Api-Key`) are deprecated.
 
 ## REST automation
 
@@ -62,4 +62,4 @@ Authentication reference: https://docs.domino.ai/cloud/reference/api/domino-api-
 - [API-APPS.md](./API-APPS.md): v1 vs beta routes, publish chain, logs
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): symptoms, causes and fixes
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps (same under `/6.3/`). Related skills: `domino-app-init` (scaffold), `domino-debug-proxy` (diagnose), `domino-api-intro` (auth, hosts), `domino-ui-bootstrap` (design system SPA), `domino-extensions` (mount an App in the Domino UI).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps (same under `/6.3/`). Related skills: `domino-app-init` (scaffold), `domino-debug-proxy` (diagnose), `domino-api-intro` (auth, hosts), `domino-ui-bootstrap` (design system SPA), `domino-extensions` (mount an App in the Domino UI).

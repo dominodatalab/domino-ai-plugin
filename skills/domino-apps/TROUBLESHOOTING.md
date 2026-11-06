@@ -55,7 +55,7 @@ app = Dash(__name__, routes_pathname_prefix="/",
            requests_pathname_prefix=os.environ.get("DOMINO_RUN_HOST_PATH"))
 ```
 
-Publish a new version with the change and deploy it. Reference: https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning/app-configuration-settings
+Publish a new version with the change and deploy it. Reference: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/configuration
 
 ## 6. Model endpoint calls fail (401, 403, CORS)
 
@@ -134,4 +134,4 @@ DIST_DIR=dist bash scripts/build-dist.sh && DIST_DIR=dist ./app.sh   # then open
 | Viewer calls 500/403, or publisher data | Section 10 |
 | Missing username, consent redirects, 413, timeouts, buffered streams | Section 11 |
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/app-logs-and-versioning (logs and support bundle) and https://docs.domino.ai/cloud/platform-capabilities/features/apps/common-app-frameworks (minimal working examples).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/operate (logs and support bundle) and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/develop-and-test/app-frameworks (minimal working examples).

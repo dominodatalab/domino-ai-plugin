@@ -1,0 +1,39 @@
+schema_version: '1.1'
+name: create-extension-rest
+description: 'Extensions: POST /api/extensions/beta/extensions with name, enabled, appId, appVersionId and uiMountPointTypeConfigs; admins only; context arrives as query params.'
+tags: [trigger, domino-extensions, extensions]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I have a published Flask app (app id 68a0b1c2d3e4f5a6b7c8d9e0, version id 68a0b1c2d3e4f5a6b7c8d9e1)
+    with identity propagation enabled. Create a Domino Extension that shows it in the project sidebar
+    using the REST API, and tell me what my app receives when someone opens it from a project. Put the
+    code in your reply, not in files.
+graders:
+- name: app-version-id
+  type: regex
+  target: last_message
+  pattern: appVersionId
+- name: extension-contract
+  type: llm
+  criteria: |
+    PASS if the create request is `POST .../api/extensions/beta/extensions` with a body that includes `name`, `enabled`, `appId`, `appVersionId` and `uiMountPointTypeConfigs` (project sidebar mount), the reply notes that only Domino admins can create Extensions and the app must be published with identity propagation, and it says the app receives the originating context as query parameters on its root route (for a project sidebar mount, `projectId`) plus a per-request bearer token in the forwarded headers for calling Domino APIs.
+    FAIL if it omits `appVersionId` as optional, uses an API key, or says the context is delivered as environment variables.
+- name: extensions-route
+  type: regex
+  target: last_message
+  pattern: /api/extensions/beta/extensions
+- name: mount-config
+  type: regex
+  target: last_message
+  pattern: uiMountPointTypeConfigs
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-extensions)"'

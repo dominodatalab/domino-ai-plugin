@@ -1,0 +1,45 @@
+schema_version: '1.1'
+name: batch-score-dataset-nightly
+description: 'Model delivery vs endpoints: nightly bulk scoring is a scheduled batch Job with result files and email, not a Domino endpoint.'
+tags: [trigger, domino-model-delivery, model-delivery, disambiguation]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Every night I need to score the 2 million rows in the dataset `transactions` with model.pkl and have
+    the predictions file delivered to the fraud team by email. Nothing needs a real-time API. How do I
+    set this up in Domino?
+graders:
+- name: batch-job
+  type: llm
+  criteria: |
+    PASS if the reply sets up a scoring script run as a Domino Job (reading the mounted dataset at its mount path and writing a predictions file), schedules it from Jobs > Schedules with a Quartz cron expression, and uses the scheduled Job's email notification (the files the Job creates are its results; an `email.html` can customise the message) to deliver the predictions.
+    FAIL if it deploys a Domino endpoint for the nightly scoring, or says scheduled Jobs can be created through the public REST API.
+- name: not-model-endpoints
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-endpoints)"'
+  min: 0
+  max: 0
+  arm: both
+- name: not-model-serving
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-serving)"'
+  min: 0
+  max: 0
+  arm: both
+- name: quartz-or-cron
+  type: regex
+  target: last_message
+  flags: i
+  pattern: Quartz|cron
+- name: scheduled-job
+  type: regex
+  target: last_message
+  flags: i
+  pattern: Schedule
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-delivery|domino-jobs)"'

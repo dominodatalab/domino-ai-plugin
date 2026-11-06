@@ -10,7 +10,7 @@ https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/v
 ## Detect the layout
 
 Domino injects these into every execution
-(https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/manage-environment-variables/5-glossary-default-variables):
+(https://docs.domino.ai/cloud/reference/environment-variables):
 
 | Variable | Value |
 |---|---|

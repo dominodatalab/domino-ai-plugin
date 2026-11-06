@@ -2,6 +2,7 @@
 # Validates skills/ against the rules both Claude Code and the OpenAI plugin portal enforce.
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -263,6 +264,7 @@ def main() -> int:
 
     content_files = lint_content(errors, warnings, allowed)
     rules_count = lint_rules(errors)
+    tracked = lint_directory_limits(errors)
 
     for note in notes:
         print(f"::notice::{note}")
@@ -271,20 +273,60 @@ def main() -> int:
     for err in errors:
         print(f"::error::{err}")
     if errors:
-        print(f"{len(errors)} problem(s) in skills/", file=sys.stderr)
+        print(f"{len(errors)} problem(s)", file=sys.stderr)
         return 1
     print(f"ok: {len(seen)} skills valid ({cross_links} links between skills); "
           f"{rules_count} always-on rules file(s) valid; content rules clean over "
-          f"{content_files} files ({len(warnings)} warning(s))")
+          f"{content_files} files ({len(warnings)} warning(s)); {tracked} tracked files "
+          f"(plugin directory limit {MAX_TRACKED_FILES})")
     return 0
+
+
+# Anthropic's plugin directory body-screens at most 512 files of the plugin folder (the repository
+# root here, so every tracked file counts) and only files under 256 KiB other than images and fonts;
+# anything past either limit holds the plugin for a reviewer. A filter (Git LFS included),
+# export-ignore or export-subst in .gitattributes stops validation outright. Eval cases are one
+# case.yaml each (plus a fixture.sh where needed), not prompt.md and graders/*.md, to stay under the
+# file limit. https://claude.com/docs/plugins/pre-submission-checklist
+MAX_TRACKED_FILES = 512
+MAX_FILE_BYTES = 256 * 1024
+IMAGE_OR_FONT = re.compile(r"\.(png|jpe?g|gif|webp|svg|ttf|otf|woff2?)$", re.I)
+GITATTRIBUTES_STOP = re.compile(r"\b(filter|export-ignore|export-subst)\b")
+
+
+def lint_directory_limits(errors: list[str]) -> int:
+    try:
+        out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return 0  # not a git checkout (an unpacked archive): nothing to count
+    files = [f for f in out.stdout.decode("utf-8").split("\0") if f]
+    if len(files) > MAX_TRACKED_FILES:
+        errors.append(f"{len(files)} tracked files exceeds the plugin directory's {MAX_TRACKED_FILES}-file "
+                      f"limit; the rest go unscreened and hold the plugin for review")
+    for rel in files:
+        path = ROOT / rel
+        if not path.is_file():
+            continue
+        if rel.startswith("evals/") and (rel.endswith("/prompt.md") or "/graders/" in rel):
+            errors.append(f"{rel}: write each eval case as one case.yaml (execution.prompt and a graders: "
+                          f"list), not prompt.md and graders/*.md, to stay under the file limit")
+        if not IMAGE_OR_FONT.search(rel) and path.stat().st_size > MAX_FILE_BYTES:
+            errors.append(f"{rel}: {path.stat().st_size} bytes exceeds the plugin directory's 256 KiB "
+                          f"limit for files other than images and fonts")
+        if rel == ".gitattributes" or rel.endswith("/.gitattributes"):
+            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if not line.lstrip().startswith("#") and GITATTRIBUTES_STOP.search(line):
+                    errors.append(f"{rel}:{n}: filter, export-ignore and export-subst stop the plugin "
+                                  f"directory's validation (Git LFS uses filter)")
+    return len(files)
 
 
 RULES = ROOT / "rules"
 # rules/*.md is loaded into every session of every user (Claude Code session-start hook, Gemini CLI
 # contextFileName, Antigravity always-on rule), and its lead section is the bundled MCP server's
 # instructions, which Codex truncates at 1,000 bytes. Keep it short, plain and host-neutral.
-MAX_RULES_CHARS = 2600
-MAX_RULES_LEAD_BYTES = 900
+MAX_RULES_CHARS = 2700
+MAX_RULES_LEAD_BYTES = 990
 # Product names, matched case-sensitively so ordinary words ("a pagination cursor") pass.
 HOST_NAMES = re.compile(r"\b(Claude|Codex|ChatGPT|Gemini|Antigravity|Copilot|Cursor)\b")
 

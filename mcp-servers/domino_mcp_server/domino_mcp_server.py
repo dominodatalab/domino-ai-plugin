@@ -36,12 +36,14 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 # Variables the server reads for its own configuration (not the ones Domino injects).
 _CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_MCP_ENV_FILE",
-                "DOMINO_INSECURE_HTTP", "DOMINO_PLUGIN_HOST", "DOMINO_PLUGIN_TOKEN")
+                "DOMINO_INSECURE_HTTP", "CLAUDE_PLUGIN_OPTION_DOMINO_HOST",
+                "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN")
 
 # Values a host collects in its own settings UI and passes under these names (Claude Code plugin
 # options: `${user_config.domino_host}`, `${user_config.domino_token}`). They take precedence over
 # DOMINO_HOST and DOMINO_TOKEN from the environment, which take precedence over the env file.
-_PLUGIN_OPTIONS = (("DOMINO_PLUGIN_HOST", "DOMINO_HOST"), ("DOMINO_PLUGIN_TOKEN", "DOMINO_TOKEN"))
+_PLUGIN_OPTIONS = (("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", "DOMINO_HOST"),
+                   ("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "DOMINO_TOKEN"))
 
 # Where DOMINO_HOST and DOMINO_TOKEN came from, for get_domino_environment_info.
 _CONFIG_SOURCES: Dict[str, str] = {}
@@ -113,7 +115,7 @@ def _recover_domino_env(environ: Dict[str, str] | None = None, proc: str = "/pro
 def _env_file_path() -> Path:
     """Where the server reads DOMINO_HOST and DOMINO_TOKEN from when the host passes neither.
 
-    `uv --directory` runs this server with the plugin directory as its working directory, so a
+    `uv run --directory` runs this server with the plugin directory as its working directory, so a
     `.env` next to the user's project is never found. Use one documented location instead:
     $DOMINO_MCP_ENV_FILE, else $XDG_CONFIG_HOME/domino-mcp-server/.env, else
     ~/.config/domino-mcp-server/.env.
@@ -462,7 +464,7 @@ def _plugin_instructions() -> str | None:
     rules/domino.md is the single source for the plugin's always-on guidance. Hosts that load it
     directly (a session-start hook, a context file, an always-on rule) get the whole file; hosts
     that only surface MCP server instructions, such as Codex, get its lead section: everything
-    before the first "## " heading, without frontmatter, capped at 900 bytes.
+    before the first "## " heading, without frontmatter, capped at 990 bytes.
     """
     rules = Path(__file__).resolve().parents[2] / "rules" / "domino.md"
     try:
@@ -475,7 +477,7 @@ def _plugin_instructions() -> str | None:
     if match:
         text = match.group(1)
     lead = text.split("\n## ", 1)[0].strip()
-    return lead.encode("utf-8")[:900].decode("utf-8", "ignore") or None
+    return lead.encode("utf-8")[:990].decode("utf-8", "ignore") or None
 
 
 class _DominoServer(MCPServer):

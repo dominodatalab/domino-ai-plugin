@@ -1,4 +1,28 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: add-experiment-tracking
+description: Experiment setup uses deployment-unique experiment names built from Domino env vars.
+tags: [trigger, converted-command, experiments, domino-experiment-setup, domino-experiment-tracking]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    This is my training project in Domino. Add MLflow experiment tracking so each training run is logged: the helper in experiment_setup.py, wired into train.py.
+graders:
+- name: autolog
+  type: regex
+  target: {source: file, path: experiment_setup.py}
+  pattern: autolog
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-experiment-setup|(?:domino-)?experiment-tracking)"'
+- name: unique-experiment-name
+  type: regex
+  target: {source: file, path: experiment_setup.py}
+  pattern: DOMINO_STARTING_USERNAME|DOMINO_PROJECT_NAME
+- name: wired
+  type: regex
+  target: {source: file, path: train.py}
+  pattern: experiment_setup|set_experiment

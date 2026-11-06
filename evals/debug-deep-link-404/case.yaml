@@ -1,4 +1,30 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: debug-deep-link-404
+description: 'Disambiguation: a deep-link 404 on a published Vite app loads domino-debug-proxy and finds the missing SPA fallback.'
+tags: [trigger, domino-debug-proxy, apps, disambiguation]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    My published Vite + React app on Domino loads fine on its home route, but refreshing the browser on
+    /reports returns a 404 from the app. Look at the config here and tell me what is wrong. Do not edit
+    anything yet.
+graders:
+- name: finds-spa-fallback
+  type: llm
+  criteria: |
+    PASS if the reply identifies that `serve` is run without the `-s` (single-page application fallback) flag in app.sh, so client-side routes such as /reports are not rewritten to index.html, and proposes `npx serve -s dist -l 8888` (or an equivalent SPA fallback) as the fix. Noting that the rest of the config (base './', host 0.0.0.0, port 8888, build step) is already correct is fine.
+    FAIL if it misses the missing `-s` flag, or claims it already changed a file.
+- name: not-app-init
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-app-init)"'
+  min: 0
+  max: 0
+  arm: both
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-debug-proxy)"'

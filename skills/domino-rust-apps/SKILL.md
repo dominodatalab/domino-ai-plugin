@@ -10,6 +10,8 @@ Applies to Domino 6.3 and Domino Cloud.
 
 Choose Rust for Apps where latency, throughput or correctness matter more than iteration speed: the compiler and Clippy reject whole classes of bugs before anything runs. A Rust App is **built once** in a Workspace or Job and `app.sh` only runs the binary, so App Preview and every deployment start in seconds.
 
+Like every App it must be idempotent: it restarts at any time and can run as several replicas at once, so startup writes nothing (migrate and seed in a Job), each write is an upsert or carries an idempotency key under a unique constraint, so a retry stores it once, and state lives in a database or Dataset ([details](../domino-apps/FRAMEWORKS.md#make-the-app-idempotent)).
+
 Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences are under "DFS Projects".
 
 ## Workflow
@@ -24,7 +26,6 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 
 - **Never compile in `app.sh`.** Every Preview start, live sync, restart and replica runs it; a build there takes minutes and needs crates.io.
 - **Build where the App runs.** The binary links the environment's glibc and targets one CPU architecture. Hardware tiers can run on different node types (amd64 or arm64, different CPU generations), so build on the App's environment and tier, or in a Job on that tier; `app.sh` refuses a binary built for another architecture.
-- **Startup changes nothing.** Migrations, seeding and Dataset preparation run as a Job before publishing; see [domino-apps](../domino-apps/FRAMEWORKS.md#startup-must-not-change-state).
 - **Commit `Cargo.lock` and build with `--locked`**, so the binary uses the dependency versions you tested.
 - **Never commit `target/`**: one Workspace build holds hundreds of MB to GBs. `.gitignore` excludes it.
 - **Secrets** come from Project environment variables read by the server (`DATABASE_URL`, `MODEL_API_URL`, `MODEL_API_TOKEN` in the template), never from files in the repository.
@@ -65,13 +66,9 @@ The environment installs rust-analyzer. Check it with `rust-analyzer --version`,
 - Build with `DIST_DIR=dist bash scripts/build-dist.sh` and save with **File Changes > Sync to Domino**; `app.sh` finds `dist/`.
 - DFS has no Git, so `.githooks` does nothing; rely on `scripts/check.sh` and the agent hooks.
 
-## Keeping the binary in Git instead
-
-Run `DIST_DIR=dist bash scripts/build-dist.sh` and commit the new `dist/<label>/` and `dist/<label>.stamp` with the sources, only for builds you publish. Every committed binary stays in history and in every clone (Domino does not support Git LFS), so keep `strip = true`.
-
 ## Reference files
 
 - [ENVIRONMENT.md](./ENVIRONMENT.md): Dockerfile instructions, upgrades, mirrors and offline builds
-- [APP.md](./APP.md): the axum template, proxy rules, identity, Postgres, model calls, outbound TLS and proxies, how the binary is shipped
+- [APP.md](./APP.md): the axum template, proxy rules, identity, Postgres, model calls, outbound TLS and proxies, how the binary is shipped (or kept in Git)
 - [TOOLING.md](./TOOLING.md): lints, tests, cargo-deny, build profiles, `target/` size, LSP and hooks per IDE and agent
 - [PROA.md](./PROA.md): Proa sites (server-rendered pages and islands) as Domino Apps

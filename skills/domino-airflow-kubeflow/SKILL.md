@@ -29,8 +29,8 @@ lives in the Domino project. Domino keeps reproducibility, the orchestrator keep
 2. **A token**: a Personal Access Token for a pipeline that acts as you, or a service-account
    token for unattended automation, created in Domino and held in the orchestrator's own secret
    mechanism (Domino variables are not readable there). Legacy user API keys are deprecated; do
-   not copy the `DOMINO_API_KEY` / `DOMINO_USER_API_KEY` the product page and python-domino's
-   example still show.
+   not copy the `DOMINO_USER_API_KEY` the product page and python-domino's example still
+   show.
    https://docs.domino.ai/cloud/reference/api/domino-api-authentication
 3. **Project id and command** per step, plus optional environment id and hardware tier id.
 
@@ -103,8 +103,8 @@ components, pipeline, secret creation and logs on failure: [KUBEFLOW.md](./KUBEF
   fails at client creation, not at Job start.
 - Default `max_poll_time` is 6000 s (100 min); longer Jobs need a larger value or the task fails
   while the Job keeps running.
-- python-domino reads `DOMINO_API_HOST` and `DOMINO_TOKEN_FILE` from the environment; the
-  product page's `DOMINO_API_KEY` is an Airflow Variable name, not something the SDK reads.
+- python-domino reads `DOMINO_API_HOST`, `DOMINO_TOKEN_FILE` and the deprecated
+  `DOMINO_USER_API_KEY` from the environment; pass `auth_token` instead of setting the key.
 - Each step is a separate Job with its own input commit; hand data between steps through
   Datasets, Data Sources or the output commit, not the local filesystem.
 

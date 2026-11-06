@@ -1,0 +1,44 @@
+schema_version: '1.1'
+name: kubeflow-component-runs-domino-job
+description: 'Kubeflow Pipelines: a KFP component starts a Domino Job over REST with a bearer token from a secret and polls it.'
+tags: [trigger, domino-airflow-kubeflow, orchestration]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Write a Kubeflow Pipelines v2 component that starts the Domino Job `python score.py` in project id
+    64f0c0ffee11223344556677, waits for it, and returns the Job id. The pipeline runs on our own
+    cluster, not in Domino. How should the component get its Domino credential? Put the code in your
+    reply, not in files.
+graders:
+- name: bearer
+  type: regex
+  target: last_message
+  pattern: Bearer
+- name: jobs-route
+  type: regex
+  target: last_message
+  pattern: /api/jobs/v1/jobs
+- name: kfp-component
+  type: llm
+  criteria: |
+    PASS if the component (a `@dsl.component` using `requests`) posts to `/api/jobs/v1/jobs` with `projectId` and `runCommand`, polls `GET /api/jobs/beta/jobs/{jobId}` until `status.isCompleted` or a terminal `executionStatus`, and reads a Personal Access Token or Domino service-account token from a Kubernetes Secret injected as an environment variable, sent as `Authorization: Bearer` to the deployment URL.
+    FAIL if it uses a legacy API key, hard-codes the token in the pipeline source, or relies on `DOMINO_API_PROXY` or `localhost:8899` inside the component.
+- name: kfp
+  type: regex
+  target: last_message
+  pattern: dsl\.component|from kfp
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: no-in-run-auth
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \$\{?DOMINO_API_PROXY\}?/|environ(\.get)?\(\s*[\x27"]DOMINO_API_PROXY|environ\[\s*[\x27"]DOMINO_API_PROXY|getenv\(\s*[\x27"]DOMINO_API_PROXY|[\x27"]https?://localhost:8899|curl[^\n]*localhost:8899
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-airflow-kubeflow)"'

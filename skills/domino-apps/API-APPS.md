@@ -11,8 +11,8 @@ Connectivity check:
 ```bash
 # in a Domino run: the proxy adds the credential
 curl -s "$DOMINO_API_PROXY/api/apps/v1/apps?limit=1"
-# outside a run: deployment URL and a Personal Access Token or service account token
-curl -s -H "Authorization: Bearer $DOMINO_API_TOKEN" "$DOMINO_API_HOST/api/apps/v1/apps?limit=1"
+# outside a run: DOMINO_API_HOST is the deployment URL, PAT a Personal Access Token or service account token
+curl -s -H "Authorization: Bearer $PAT" "$DOMINO_API_HOST/api/apps/v1/apps?limit=1"
 ```
 
 The examples below use the in-run form; outside a run add the `Authorization` header and use the deployment URL.
@@ -95,4 +95,4 @@ Management calls go to the platform API base above. Viewers open the `url` field
 | 422 on publish or start | Entry point or configuration type differs from `targetAppId`; `vanityUrl` or `renderIFrame` override on a draft start |
 | Deploy blocked | A governance policy gates **Deploy** until approvals are complete; see the `domino-governance` skill |
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/apps/publish-and-deploy-app-versions (same content under `/6.3/`).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/publish (same content under `/6.3/`).

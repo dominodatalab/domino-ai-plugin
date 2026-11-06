@@ -85,6 +85,7 @@ Skill format:
 Release mechanics:
 
 - [ ] `.claude-plugin/plugin.json` `version`: **unchanged** for a PR to `develop`; bumped to the next `YYYY.XYY.N` only in the `develop` → `main` release PR or on a `release-X.Y` branch (`N` never reused; on `release-X.Y` the version's line must equal the branch). CI enforces both directions. After a bump, `scripts/sync-manifests.py` updates the portable `plugin.json`.
+- [ ] Release promotion PR only: every pinned version was refreshed on `develop` first (CONTRIBUTING.md "Refresh pinned versions every release").
 - [ ] README skill table and counts updated for any added, renamed or removed component.
 - [ ] A `claude plugin eval` case added or updated under `evals/` for each skill touched.
 - [ ] New skill or write-path change: a live end-to-end round with `evals/e2e/` met the bar in AGENTS.md "Testing new and updated skills" (the orchestrator iterated on the skill with the Haiku tester; results under Testing).

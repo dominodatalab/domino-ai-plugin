@@ -42,7 +42,7 @@ The App's entry point is `app-code/app.sh`; it serves the build in `app-code/dis
 | Variable | `ENVIRONMENT_ID` | Compute Environment ID |
 | Variable | `HARDWARE_TIER_ID` | Hardware Tier ID, for example `small-k8s` |
 
-Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate. The runner is outside Domino and cannot read Domino Project or user environment variables, so the GitHub secret is its own copy of a token created in Domino (**Account Settings > Personal Access Token**, or a service account token).
+Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate. The runner is outside Domino and cannot read Domino Project or user environment variables, so the GitHub secret is its own copy of a token created in Domino (**Account Settings > Personal Access Token**, or a service account token). `DOMINO_URL` and `DOMINO_TOKEN` here are GitHub names the runner reads, not variables Domino injects.
 
 ## Workflow
 
@@ -67,11 +67,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'uat' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
           cache: npm
           cache-dependency-path: app-code/package-lock.json
 
@@ -88,7 +88,7 @@ jobs:
           git push origin "build-$LABEL"
           echo "BUILD_LABEL=$LABEL" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'   # matches the Domino Standard Environment's Python 3.12
 

@@ -1,0 +1,35 @@
+schema_version: '1.1'
+name: add-system-packages-to-environment
+description: 'Environments: Dockerfile instructions without FROM, USER root for installs then USER ubuntu.'
+tags: [trigger, domino-environments, environments]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I need libpq-dev, psycopg2-binary and pandas==2.3.2 permanently available in my Domino compute
+    environment. Give me the Dockerfile instructions to paste into the environment definition and tell
+    me where they go. Put the code in your reply, not in files.
+graders:
+- name: dockerfile-rules
+  type: llm
+  criteria: |
+    PASS if the Dockerfile instructions omit any `FROM` line (the base image is chosen in the environment's settings), switch to `USER root` before apt/pip installs and back to `USER ubuntu` afterwards, and the reply says the block goes into the environment's Dockerfile Instructions (Edit Definition) followed by a build / new revision.
+    FAIL if it includes a `FROM` line, ends as `USER domino`, or tells the user to put the packages only in requirements.txt as the permanent solution.
+- name: no-user-domino
+  type: regex
+  target: last_message
+  match: not_contains
+  flags: m
+  pattern: ^\s*USER domino\s*$
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-environments)"'
+- name: user-root
+  type: regex
+  target: last_message
+  pattern: USER root
+- name: user-ubuntu
+  type: regex
+  target: last_message
+  pattern: USER ubuntu
