@@ -74,7 +74,7 @@ claude plugin eval . --case start-job-via-rest-and-schedule --runs 1 --ablation 
 claude plugin eval . --tag domino-datasets --runs 1 --ablation none --no-publish --scaffold --allow-tools Write Edit
 claude plugin eval . --tag negative --runs 1 --ablation none --no-publish
 
-# full suite, default three runs plus the no-plugin baseline (58 cases x 6 runs; roughly $20-100
+# full suite, default three runs plus the no-plugin baseline (59 cases x 6 runs; roughly $20-100
 # with the judge, so set the ceiling you can afford; hitting it exits 2 with a partial results.json)
 claude plugin eval . --scaffold --allow-tools Write Edit --no-publish -j 3 --max-cost-usd 60 --json results.json
 ```
