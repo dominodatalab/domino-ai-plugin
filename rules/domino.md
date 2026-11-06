@@ -7,6 +7,7 @@ description: "Domino Data Lab: API proxy auth, where to write code, artifacts an
 Inside Domino (DOMINO_API_PROXY set) call $DOMINO_API_PROXY/<path> with no auth header; the proxy adds your token. Outside Domino: Personal Access Token as Authorization: Bearer. API keys (X-Domino-Api-Key, DOMINO_USER_API_KEY) are deprecated; never print or hard-code tokens.
 Only DOMINO_WORKING_DIR (and /mnt/artifacts if Git-based) survives a stop, and it is small.
 Use Domino primitives, not third-party services: Datasets/Volumes (bulk data), Data Sources, Jobs/Flows, Apps/endpoints, LLM Gateway if present, Project/User variables (secrets).
+Make Apps idempotent: they restart and run as several replicas at any time.
 Make error states unrepresentable; keep commits atomic.
 Load the matching domino-* skill before the docs.
 Docs: domino_docs MCP (search_domino, version Cloud or 6.3; query_docs_filesystem_domino) or docs.domino.ai/llms.txt.
