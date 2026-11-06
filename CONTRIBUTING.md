@@ -518,6 +518,25 @@ How each channel receives a release:
   releases from `main` as latest, so a backport never moves default users; `gemini extensions
   update dominodatalab` picks up the next release. Nothing else to do.
 
+### Refresh pinned versions every release
+
+Before each promotion PR, land one PR on `develop` that moves every pinned version to the newest
+stable release (LTS where the line has one), build-tests it, and pins it exactly: never `@latest`,
+a version range or a floating tag. Check upstream for each, not this list:
+
+- the MCP server's `uv.lock` (`uv lock --upgrade` in `mcp-servers/domino_mcp_server`, then the
+  server tests and `uv lock --check`; hosts start it with `uv run --frozen`, which installs exactly
+  what the lock says);
+- SHA-pinned GitHub Actions, in `.github/workflows/` and in skill examples (`# vX.Y.Z` after the
+  SHA);
+- tools a skill or an `evals/e2e/` setup step installs: Node (LTS), nvm, `create-vite`, the Rust
+  toolchain, `cargo-nextest`, `cargo-deny` and their checksums.
+
+Two kinds of pin follow something else and move only with it: Python packages pinned to the
+Domino Standard Environment's versions, and commits pinned until upstream publishes a release
+(Proa). `.github/dependabot.yml` keeps Actions and `uv.lock` current between releases; the
+refresh catches everything it does not cover.
+
 ### Release candidates
 
 A release that should be tested internally before it goes public is cut as a candidate first.

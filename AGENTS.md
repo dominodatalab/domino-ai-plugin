@@ -71,6 +71,11 @@ customer environments from a **public** repository. Three facts drive most rules
   the `sha` for `dominodatalab` in `anthropics/claude-plugins-official`.
 - Run `scripts/check-version.sh origin/<your PR's base branch>` before pushing. It applies
   the rules CI applies and prints why it fails.
+- Every release refreshes every pinned version first: one PR to `develop` before the promotion
+  PR moves each pin (`uv.lock`, SHA-pinned Actions, Node, nvm, `create-vite`, Rust tools) to the
+  newest stable release, LTS where there is one, build-tested and pinned exactly. Pins to the
+  Domino Standard Environment's versions and pre-release commits move only with what they track.
+  CONTRIBUTING.md "Refresh pinned versions every release" has the list.
 
 ## Requirements for skill content
 
