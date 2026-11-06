@@ -1,0 +1,46 @@
+schema_version: '1.1'
+name: app-persists-feedback-to-database
+description: 'Apps: an App that writes to a database is idempotent: schema setup outside startup (or atomic IF NOT EXISTS), app.sh only starts the server, submissions safe to retry, nothing kept on local disk.'
+tags: [trigger, domino-app-init, domino-apps, apps]
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    Build a small Flask App for our Domino Project where teammates submit feedback (their name and a comment)
+    and see the latest 20 entries. Keep the feedback in our team's PostgreSQL database; the connection string is
+    in the Project environment variable DATABASE_URL. Write app.py and app.sh in this directory, plus anything
+    else the App needs, and tell me what to run before I publish it.
+graders:
+- name: app-sh-only-starts
+  type: regex
+  target: {source: file, path: app.sh}
+  match: not_contains
+  flags: i
+  pattern: CREATE\s+TABLE|\bpsql\b|alembic|db\s+upgrade|migrat
+- name: no-local-storage
+  type: regex
+  target: {source: file, path: app.py}
+  match: not_contains
+  pattern: sqlite3|\.db['"]|\.json['"],\s*['"]a
+- name: no-plain-create-table-in-app
+  type: regex
+  target: {source: file, path: app.py}
+  match: not_contains
+  flags: i
+  pattern: CREATE\s+TABLE(?!\s+IF\s+NOT\s+EXISTS)
+- name: retry-safe-insert
+  type: llm
+  focus: {source: file, path: app.py}
+  criteria: |
+    PASS if storing a submission is safe to retry: the insert carries an idempotency key (for example a client-generated id sent with the form) or a natural key under a unique constraint, and uses INSERT ... ON CONFLICT DO NOTHING / DO UPDATE or an equivalent upsert, so the same submission sent twice stores one row.
+    FAIL if every request appends a new row with nothing that lets a retried submission be recognised.
+- name: schema-outside-startup
+  type: llm
+  focus: last_message
+  criteria: |
+    PASS if the table is created by a step meant to run once before publishing (a Domino Job, or a setup or migration script the reply tells the user to run as a Job or once before publishing), or, if the App creates it at startup, the reply's code uses CREATE TABLE IF NOT EXISTS or an equivalent atomic statement; and the reply keeps the feedback only in the database.
+    FAIL if the App runs a plain CREATE TABLE or a migration tool on every start, or keeps feedback in memory, a local file or SQLite.
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-app-init|domino-apps)"'
