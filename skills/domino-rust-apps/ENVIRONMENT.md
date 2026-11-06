@@ -21,7 +21,7 @@ RUN set -eux; \
     ./rustup-init -y --no-modify-path --profile minimal \
       --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src; \
     rm -f rustup-init rustup-init.sha256; \
-    nv=0.9.148; f=cargo-nextest-$nv-$arch-unknown-linux-gnu; \
+    nv=0.9.151; f=cargo-nextest-$nv-$arch-unknown-linux-gnu; \
     curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-$nv/$f.tar.gz; \
     curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-$nv/$f.sha256; \
     sha256sum -c $f.sha256; tar -xzf $f.tar.gz -C $CARGO_HOME/bin; \
