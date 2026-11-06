@@ -1,0 +1,22 @@
+schema_version: '1.1'
+name: scaffold-streamlit-app
+description: A converted command (domino-app-init) fires from natural phrasing and writes a proxy-safe app.sh.
+tags: [trigger, converted-command, apps, domino-app-init]
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write]
+  prompt: |
+    I want to build a small Streamlit dashboard that I'll publish as an app in Domino. Set up the starter files in this folder for me.
+graders:
+- name: binds-all-interfaces
+  type: regex
+  target: {source: file, path: app.sh}
+  pattern: server\.address[ =]+0\.0\.0\.0
+- name: port-8888
+  type: regex
+  target: {source: file, path: app.sh}
+  pattern: server\.port[ =]+8888
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-app-init)"'

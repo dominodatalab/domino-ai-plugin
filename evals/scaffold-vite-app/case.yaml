@@ -1,4 +1,46 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: scaffold-vite-app
+description: 'Vite Apps: an existing Vite React app is made publishable with an app.sh that serves a build made once, never installing or building at start.'
+tags: [trigger, domino-app-init, domino-apps, apps, vite]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    This folder has a React dashboard I made with Vite. Get it ready to publish as a Domino App in our Git-based
+    Project. It will call one of our model endpoints, so give it a small backend route for that. Tell me what I need
+    to do in Domino before I publish it, and how I'd roll back if a release goes wrong.
+graders:
+- name: app-sh-no-build
+  type: regex
+  target: {source: file, path: app.sh}
+  match: not_contains
+  pattern: \bnpm\s+(ci|i|install|run)\b|\bvite\s+build\b|\bnpx\b
+- name: app-sh-serves-node
+  type: regex
+  target: {source: file, path: app.sh}
+  pattern: \bnode\s+server\.js
+- name: build-once-explained
+  type: llm
+  criteria: |
+    PASS if the reply tells the user (1) to build the app once in a Workspace or Job (for example with
+    `scripts/build-dist.sh`) and save the build before publishing, after which app.sh only serves that build and
+    never runs npm; (2) to set the model endpoint URL and token as Domino Project environment variables read by the
+    backend, not as `VITE_` variables; and (3) how to roll back, by starting an earlier App version or by reverting
+    the code so the kept previous build is served again.
+    FAIL if it tells the user to run `npm ci` or `npm run build` inside app.sh, puts the model token in a `VITE_`
+    variable or the repository, or says nothing about rolling back.
+- name: build-script
+  type: regex
+  target: {source: file, path: scripts/build-dist.sh}
+  pattern: npm\s+run\s+build
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-app-init|domino-apps)"'
+- name: vite-relative-base
+  type: regex
+  target: {source: file, path: vite.config.js}
+  pattern: base\s*:\s*['"]\./['"]

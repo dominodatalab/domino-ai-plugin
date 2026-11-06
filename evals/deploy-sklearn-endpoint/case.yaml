@@ -1,4 +1,35 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: deploy-sklearn-endpoint
+description: 'Model endpoints: predict function contract, {"data": ...} payload, Basic auth with token:token for a restricted sync endpoint, fixed instance count.'
+tags: [trigger, domino-model-endpoints, model-deployment]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I saved a scikit-learn classifier to model.pkl in this project. Walk me through deploying it as a
+    restricted synchronous Domino endpoint and show the curl call to get a prediction, including how to
+    authenticate. Put the code in your reply, not in files.
+graders:
+- name: data-payload
+  type: regex
+  target: last_message
+  pattern: '\\?[\x27"](data|parameters)\\?[\x27"]\s*:'
+- name: endpoint-contract
+  type: llm
+  criteria: |
+    PASS if ALL hold:
+    1. The prediction code is a Python function in a project file that takes the request inputs as arguments and returns a JSON-serialisable value; the endpoint is created from the Domino UI (Deployments > Endpoints) or the `/api/modelServing/v1/modelApis` API by naming that file and function.
+    2. The curl request posts JSON in one of the documented forms, `{"data": {...}}` with named arguments or `{"parameters": [...]}` with positional ones, to the endpoint's URL (ending in `.../latest/model` or the URL shown on the endpoint page).
+    3. For a restricted synchronous endpoint the call uses HTTP Basic authentication with the model access token as both username and password (for example `curl -u TOKEN:TOKEN`), or it says an unrestricted endpoint needs no token. Mentioning that Bearer is for asynchronous endpoints is fine but not required.
+    FAIL if it sends `Authorization: Bearer` as the way to call a synchronous restricted endpoint, describes Kubernetes HPA / scale-to-zero autoscaling, or claims the endpoint image installs the project's requirements.txt (Domino endpoint images do not read requirements.txt; packages come from the environment's Dockerfile instructions).
+- name: no-autoscaling-yaml
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: minReplicas\s*:|kind:\s*HorizontalPodAutoscaler|apiVersion:\s*autoscaling/v2
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-endpoints|domino-model-serving)"'

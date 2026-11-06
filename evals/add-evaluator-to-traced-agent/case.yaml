@@ -1,4 +1,43 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: add-evaluator-to-traced-agent
+description: 'GenAI tracing: evaluators receive the span; DominoRun has no run_name; results grouped in one run.'
+tags: [trigger, domino-genai-tracing, genai]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    agent.py is already traced with @add_tracing. Add an evaluator in agent.py through the Domino SDK's evaluator hook
+    on that decorator, scoring each answer for relevance (an LLM-as-judge is fine) so the score appears on the
+    trace in Domino, and write run_eval.py that runs three sample questions as one experiment run.
+graders:
+- name: evaluator-kwarg
+  type: regex
+  target: {source: file, path: agent.py}
+  pattern: evaluator=
+- name: no-run-id-attr
+  type: regex
+  target: {source: file, path: run_eval.py}
+  match: not_contains
+  flags: m
+  pattern: ^(?!\s*#).*(?<!\.info)\.run_id\b
+- name: no-run-name-kwarg
+  type: regex
+  target: {source: file, path: run_eval.py}
+  match: not_contains
+  pattern: Domino(Run|AgentContext)\([^)]*run_name
+- name: run-context
+  type: regex
+  target: {source: file, path: run_eval.py}
+  pattern: DominoRun|DominoAgentContext
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-genai-tracing)"'
+- name: span-evaluator
+  type: llm
+  focus: {source: file, path: agent.py}
+  criteria: |
+    PASS if the evaluator passed to `@add_tracing(evaluator=...)` is a function that takes the completed span as its single argument and reads `span.inputs` / `span.outputs` (or equivalent attributes of that span object), returning a dict of metric name to number or string.
+    FAIL if the evaluator is written with an `(inputs, output)` or `(question, answer)` signature as what the SDK calls.

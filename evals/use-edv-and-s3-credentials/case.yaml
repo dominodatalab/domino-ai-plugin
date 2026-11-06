@@ -1,0 +1,25 @@
+schema_version: '1.1'
+name: use-edv-and-s3-credentials
+description: 'Data connectivity: EDV mount path /domino/edv/<name> and credential-safe S3 options (Domino data source, IRSA).'
+tags: [trigger, domino-data-connectivity, data]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Our admin registered an external data volume named `lake-archive` and shared it with me. How do I
+    use it in my project and read it from a Job? Separately, what are my options to read S3 from Domino
+    without pasting AWS keys into code?
+graders:
+- name: edv-and-s3
+  type: llm
+  criteria: |
+    PASS if the reply (a) adds the EDV to the project under Data > External Data Volumes and reads it at `/domino/edv/lake-archive` in executions, and (b) for S3 offers credential-free or credential-managed paths such as a Domino S3 data source (queried through the Data API), AWS IRSA / credential propagation, or an admin-configured S3 mount, instead of embedding access keys in code.
+    FAIL if it tells the user to put AWS access keys in the script or gives `/mnt/external-data/...` as the EDV path.
+- name: edv-path
+  type: regex
+  target: last_message
+  pattern: /domino/edv/lake-archive
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-data-connectivity)"'

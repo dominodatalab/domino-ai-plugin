@@ -1,0 +1,36 @@
+schema_version: '1.1'
+name: compare-runs-register-model
+description: 'Experiment tracking: compare runs with MLflow search, register the best run''s model with MLflow registry APIs.'
+tags: [trigger, domino-experiment-tracking, experiments, disambiguation]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I have logged twenty runs to my Domino experiment `churn-alice`. From code, find the run with the
+    highest `val_auc`, and register that run's logged model in the Domino model registry as `churn-clf`.
+    Put the code in your reply, not in files.
+graders:
+- name: not-experiment-setup
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-experiment-setup)"'
+  min: 0
+  max: 0
+  arm: both
+- name: register
+  type: regex
+  target: last_message
+  pattern: register_model|create_model_version
+- name: registry-flow
+  type: llm
+  criteria: |
+    PASS if the code uses MLflow against Domino's preconfigured tracking server (no custom tracking URI needed), finds the best run with `mlflow.search_runs` or `MlflowClient().search_runs` ordered by `metrics.val_auc`, and registers the model with `mlflow.register_model("runs:/<run_id>/<artifact_path>", "churn-clf")` or `MlflowClient().create_model_version(...)` after creating the registered model.
+    FAIL if it invents Domino-specific registry functions outside MLflow, or requires an API key.
+- name: search-runs
+  type: regex
+  target: last_message
+  pattern: search_runs|MlflowClient
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-experiment-tracking)"'

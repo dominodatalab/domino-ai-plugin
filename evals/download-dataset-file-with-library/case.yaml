@@ -1,0 +1,40 @@
+schema_version: '1.1'
+name: download-dataset-file-with-library
+description: 'Data SDK: DatasetClient().get_dataset(name) and file download methods that exist in domino-data.'
+tags: [trigger, domino-data-sdk, data, disambiguation]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Using the Domino Data API Python library (not the mounted filesystem), download
+    `features/v3.parquet` from the Domino dataset `features-store` to the local disk in a script that
+    runs in a Job. Put the code in your reply, not in files.
+graders:
+- name: dataset-client-import
+  type: regex
+  target: last_message
+  pattern: from domino(_data)?\.datasets import DatasetClient
+- name: download-method
+  type: regex
+  target: last_message
+  pattern: \.download_file\(|\.download\(|\.get\(
+- name: get-dataset
+  type: regex
+  target: last_message
+  pattern: get_dataset\(
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=|api_key\s*=
+- name: not-netapp
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(netapp-volumes)"'
+  min: 0
+  max: 0
+  arm: both
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-data-sdk)"'

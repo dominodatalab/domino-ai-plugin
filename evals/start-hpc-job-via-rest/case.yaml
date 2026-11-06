@@ -1,0 +1,57 @@
+schema_version: '1.1'
+name: start-hpc-job-via-rest
+description: 'HPC Slurm: start an HPC Job with POST /api/hpc/v1/jobs (filePath relative to the Project root, dataPlaneId, config.walltime), find it in the list, poll its status and page its logs; no standard Jobs route, no invented SDK method, no legacy API key.'
+tags: [trigger, domino-hpc-slurm, rest]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Our Domino admin enabled HPC Job submission. From Python running inside a Domino Workspace, start
+    the Slurm script `hpc/sweep.sh` that is committed in this Project as an HPC Job on data plane
+    `6a17175ab03cb818f0f9c25f` with 4 CPUs and a two-hour wall time, then show how to find the new
+    job, wait for it to finish, and print its logs. Use the REST API. Put the code in your reply, not
+    in files.
+graders:
+- name: data-plane-field
+  type: regex
+  target: last_message
+  pattern: '[\x27"]dataPlaneId[\x27"]\s*:'
+- name: file-path-field
+  type: regex
+  target: last_message
+  pattern: '[\x27"]filePath[\x27"]\s*:\s*[\x27"]hpc/sweep\.sh[\x27"]'
+- name: hpc-route
+  type: regex
+  target: last_message
+  pattern: /api/hpc/v1/jobs
+- name: in-run-auth
+  type: regex
+  target: last_message
+  pattern: DOMINO_API_PROXY|localhost:8899/access-token
+- name: logs-route
+  type: regex
+  target: last_message
+  pattern: /logs
+- name: no-invented-sdk
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \.job_start\(|\.hpc_job_start\(|\.start_hpc_job\(|from domino import Domino
+- name: no-legacy-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key|DOMINO_USER_API_KEY
+- name: no-standard-jobs-route
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: '["\x27][^"\x27\n]*/api/jobs/v1/jobs[^"\x27\n]*["\x27]|[\x27"]clusterType[\x27"]\s*:\s*[\x27"]slurm[\x27"]'
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-hpc-slurm)"'
+- name: walltime-field
+  type: regex
+  target: last_message
+  pattern: '[\x27"]walltime[\x27"]\s*:\s*[\x27"]0?2:00:00[\x27"]'

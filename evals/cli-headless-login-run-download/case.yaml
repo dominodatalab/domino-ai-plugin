@@ -1,0 +1,38 @@
+schema_version: '1.1'
+name: cli-headless-login-run-download
+description: 'Domino CLI: device-code login without a browser, get a DFS project, run with --wait, download-results with --filter.'
+tags: [trigger, domino-cli, cli]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    I am on a headless Linux server over SSH with no browser. With the Domino command-line client: sign
+    in to https://domino.example.com, pull my Domino File System project alice/churn, run train.py as a
+    job with the argument 20 and wait for it, then download only the files under results/ from that run.
+    Put the code in your reply, not in files.
+graders:
+- name: device-login
+  type: regex
+  target: last_message
+  pattern: domino login --device
+- name: download-results
+  type: regex
+  target: last_message
+  pattern: domino download-results\s+--filter
+- name: get-project
+  type: regex
+  target: last_message
+  pattern: domino get alice/churn
+- name: no-invented-login
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: domino login\s+--(token|api-key|password)|X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: run-wait
+  type: regex
+  target: last_message
+  pattern: domino run --wait\s+train\.py\s+20
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-cli)"'

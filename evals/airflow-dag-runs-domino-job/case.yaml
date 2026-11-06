@@ -1,0 +1,44 @@
+schema_version: '1.1'
+name: airflow-dag-runs-domino-job
+description: 'Airflow: a task starts a Domino Job through the Jobs API, polls to a terminal state, fails on non-success; worker auth is a PAT or service-account bearer.'
+tags: [trigger, domino-airflow-kubeflow, orchestration]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    We run Apache Airflow 2.x outside Domino. Write a DAG task that starts the Domino Job `python
+    train.py` in project id 64f0c0ffee11223344556677 and fails the task unless the Job succeeds, and
+    tell me how the worker authenticates to Domino. Put the code in your reply, not in files.
+graders:
+- name: airflow-task
+  type: llm
+  criteria: |
+    PASS if the task starts the Job with `POST /api/jobs/v1/jobs` (body with `projectId` and `runCommand`) or python-domino's `job_start` / `DominoOperator`, waits by polling the Job status (`GET /api/jobs/beta/jobs/{jobId}` reading `status.executionStatus`, or a blocking SDK call), raises or fails the task when the Job ends in any state other than Succeeded (Failed, Stopped, Error), and authenticates with a Personal Access Token or Domino service-account token kept in Airflow's secret store or a token file, sent as `Authorization: Bearer` to the deployment URL.
+    FAIL if it tells the user to store a legacy Domino API key (`DOMINO_API_KEY` / `X-Domino-Api-Key`) as the credential, uses `DOMINO_API_PROXY` or `localhost:8899` on the Airflow worker, or treats a Failed or Stopped Job as success.
+- name: bearer-or-token-file
+  type: regex
+  target: last_message
+  pattern: Bearer|DOMINO_TOKEN_FILE|domino_token_file
+- name: jobs-api-or-operator
+  type: regex
+  target: last_message
+  pattern: /api/jobs/v1/jobs|DominoOperator|job_start
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: no-in-run-auth
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \$\{?DOMINO_API_PROXY\}?/|environ(\.get)?\(\s*[\x27"]DOMINO_API_PROXY|environ\[\s*[\x27"]DOMINO_API_PROXY|getenv\(\s*[\x27"]DOMINO_API_PROXY|[\x27"]https?://localhost:8899|curl[^\n]*localhost:8899
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-airflow-kubeflow)"'
+- name: terminal-status
+  type: regex
+  target: last_message
+  flags: i
+  pattern: Succeeded

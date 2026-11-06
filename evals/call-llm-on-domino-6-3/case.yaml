@@ -1,0 +1,20 @@
+schema_version: '1.1'
+name: call-llm-on-domino-6-3
+description: 'LLM access on self-managed Domino 6.3: provider env var is the default; the legacy AI Gateway is off unless an admin enabled it.'
+tags: [trigger, domino-llm-access, llms, compat]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    Our self-managed Domino is version 6.3. Which options do I have to call an external LLM provider
+    (Anthropic) from a Workspace, and which one should I use by default?
+graders:
+- name: gated-answer
+  type: llm
+  criteria: |
+    PASS if the reply recommends the provider SDK with the API key stored as a Domino environment variable (read via os.environ) as the default path, and, if it mentions the AI Gateway at all, says it is legacy and not enabled by default on 6.3 (usable only where an administrator enabled it). Mentioning LLM Gateway 2.0 as a separately distributed app is fine.
+    FAIL if it presents the AI Gateway ("Gateway LLMs", /api/aigateway routes, MLflow deployments client) as the default or always-available path on 6.3, or if it tells the user to hard-code the key.
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-llm-access)"'

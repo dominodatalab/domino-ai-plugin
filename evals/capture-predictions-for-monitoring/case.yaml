@@ -1,4 +1,39 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: capture-predictions-for-monitoring
+description: 'Model monitoring: prediction capture via DataCaptureClient edited into predict.py, plus a registered training set as baseline.'
+tags: [trigger, domino-model-monitoring, monitoring]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    Edit predict.py in place so Domino Model Monitoring captures every prediction from this endpoint for
+    drift analysis, and tell me how to give Domino the training data it compares against.
+graders:
+- name: baseline
+  type: llm
+  criteria: |
+    PASS if the reply says the training data is registered as the model's training set / baseline through the endpoint's Monitoring setup in Domino (uploading or registering the training dataset), after which drift tests and thresholds are configured there, and describes the prediction capture as an edit to the prediction code (DataCaptureClient + capturePrediction).
+    FAIL if it claims predictions are captured automatically with no code change, or if it says captured predictions are read back from an invented local path as the mechanism.
+- name: capture-call
+  type: regex
+  target: {source: file, path: predict.py}
+  pattern: capturePrediction
+- name: data-capture-client
+  type: regex
+  target: {source: file, path: predict.py}
+  pattern: DataCaptureClient
+- name: import-path
+  type: regex
+  target: {source: file, path: predict.py}
+  pattern: domino_data_capture
+- name: no-undefined-helpers
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: (merge_with_ground_truth|check_drift_metrics)\(
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-monitoring)"'

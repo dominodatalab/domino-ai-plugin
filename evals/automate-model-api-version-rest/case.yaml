@@ -1,0 +1,30 @@
+schema_version: '1.1'
+name: automate-model-api-version-rest
+description: 'Model serving: new model API version via /api/modelServing/v1, polled to Running, with PAT or service-account auth from CI.'
+tags: [trigger, domino-model-serving, model-deployment]
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    From a CI pipeline outside Domino, write a Python requests script that creates a new version of the
+    existing Domino model API with id 64f0c0ffee from registered model `churn-clf` version 3, then waits
+    until it is running. REST only. Put the code in your reply, not in files.
+graders:
+- name: lifecycle
+  type: llm
+  criteria: |
+    PASS if the script (a) authenticates with `Authorization: Bearer <token>` where the token is a Personal Access Token or a Domino service-account token read from a secret / environment variable, against the deployment's public URL; (b) creates the version with POST `/api/modelServing/v1/modelApis/{modelApiId}/versions`; and (c) polls `GET /api/modelServing/v1/modelApis/{modelApiId}` (or the version resource) until the status is Running or a failure state, rather than assuming success.
+    FAIL if it uses an API key header, uses `DOMINO_API_PROXY` or `localhost:8899` outside Domino, or uses a `/v4/models...` route without labelling it internal.
+- name: model-serving-route
+  type: regex
+  target: last_message
+  pattern: /api/modelServing/v1/modelApis
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=|api_key\s*=
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-model-serving)"'
