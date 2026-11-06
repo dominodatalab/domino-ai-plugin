@@ -67,11 +67,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'uat' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
           cache: npm
           cache-dependency-path: app-code/package-lock.json
 
@@ -88,7 +88,7 @@ jobs:
           git push origin "build-$LABEL"
           echo "BUILD_LABEL=$LABEL" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'   # matches the Domino Standard Environment's Python 3.12
 
