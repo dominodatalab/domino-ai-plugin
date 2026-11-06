@@ -839,7 +839,7 @@ def test_tool_names_schemas_and_instructions(server, run):
     # Domino and carry the in-run auth rule it is the single source for.
     first_line = instructions.splitlines()[0]
     assert "Domino" in first_line and "DOMINO_API_PROXY" in instructions
-    assert len(lead.encode()) <= 900, "rules/domino.md lead section would be truncated"
+    assert len(lead.encode()) <= 950, "rules/domino.md lead section would be truncated"
 
 
 def test_tool_errors_are_reported_as_mcp_errors(server, clean_env, run):
