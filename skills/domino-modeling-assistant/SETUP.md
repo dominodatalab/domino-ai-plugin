@@ -130,10 +130,10 @@ Clone the plugin repository, then point your assistant at `mcp-servers/domino_mc
 
 ```bash
 codex mcp add domino_server \
-  -- uv --directory /path/to/domino-ai-plugin/mcp-servers/domino_mcp_server run domino_mcp_server.py
+  -- uv run --frozen --directory /path/to/domino-ai-plugin/mcp-servers/domino_mcp_server domino_mcp_server.py
 ```
 
-Codex strips the shell environment from MCP servers, so on a laptop use the env file (`~/.config/domino-mcp-server/.env`) rather than `--env`, which would store the token in your Codex config. For Claude Code, `claude mcp add domino_server -- uv --directory ... run domino_mcp_server.py` works the same way and inherits your shell environment. For other assistants, register a stdio server with the same `uv` command and pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file.
+Codex strips the shell environment from MCP servers, so on a laptop use the env file (`~/.config/domino-mcp-server/.env`) rather than `--env`, which would store the token in your Codex config. For Claude Code, `claude mcp add domino_server -- uv run --frozen --directory ... domino_mcp_server.py` works the same way and inherits your shell environment. For other assistants, register a stdio server with the same `uv` command and pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file.
 
 ### "Unauthorized" or "DOMINO_TOKEN is not set" errors
 

@@ -113,7 +113,7 @@ def _recover_domino_env(environ: Dict[str, str] | None = None, proc: str = "/pro
 def _env_file_path() -> Path:
     """Where the server reads DOMINO_HOST and DOMINO_TOKEN from when the host passes neither.
 
-    `uv --directory` runs this server with the plugin directory as its working directory, so a
+    `uv run --directory` runs this server with the plugin directory as its working directory, so a
     `.env` next to the user's project is never found. Use one documented location instead:
     $DOMINO_MCP_ENV_FILE, else $XDG_CONFIG_HOME/domino-mcp-server/.env, else
     ~/.config/domino-mcp-server/.env.

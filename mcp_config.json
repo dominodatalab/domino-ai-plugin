@@ -3,9 +3,10 @@
     "domino_server": {
       "command": "uv",
       "args": [
+        "run",
+        "--frozen",
         "--directory",
         "${PLUGIN_ROOT}/mcp-servers/domino_mcp_server",
-        "run",
         "domino_mcp_server.py"
       ]
     },

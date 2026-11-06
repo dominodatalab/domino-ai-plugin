@@ -20,9 +20,10 @@
     "domino_server": {
       "command": "uv",
       "args": [
+        "run",
+        "--frozen",
         "--directory",
         "${extensionPath}${/}mcp-servers${/}domino_mcp_server",
-        "run",
         "domino_mcp_server.py"
       ]
     },
