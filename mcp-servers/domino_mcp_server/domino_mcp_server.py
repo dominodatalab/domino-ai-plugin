@@ -464,7 +464,7 @@ def _plugin_instructions() -> str | None:
     rules/domino.md is the single source for the plugin's always-on guidance. Hosts that load it
     directly (a session-start hook, a context file, an always-on rule) get the whole file; hosts
     that only surface MCP server instructions, such as Codex, get its lead section: everything
-    before the first "## " heading, without frontmatter, capped at 950 bytes.
+    before the first "## " heading, without frontmatter, capped at 990 bytes.
     """
     rules = Path(__file__).resolve().parents[2] / "rules" / "domino.md"
     try:
@@ -477,7 +477,7 @@ def _plugin_instructions() -> str | None:
     if match:
         text = match.group(1)
     lead = text.split("\n## ", 1)[0].strip()
-    return lead.encode("utf-8")[:950].decode("utf-8", "ignore") or None
+    return lead.encode("utf-8")[:990].decode("utf-8", "ignore") or None
 
 
 class _DominoServer(MCPServer):
