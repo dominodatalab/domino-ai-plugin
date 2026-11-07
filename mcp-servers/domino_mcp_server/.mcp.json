@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "domino_server": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--frozen",
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server",
+        "domino_mcp_server.py"
+      ],
+      "env": {
+        "CLAUDE_PLUGIN_OPTION_DOMINO_HOST": "${user_config.domino_host}",
+        "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN": "${user_config.domino_token}"
+      }
+    }
+  }
+}

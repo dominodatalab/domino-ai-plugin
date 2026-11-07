@@ -33,7 +33,7 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
 | `skills/` (35 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
-| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; credentials from the env file, see [Your Domino URL and token](#your-domino-url-and-token)) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ✅ via `mcp_config.json` (stdio; credentials from `agy`'s environment or the env file) |
+| Domino MCP server (`mcp-servers/`) | ✅ via `mcp-servers/domino_mcp_server/.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; credentials from the env file, see [Your Domino URL and token](#your-domino-url-and-token)) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ✅ via `mcp_config.json` (stdio; credentials from `agy`'s environment or the env file) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
 | Subagents (`agents/`) | ✅ routers that preload their skills | ❌ | Routing prompts only: Cursor loads `agents/` without `skills:` or `tools:`, so nothing is preloaded | ❌ the files are `_`-prefixed, which Gemini CLI skips (its sub-agent schema differs) | Imported as prompts (`agy` reports 3 agents); `skills:` and `tools:` are Claude Code fields |
@@ -624,7 +624,7 @@ domino-ai-plugin/
 ├── plugin.json                  # Portable (Agent Plugins) manifest + OpenAI listing metadata
 ├── .cursor-plugin/              # Cursor manifest, MCP config and marketplace
 ├── gemini-extension.json        # Gemini CLI extension manifest (synced from the Claude manifest)
-├── .mcp.json                    # Claude MCP config (stdio)
+├── .mcp.json                    # Claude MCP config: the docs server (the bundled server's entry is mcp-servers/domino_mcp_server/.mcp.json)
 ├── mcp.json                     # Portable MCP config (stdio) for Codex local installs
 ├── mcp_config.json              # MCP servers for Antigravity
 ├── rules/domino.md              # Always-on guidance for every host
