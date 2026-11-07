@@ -46,7 +46,8 @@ domino-ai-plugin/
 ├── plugin.json                  # Portable (Agent Plugins) manifest + OpenAI listing (synced)
 ├── .cursor-plugin/plugin.json   # Cursor manifest (synced)
 ├── gemini-extension.json        # Gemini CLI extension manifest (synced)
-├── .mcp.json / mcp.json         # MCP config for Claude Code / for Codex (portable)
+├── .mcp.json / mcp.json         # MCP config for Claude Code (docs server) / for Codex (portable)
+├── mcp-servers/domino_mcp_server/.mcp.json  # Claude Code's entry for the bundled server, beside its uv.lock
 ├── .cursor-plugin/mcp.json      # MCP config for Cursor; mcp_config.json registers the docs server for Antigravity
 ├── rules/domino.md              # Always-on guidance (Claude Code hook, Cursor rule, Gemini CLI context file)
 ├── skills/                      # Shared skills; ship to every host
