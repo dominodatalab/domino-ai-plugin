@@ -1,4 +1,52 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: publish-proa-site
+description: 'Proa on Domino: a site from the Proa CLI is made ready to publish: Proa crates pinned to one commit, PROA_BASE_PATH from DOMINO_RUN_HOST_PATH in app.sh, built once with proa build.'
+tags: [trigger, domino-rust-apps, apps, rust, proa]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+  prompt: |
+    I made this website with Proa (https://proa.so), using `proa new` with the minimal template. I want to run it
+    as a Domino App in our Git-based Project. Make the changes the project needs, including the App's `app.sh`, and
+    tell me how to build it and publish it.
+graders:
+- name: app-sh-base-path
+  type: regex
+  target: {source: file, path: app.sh}
+  match: contains
+  pattern: PROA_BASE_PATH="?\$\{?DOMINO_RUN_HOST_PATH
+- name: app-sh-host
+  type: regex
+  target: {source: file, path: app.sh}
+  match: contains
+  pattern: PROA_HOST="?0\.0\.0\.0
+- name: app-sh-no-compile
+  type: regex
+  target: {source: file, path: app.sh}
+  match: not_contains
+  pattern: (^|\n)[^#\n]*\b(cargo|proa)\s+(\+\S+\s+)?(build|run|install|dev)\b
+- name: app-sh-port
+  type: regex
+  target: {source: file, path: app.sh}
+  match: contains
+  pattern: PORT="?8888
+- name: build-explained
+  type: llm
+  criteria: |
+    PASS if the reply tells the user (1) to build the site once with `proa build` in a Workspace or Job, directly or
+    through a build script that runs it (not with plain `cargo build`), (2) that the Proa CLI used for that build comes from the same Proa commit or release as the Proa
+    crates in `Cargo.toml`, and (3) that the App then runs the prebuilt binary through `app.sh` without compiling.
+    FAIL if it tells the user to compile in `app.sh`, or says the crates.io 0.3.0 Proa crates the scaffold names work as
+    they are.
+- name: proa-crates-pinned
+  type: regex
+  target: {source: file, path: Cargo.toml}
+  match: contains
+  pattern: proa_framework_axum\s*=\s*\{[^}\n]*git\s*=\s*"https://github\.com/Proa-Labs/proa"[^}\n]*rev\s*=\s*"[0-9a-f]{7,40}"
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-rust-apps)"'

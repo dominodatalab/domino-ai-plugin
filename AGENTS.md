@@ -33,8 +33,8 @@ customer environments from a **public** repository. Three facts drive most rules
 | `skills/<name>/assets/` | Templates a skill copies into the user's project (no `templates/` or `commands/` dirs) |
 | `agents/`, `output-styles/` | Claude Code components; not in the OpenAI package. An agent is a thin router: it preloads the skills for its area (`skills:`, Claude Code 2.0.43+; loading further plugin skills from a subagent needs 2.1.133+) and holds no procedure of its own. Cursor reads `agents/` as plain prompts (its frontmatter has no `skills:` or `tools:`). The files are named `_<name>.md`: Gemini CLI skips underscore-prefixed files in `agents/` (its strict sub-agent schema would reject `skills:` and log an error per file), while Claude Code, Cursor and Antigravity take the agent's name from the frontmatter `name` |
 | `hooks/` | Documentation only (`hooks/README.md`); no `hooks.json` is shipped, so neither Claude Code nor Gemini CLI loads anything from it. The plugin's only hook is the inline `SessionStart` entry in `.claude-plugin/plugin.json` |
-| `rules/domino.md` | Always-on Domino guidance, loaded into every session: by a `SessionStart` hook in `.claude-plugin/plugin.json` (Claude Code), as an always-on rule (Antigravity reads `trigger: always_on`, Cursor reads `alwaysApply: true`), as the Gemini CLI extension's context file (`contextFileName` in `gemini-extension.json`), and as the bundled MCP server's instructions (lead section only, for Codex). Every user pays for it on every turn, so it holds only what an assistant needs to work in Domino: lint caps it at 2,600 characters, ASCII, host-neutral, with a lead section under 900 bytes |
-| `mcp-servers/` | Bundled MCP server, started by `.mcp.json` (Claude Code), `mcp.json` (Codex), `.cursor-plugin/mcp.json` (Cursor), `gemini-extension.json` (Gemini CLI) and `mcp_config.json` (Antigravity). All five also register the Domino docs MCP server, `domino_docs` at `https://docs.domino.ai/mcp`; `mcp_config.json` registers it for Antigravity |
+| `rules/domino.md` | Always-on Domino guidance, loaded into every session: by a `SessionStart` hook in `.claude-plugin/plugin.json` (Claude Code), as an always-on rule (Antigravity reads `trigger: always_on`, Cursor reads `alwaysApply: true`), as the Gemini CLI extension's context file (`contextFileName` in `gemini-extension.json`), and as the bundled MCP server's instructions (lead section only, for Codex). Every user pays for it on every turn, so it holds only what an assistant needs to work in Domino: lint caps it at 2,700 characters, ASCII, host-neutral, with a lead section under 990 bytes (Codex cuts server instructions at 1,000) |
+| `mcp-servers/` | Bundled MCP server, started by `mcp-servers/domino_mcp_server/.mcp.json` (Claude Code; `mcpServers` in `.claude-plugin/plugin.json` names it, and it sits beside the server's `uv.lock`, which the plugin directory requires for a locked launcher), `mcp.json` (Codex), `.cursor-plugin/mcp.json` (Cursor), `gemini-extension.json` (Gemini CLI) and `mcp_config.json` (Antigravity). All five also register the Domino docs MCP server, `domino_docs` at `https://docs.domino.ai/mcp`; `mcp_config.json` registers it for Antigravity |
 | `.claude-plugin/plugin.json` | Claude manifest and source of truth for name, `version` and `description`; see the rules below before touching it |
 | `plugin.json` | Portable manifest plus OpenAI listing metadata; identity fields are copied by `scripts/sync-manifests.py` |
 | `.cursor-plugin/` | Cursor: `plugin.json` (identity fields copied by `scripts/sync-manifests.py`; Cursor's schema is closed, so only its own keys), `mcp.json` (`${CURSOR_PLUGIN_ROOT}` paths, `${env:NAME}` values from the environment Cursor runs in; Cursor prompts only for manifest `variables`) and `marketplace.json` (needed to import the repo from GitHub) |
@@ -71,6 +71,11 @@ customer environments from a **public** repository. Three facts drive most rules
   the `sha` for `dominodatalab` in `anthropics/claude-plugins-official`.
 - Run `scripts/check-version.sh origin/<your PR's base branch>` before pushing. It applies
   the rules CI applies and prints why it fails.
+- Every release refreshes every pinned version first: one PR to `develop` before the promotion
+  PR moves each pin (`uv.lock`, SHA-pinned Actions, Node, nvm, `create-vite`, Rust tools) to the
+  newest stable release, LTS where there is one, build-tested and pinned exactly. Pins to the
+  Domino Standard Environment's versions and pre-release commits move only with what they track.
+  CONTRIBUTING.md "Refresh pinned versions every release" has the list.
 
 ## Requirements for skill content
 
@@ -136,7 +141,8 @@ claude --plugin-dir .                                 # load this checkout in pl
 /reload-plugins                                       # inside a session, after editing a skill
 ```
 
-Behaviour tests live in `evals/` (one directory per case) and run with `claude plugin eval`.
+Behaviour tests live in `evals/` (one directory per case, each a single `case.yaml`) and run with
+`claude plugin eval`.
 Each run is a real model call on your account, so iterate with one arm and one run:
 
 ```bash

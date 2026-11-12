@@ -1,0 +1,48 @@
+schema_version: '1.1'
+name: read-and-snapshot-dataset
+description: 'Datasets: Git-based mount paths, snapshot via UI or /api/datasetrw/v1 snapshots, snapshot read path; no invented SDK or @tag syntax.'
+tags: [trigger, domino-datasets, data, disambiguation]
+execution:
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    My Git-based Domino project has a dataset named `sales-raw`. Show the path my job reads it from, how
+    to take a snapshot after I write processed files into it, and the path to read snapshot number 2
+    later. Put the code in your reply, not in files.
+graders:
+- name: live-path
+  type: regex
+  target: last_message
+  pattern: /mnt/data/sales-raw
+- name: no-invented-sdk
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \.datasets_snapshot\(|\.datasets_tag\(|/sales-raw@
+- name: not-data-sdk
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-data-sdk)"'
+  min: 0
+  max: 0
+  arm: both
+- name: not-netapp
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(netapp-volumes)"'
+  min: 0
+  max: 0
+  arm: both
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-datasets)"'
+- name: snapshot-mechanism
+  type: llm
+  criteria: |
+    PASS if the snapshot is taken from the dataset's page in the Domino UI, through `POST /api/datasetrw/v1/datasets/{datasetId}/snapshots`, or by setting `snapshotDatasetsOnCompletion` on the job, and the reply gives `/mnt/data/sales-raw` as the read-write path and `/mnt/data/snapshots/sales-raw/2` as the read-only snapshot path.
+    FAIL if it uses python-domino methods such as `datasets_snapshot` or `datasets_tag`, an `@tag` path syntax, or claims old snapshots are deleted automatically.
+- name: snapshot-path
+  type: regex
+  target: last_message
+  pattern: /mnt/data/snapshots/sales-raw/2

@@ -11,11 +11,17 @@ setup:
     content: |
       set -e
       if [ ! -x "$HOME/.cargo/bin/rustup" ]; then
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
-          --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src >/dev/null 2>&1
         cd /tmp
-        f=cargo-nextest-0.9.148-x86_64-unknown-linux-gnu
-        curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.148/$f.tar.gz
+        r=https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
+        curl --proto '=https' --tlsv1.2 -fsSLO $r; curl --proto '=https' --tlsv1.2 -fsSLO $r.sha256
+        sha256sum -c rustup-init.sha256; chmod +x rustup-init
+        ./rustup-init -y --no-modify-path --profile minimal \
+          --default-toolchain 1.99.1 --component clippy,rustfmt,rust-analyzer,rust-src >/dev/null 2>&1
+        rm -f rustup-init rustup-init.sha256
+        f=cargo-nextest-0.9.151-x86_64-unknown-linux-gnu
+        curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.151/$f.tar.gz
+        curl -fsSLO https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.151/$f.sha256
+        sha256sum -c $f.sha256
         tar -xzf $f.tar.gz -C "$HOME/.cargo/bin"
         d=cargo-deny-0.20.2-x86_64-unknown-linux-musl
         curl -fsSLO https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/$d.tar.gz

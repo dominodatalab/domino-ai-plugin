@@ -1,6 +1,6 @@
 {
   "name": "dominodatalab",
-  "version": "2026.603.9",
+  "version": "2026.603.10",
   "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, GenAI tracing, Flows, Spark/Ray/Dask clusters, governance, and the Domino APIs and SDKs",
   "author": {
     "name": "Domino Data Lab",
@@ -9,6 +9,8 @@
   "homepage": "https://github.com/dominodatalab/domino-ai-plugin",
   "repository": "https://github.com/dominodatalab/domino-ai-plugin",
   "license": "MIT",
+  "privacyPolicyUrl": "https://domino.ai/legal/privacy-policy",
+  "mcpServers": "./mcp-servers/domino_mcp_server/.mcp.json",
   "keywords": ["domino", "mlops", "data-science", "machine-learning","experiment-tracking","genai-tracing","spark","ray","dask","app-deployment"],
   "userConfig": {
     "domino_host": {

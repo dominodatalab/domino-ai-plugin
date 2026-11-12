@@ -5,7 +5,7 @@ that lets an AI coding assistant work with a Domino project: start Jobs, read th
 output, and read, upload and sync the files of a DFS (non-Git) project. The
 `domino-modeling-assistant` skill describes the workflow built on it.
 
-It runs on `uv` from this directory (`uv --directory <here> run domino_mcp_server.py`); the
+It runs on `uv` from this directory (`uv run --frozen --directory <here> domino_mcp_server.py`); the
 committed `uv.lock` pins the dependencies. Python 3.11 or later; the official `mcp` SDK 2.x
 server class (`MCPServer`), which speaks MCP protocol 2026-07-28 and still answers handshake-era
 clients (2024-11-05 to 2025-11-25): the server negotiates whatever the host speaks and prints
@@ -155,7 +155,7 @@ variables above from the nearest ancestor process that has `DOMINO_API_PROXY` or
 |---|---|
 | `DOMINO_HOST` | Your Domino URL, for example `https://domino.example.com` (`DOMINO_API_HOST` is accepted as a fallback). `http://` is refused except for localhost, because it would send the token in clear text; set `DOMINO_INSECURE_HTTP=true` to allow it deliberately |
 | `DOMINO_TOKEN` | A [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication) (Account settings > Personal Access Token) or a service account token, sent as `Authorization: Bearer`. Surrounding whitespace is stripped; a value with whitespace inside is rejected. Ignored when `DOMINO_API_PROXY` is set. The token never appears in tool results, errors or logs. |
-| `DOMINO_PLUGIN_HOST`, `DOMINO_PLUGIN_TOKEN` | Set by a host from its own settings UI (Claude Code passes the plugin options `domino_host` and `domino_token`). Non-empty values take precedence over `DOMINO_HOST` and `DOMINO_TOKEN`; the server moves them into those names at start and removes them from its environment |
+| `CLAUDE_PLUGIN_OPTION_DOMINO_HOST`, `CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN` | Set by a host from its own settings UI (Claude Code passes the plugin options `domino_host` and `domino_token`). Non-empty values take precedence over `DOMINO_HOST` and `DOMINO_TOKEN`; the server moves them into those names at start and removes them from its environment |
 
 Precedence: plugin options, then `DOMINO_HOST` and `DOMINO_TOKEN` from the environment, then the
 env file below. `get_domino_environment_info` reports where each value came from
@@ -172,7 +172,7 @@ When the host does not pass these variables, the server reads an env file (`KEY=
 existing non-empty variables win): `$DOMINO_MCP_ENV_FILE` if set, else
 `$XDG_CONFIG_HOME/domino-mcp-server/.env`, else `~/.config/domino-mcp-server/.env`. Make it
 readable only by you (`chmod 600`). A `.env` in the project directory or next to the server is
-not read: `uv --directory` starts the server with the plugin directory as its working directory,
+not read: `uv run --directory` starts the server with the plugin directory as its working directory,
 and earlier versions that walked up from the server directory found files by accident. The
 "not set" errors name the env file path, since under Codex it is the only route that works.
 
@@ -183,12 +183,12 @@ and `DOMINO_HOST`; a missing variable names both and links the authentication pa
 
 | Host | File | Environment |
 |---|---|---|
-| Claude Code | `.mcp.json` (plugin root): `uv --directory ${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server run domino_mcp_server.py` | The plugin declares two options in `.claude-plugin/plugin.json` (`userConfig`: `domino_host`, and `domino_token` marked `sensitive`, which Claude Code keeps in the system's secure credential store). Claude Code asks for them when the plugin is enabled; `/plugin` → Installed → dominodatalab → Configure options changes them. The `env` block passes them as `DOMINO_PLUGIN_HOST` and `DOMINO_PLUGIN_TOKEN` (`${user_config.…}`). The server also inherits Claude Code's environment, so `DOMINO_HOST` and `DOMINO_TOKEN` exported before starting Claude Code still work. An option that was never set arrives empty or as literal `${…}` text, which the server treats as unset. |
+| Claude Code | `.mcp.json` in this directory, named by `mcpServers` in `.claude-plugin/plugin.json` so it sits beside `uv.lock` (the root `.mcp.json` registers only the docs server): `uv run --frozen --directory ${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server domino_mcp_server.py` | The plugin declares two options in `.claude-plugin/plugin.json` (`userConfig`: `domino_host`, and `domino_token` marked `sensitive`, which Claude Code keeps in the system's secure credential store). Claude Code asks for them when the plugin is enabled; `/plugin` → Installed → dominodatalab → Configure options changes them. The `env` block passes them as `CLAUDE_PLUGIN_OPTION_DOMINO_HOST` and `CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN` (`${user_config.…}`), the names the plugin directory expects for plugin options. The server also inherits Claude Code's environment, so `DOMINO_HOST` and `DOMINO_TOKEN` exported before starting Claude Code still work. An option that was never set arrives empty or as literal `${…}` text, which the server treats as unset. |
 | Codex and the ChatGPT desktop app (local marketplace) | `mcp.json` (Agent Plugins format, `${PLUGIN_ROOT}`) | No `env` block (the format forbids secrets there) and Codex strips the shell environment. Inside a Workspace the server recovers the Domino variables itself; on a laptop use the env file above, at `~/.config/domino-mcp-server/.env`: Codex passes neither `XDG_CONFIG_HOME` nor `DOMINO_MCP_ENV_FILE`. |
 | Cursor | `.cursor-plugin/mcp.json` (`${CURSOR_PLUGIN_ROOT}`) | `${env:DOMINO_HOST}` and `${env:DOMINO_TOKEN}`, resolved from the environment Cursor runs in (the Cursor CLI may not see your shell's). Cursor prompts only for a plugin's manifest `variables`, which admins set team-wide, so the token is never one: use the env file. Whether Cursor passes literal text or an empty string for an unset variable is not documented; the server treats both as unset. |
 | Gemini CLI | `gemini-extension.json` (`${extensionPath}`) | Extension `settings` with `envVar` `DOMINO_HOST` and `DOMINO_TOKEN` (sensitive, kept in the keychain): Gemini asks at install and `gemini extensions config dominodatalab` changes them. Gemini drops TOKEN-named variables from the environment it passes, so a shell `DOMINO_TOKEN` never arrives. |
 | Antigravity | `mcp_config.json` (`${PLUGIN_ROOT}`) | Inherits the environment `agy` starts with, unfiltered; otherwise the env file. |
-| Any other host | register a stdio server with the same `uv --directory <path to this directory> run domino_mcp_server.py` command | pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file |
+| Any other host | register a stdio server with the same `uv run --frozen --directory <path to this directory> domino_mcp_server.py` command | pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file |
 
 The server's `instructions` (sent in the MCP `initialize` response) are the lead section of
 `rules/domino.md` two directories up, so hosts that only surface server instructions, such as

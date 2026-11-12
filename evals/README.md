@@ -1,9 +1,13 @@
 # Behaviour tests for the Domino plugin
 
-`claude plugin eval` runs every directory here as one case: `prompt.md` (frontmatter plus the
-user prompt), optional `case.yaml` naming a `fixture.sh` that seeds the working directory, and
-`graders/*.md`. Format reference: https://code.claude.com/docs/en/plugin-evals. Each run is a real
-model call billed to your account; results land in `results/` (git-ignored).
+`claude plugin eval` runs every directory here as one case, written as a single `case.yaml`: the
+case fields (`name`, `description`, `tags`), `execution` (`max_turns`, `allowed_tools`, the user
+`prompt`), a `graders:` list (an `llm` grader's rubric goes in `criteria`) and, where a case needs a
+working directory, `context.scaffold_script` naming the case's `fixture.sh`. One file per case keeps
+the repository under the 512 files Anthropic's plugin directory screens; `scripts/lint-skills.py`
+fails on a `prompt.md` or `graders/` here. Format reference:
+https://code.claude.com/docs/en/plugin-evals. Each run is a real model call billed to your account;
+results land in `results/` (git-ignored).
 
 ## What the suite covers
 
@@ -46,7 +50,7 @@ still carries an invented method or route is doing its job.
 - Two rubric clauses are plugin policy rather than documented Domino behaviour and are therefore
   optional in the rubric: the governance base-URL fallback to the public URL on 404, and retry
   guidance for 502s.
-- `llm` graders carry a PASS/FAIL rubric; where the judged content is a file the grader sets
+- `llm` graders carry a PASS/FAIL rubric in `criteria`; where the judged content is a file the grader sets
   `focus: { source: file, path: ... }`.
 - The `skill-fired` grader is excluded from the score under the default `with-without` ablation
   (it can never pass without the plugin); it still shows as an indicator. Under `--ablation none`
@@ -70,7 +74,7 @@ claude plugin eval . --case start-job-via-rest-and-schedule --runs 1 --ablation 
 claude plugin eval . --tag domino-datasets --runs 1 --ablation none --no-publish --scaffold --allow-tools Write Edit
 claude plugin eval . --tag negative --runs 1 --ablation none --no-publish
 
-# full suite, default three runs plus the no-plugin baseline (55 cases x 6 runs; roughly $20-100
+# full suite, default three runs plus the no-plugin baseline (59 cases x 6 runs; roughly $20-100
 # with the judge, so set the ceiling you can afford; hitting it exits 2 with a partial results.json)
 claude plugin eval . --scaffold --allow-tools Write Edit --no-publish -j 3 --max-cost-usd 60 --json results.json
 ```
@@ -82,7 +86,8 @@ credentials; ids in prompts are placeholders. The plugin's MCP servers are not s
 
 ## Adding a case
 
-Copy a neighbouring directory. Name the case after the request, not the skill; tag it with the
-skill name and `trigger`, `negative` or `disambiguation`; put the skill-firing check in
-`graders/skill-fired.md` and keep correctness graders grounded in a docs.domino.ai page, a spec
-route or an SDK method you verified.
+Copy a neighbouring case's `case.yaml` into a new directory. Name the case after the request, not
+the skill; tag it with the skill name and `trigger`, `negative` or `disambiguation`; name the
+skill-firing check `skill-fired` and keep correctness graders grounded in a docs.domino.ai page, a
+spec route or an SDK method you verified. `claude plugin eval init` writes `prompt.md` and
+`graders/*.md`; fold them into `case.yaml` (`execution.prompt`, `graders:`) before committing.

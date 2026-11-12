@@ -1,4 +1,59 @@
-schema_version: "1.1"
+schema_version: '1.1'
 name: start-job-via-rest-and-schedule
+description: 'Jobs: POST /api/jobs/v1/jobs with runCommand, poll GET /api/jobs/beta/jobs/{jobId}; scheduled jobs have no public route, only the labelled internal /v4 scheduledjobs route or the UI.'
+tags: [trigger, domino-jobs, jobs]
 context:
   scaffold_script: fixture.sh
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: |
+    From inside my Domino workspace, write Python that starts a job running `python train.py --epochs 5`
+    in the current project through the REST API and polls until it finishes. Then: can I also create the
+    nightly schedule for it through the public API? Put the code in your reply, not in files.
+graders:
+- name: no-api-key
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: X-Domino-Api-Key\\?[\x27"]?\s*:|-H\s*\\?[\x27"]X-Domino-Api-Key|DOMINO_USER_API_KEY\s*=|DOMINO_API_KEY\s*=
+- name: no-invented-fields
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: '[\x27"](commandToRun|hardwareTierId|isDirectHardwareTierId)[\x27"]\s*:'
+- name: no-invented-sdk
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: \.(runs_wait|runs_get_logs|runs_stop|runs_get_results)\(
+- name: no-v1-get-by-id
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: jobs/v1/jobs/(\{[^}]+\}|\$\{?\w+\}?|[\x27"]\s*\+)(?!/tags)
+- name: poll-and-schedule
+  type: llm
+  criteria: |
+    PASS if ALL hold:
+    1. The job is started with POST to `/api/jobs/v1/jobs` using a JSON body that includes `projectId` and `runCommand` (not `commandToRun`).
+    2. Status is polled with `GET /api/jobs/beta/jobs/{jobId}` reading `status.executionStatus` (or python-domino's `job_status` / `job_start_blocking`), finishing on a terminal state such as Succeeded, Failed, Stopped or Error.
+    3. Authentication is `$DOMINO_API_PROXY` with no header or a bearer token from `http://localhost:8899/access-token`.
+    4. For the schedule question, the reply says the public API has no endpoint for scheduled Jobs and offers either the UI (Jobs > Schedules, Quartz cron) or the internal route `POST /v4/projects/{projectId}/scheduledjobs`, labelled as internal API that may change between Domino versions, with a Quartz `cronString` and a `timezoneId`. It must not claim scheduling is impossible through any API.
+    FAIL if it presents a public `/api/...` route for creating scheduled jobs, says scheduled Jobs cannot be created outside the UI, polls `GET /api/jobs/v1/jobs/{id}` (that route does not exist; only the POST does), uses an API key header, or calls python-domino methods that do not exist (runs_wait, runs_get_logs, runs_stop).
+- name: run-command-field
+  type: regex
+  target: last_message
+  pattern: runCommand
+- name: skill-fired
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(domino-jobs|domino-python-sdk)"'
+- name: start-route
+  type: regex
+  target: last_message
+  pattern: /api/jobs/v1/jobs
+- name: status-route
+  type: regex
+  target: last_message
+  pattern: /api/jobs/beta/jobs/|job_status\(|job_start_blocking\(

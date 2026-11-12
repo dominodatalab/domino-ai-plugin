@@ -46,7 +46,8 @@ domino-ai-plugin/
 ├── plugin.json                  # Portable (Agent Plugins) manifest + OpenAI listing (synced)
 ├── .cursor-plugin/plugin.json   # Cursor manifest (synced)
 ├── gemini-extension.json        # Gemini CLI extension manifest (synced)
-├── .mcp.json / mcp.json         # MCP config for Claude Code / for Codex (portable)
+├── .mcp.json / mcp.json         # MCP config for Claude Code (docs server) / for Codex (portable)
+├── mcp-servers/domino_mcp_server/.mcp.json  # Claude Code's entry for the bundled server, beside its uv.lock
 ├── .cursor-plugin/mcp.json      # MCP config for Cursor; mcp_config.json registers the docs server for Antigravity
 ├── rules/domino.md              # Always-on guidance (Claude Code hook, Cursor rule, Gemini CLI context file)
 ├── skills/                      # Shared skills; ship to every host
@@ -517,6 +518,25 @@ How each channel receives a release:
   default branch). `tag-release.yml` publishes a Release on every push to `main` and marks only
   releases from `main` as latest, so a backport never moves default users; `gemini extensions
   update dominodatalab` picks up the next release. Nothing else to do.
+
+### Refresh pinned versions every release
+
+Before each promotion PR, land one PR on `develop` that moves every pinned version to the newest
+stable release (LTS where the line has one), build-tests it, and pins it exactly: never `@latest`,
+a version range or a floating tag. Check upstream for each, not this list:
+
+- the MCP server's `uv.lock` (`uv lock --upgrade` in `mcp-servers/domino_mcp_server`, then the
+  server tests and `uv lock --check`; hosts start it with `uv run --frozen`, which installs exactly
+  what the lock says);
+- SHA-pinned GitHub Actions, in `.github/workflows/` and in skill examples (`# vX.Y.Z` after the
+  SHA);
+- tools a skill or an `evals/e2e/` setup step installs: Node (LTS), nvm, `create-vite`, the Rust
+  toolchain, `cargo-nextest`, `cargo-deny` and their checksums.
+
+Two kinds of pin follow something else and move only with it: Python packages pinned to the
+Domino Standard Environment's versions, and commits pinned until upstream publishes a release
+(Proa). `.github/dependabot.yml` keeps Actions and `uv.lock` current between releases; the
+refresh catches everything it does not cover.
 
 ### Release candidates
 
