@@ -40,17 +40,17 @@ Where filesystems carry a volume cap ([Which path applies](./SKILL.md#which-path
 `maxVolumes` on the filesystem record is the cap and `numVolumes` the current count.
 
 - `POST /remotefs/v1/volumes` with a `filesystemId` returns
-  `409 filesystem has reached its maximum number of volumes`: pick another filesystem on
+  `409 Filesystem has reached its maximum number of Volumes`: pick another filesystem on
   the same data plane, or omit `filesystemId` and send `dataPlaneId` so the service
   places the volume automatically.
-- `409 no filesystem on the data plane has capacity for another volume` from automatic
+- `409 No Filesystem on the data plane has capacity for another Volume` from automatic
   placement: every filesystem on that data plane is full; an administrator registers
   another one or raises a filesystem's `maxVolumes`
   ([Change a filesystem setting](./API-NETAPP-VOLUMES.md#change-a-filesystem-setting)).
 - `bulk-copy-volumes-to-project` reports a full `targetFilesystemId` as `status: 409` on
   that item only; drop `targetFilesystemId` to let the copy fall back to an automatically
   selected filesystem.
-- `400 filesystem does not belong to the specified data plane`: `filesystemId` and
+- `400 Filesystem does not belong to the specified data plane`: `filesystemId` and
   `dataPlaneId` disagree; send one of them, or matching values.
 - In the UI (Create Volume, Create Template Data step, Create Project from a template)
   the filesystem is chosen automatically. A **NetApp Filesystem** picker (default
