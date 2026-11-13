@@ -43,15 +43,36 @@ re-read it for long-running scripts.
 ```
 GET  /remotefs/v1/filesystems?limit=&offset=&data_plane_id=
 GET  /remotefs/v1/filesystems/{id}
-POST /remotefs/v1/filesystems            admin: name, dataPlaneId, isDataPlaneDefault, rootPvc, storageClass required; maxSnapshotsPerVolume optional
-PUT, DELETE /remotefs/v1/filesystems/{id}
+POST /remotefs/v1/filesystems            admin: name, dataPlaneId, isDataPlaneDefault, rootPvc, storageClass required; other fields per the spec
+PUT, DELETE /remotefs/v1/filesystems/{id}   admin: PUT replaces the whole record (see below)
 ```
 
 ```python
 filesystems = requests.get(f"{remotefs_url}/remotefs/v1/filesystems", headers=remotefs_headers).json()["data"]
 for fs in filesystems:
-    print(fs["id"], fs["name"], fs["dataPlaneName"], fs.get("numVolumes"), fs["maxSnapshotsPerVolume"])
+    print(fs["id"], fs["name"], fs["dataPlaneName"], fs["isDataPlaneDefault"],
+          fs.get("numVolumes"), fs.get("maxVolumes"), fs["maxSnapshotsPerVolume"])
 ```
+
+Where filesystems carry `maxVolumes` ([Which path applies](./SKILL.md#which-path-applies)),
+it caps the volumes on that filesystem and `numVolumes` counts the volumes not in `Deleted`
+status. A filesystem with `numVolumes >= maxVolumes` is full: creating or copying onto it
+explicitly returns `409`, and automatic placement skips it. An administrator raises the cap
+by changing the setting below.
+
+### Change a filesystem setting
+
+`PUT /remotefs/v1/filesystems/{id}` replaces the whole record, so a body with only the field
+you are changing fails with `400` (the other required fields are missing). Read the record,
+change the field, and send the whole record back:
+
+```python
+fs = requests.get(f"{remotefs_url}/remotefs/v1/filesystems/{filesystem_id}", headers=remotefs_headers).json()
+fs["maxVolumes"] = 600   # or any other writable field the spec lists for this route
+requests.put(f"{remotefs_url}/remotefs/v1/filesystems/{filesystem_id}", headers=remotefs_headers, json=fs).raise_for_status()
+```
+
+Read-only fields in the record (`id`, `numVolumes`, timestamps) are ignored on `PUT`.
 
 Registering a filesystem is an administrator task that also needs Kubernetes and Trident
 setup: https://docs.domino.ai/cloud/admin/data-administration/netapp-volumes.
@@ -62,9 +83,22 @@ setup: https://docs.domino.ai/cloud/admin/data-administration/netapp-volumes.
 POST /remotefs/v1/volumes
 ```
 
-Required: `name`, `filesystemId`, `capacity` (integer, bytes), `grants`
+Required: `name`, `capacity` (integer, bytes), `grants`
 (`[{"targetId": "<user-or-org-id>", "targetRole": "VolumeOwner" | "VolumeEditor" | "VolumeReader"}]`).
-Optional: `description`, `projectId` (attach on creation).
+Optional: `description`, `projectId` (attach on creation), `filesystemId`, `dataPlaneId`.
+
+Placement depends on the deployment ([Which path applies](./SKILL.md#which-path-applies)).
+Where placement is automatic, choose one of two calls:
+
+- You know which filesystem the volume belongs on: send `filesystemId`. A full filesystem
+  returns `409`; a `dataPlaneId` sent alongside it that names another data plane returns `400`.
+- Any filesystem with room on a data plane will do: send only `dataPlaneId` and let Domino
+  choose. `409` means no filesystem on that data plane has room; `404` means the data plane
+  has no filesystem registered.
+
+Do not pick a filesystem yourself from `numVolumes` and `maxVolumes` to emulate automatic
+placement: another request can take the last slot between your read and your create.
+On Domino 6.3, `filesystemId` is required.
 
 ```python
 user_id = requests.get(f"{base_url}/api/users/v1/self", headers=headers).json()["user"]["id"]
@@ -72,7 +106,7 @@ user_id = requests.get(f"{base_url}/api/users/v1/self", headers=headers).json()[
 volume = requests.post(f"{remotefs_url}/remotefs/v1/volumes", headers=remotefs_headers, json={
     "name": "large-training-data",
     "description": "Multi-TB training dataset for vision models",
-    "filesystemId": filesystems[0]["id"],
+    "dataPlaneId": filesystems[0]["dataPlaneId"],   # automatic placement; on 6.3 send "filesystemId": filesystems[0]["id"]
     "capacity": 5_000_000_000_000,            # 5 TB in bytes
     "grants": [{"targetId": user_id, "targetRole": "VolumeOwner"}],
     "projectId": os.environ.get("DOMINO_PROJECT_ID"),
@@ -95,7 +129,8 @@ POST  /remotefs/v1/rpc/detach-volume-from-project        body: {"projectId": "..
 POST  /remotefs/v1/rpc/mark-volume-for-deletion          body: {"volumeId": "..."}   -> 200, status MarkedForDeletion
 POST  /remotefs/v1/rpc/restore-volume                    body: {"volumeId": "..."}   -> 200, status Active (undo mark-for-deletion)
 POST  /remotefs/v1/rpc/delete-volume                     body: {"volumeId": "..."}   -> 204 (permanent; needs delete permission; works on an Active volume, marking first is not required)
-POST  /remotefs/v1/rpc/bulk-attach-volumes-to-project, /rpc/bulk-copy-volumes-to-project
+POST  /remotefs/v1/rpc/bulk-attach-volumes-to-project    body: {"projectId": "...", "volumeIds": ["..."]}
+POST  /remotefs/v1/rpc/bulk-copy-volumes-to-project      body: {"projectId": "...", "volumes": [{"sourceVolumeId": "...", "targetFilesystemId": "..." (optional where placement is automatic), "grants": [...]}]}
 ```
 
 Accept 200 or 204 from these RPCs; after `delete-volume` the volume and its snapshots return 404.
@@ -103,6 +138,26 @@ Accept 200 or 204 from these RPCs; after `delete-volume` the volume and its snap
 ```python
 requests.post(f"{remotefs_url}/remotefs/v1/rpc/attach-volume-to-project", headers=remotefs_headers,
               json={"volumeId": volume["id"], "projectId": project_id})
+```
+
+`bulk-copy-volumes-to-project` copies data (not snapshots) into new volumes attached to
+`projectId` and always answers `200` with `results[]`, one entry per source volume:
+`sourceVolumeId`, `status` (`200`, or an error code such as `409`), `error`, and `data`
+(the new volume record on success). Where placement is automatic
+([Which path applies](./SKILL.md#which-path-applies)), a copy stays on the source volume's
+filesystem and moves to another filesystem on the same data plane only when the source one
+is full; `targetFilesystemId` pins it to a filesystem on that data plane instead, in which
+case a full target is a per-item `409` rather than a fallback. Each item is placed on its
+own, so one request can spread copies over several filesystems. Check every
+`results[i].status`; one failed copy does not fail the others.
+
+```python
+copies = requests.post(f"{remotefs_url}/remotefs/v1/rpc/bulk-copy-volumes-to-project", headers=remotefs_headers, json={
+    "projectId": project_id,
+    "volumes": [{"sourceVolumeId": volume["id"], "grants": [{"targetId": user_id, "targetRole": "VolumeOwner"}]}],
+}).json()["results"]
+for r in copies:
+    print(r["sourceVolumeId"], r["status"], r.get("error") or r["data"]["filesystemId"])
 ```
 
 ## Grants
@@ -177,7 +232,7 @@ tag that mounts), `labels` (system-set), `runId`, `createdAt`, `createdBy`.
 ## List volumes
 
 ```
-GET /remotefs/v1/volumes?limit=&offset=&search=&sort_by=&order=&project_id=&data_plane_id=&status=&tag_ids=&filter_strictly_by_volume_roles=
+GET /remotefs/v1/volumes?limit=&offset=&search=&sort_by=&order=&project_id=&data_plane_id=&filesystem_id=&status=&tag_ids=&filter_strictly_by_volume_roles=
 GET /remotefs/v1/volumes/{id}
 GET /remotefs/v1/volumes/ids;  GET /remotefs/v1/volumes/unique-name/{uniqueName}
 ```
@@ -189,6 +244,11 @@ for v in volumes["data"]:
     print(f"{v['name']}  {v['capacity'] / 1e12:.1f} TB  snapshots={v['numSnapshots']}/{v['maxSnapshots']}  id={v['id']}")
 print(volumes["meta"]["pagination"])
 ```
+
+Where placement is automatic ([Which path applies](./SKILL.md#which-path-applies)),
+`filesystem_id` (repeatable) narrows the list to one or more filesystems and
+`sort_by=filesystem_name` sorts by the filesystem's name; the other `sort_by` values are
+volume columns such as `name`, `created_at` and `updated_at`.
 
 ## Files
 
