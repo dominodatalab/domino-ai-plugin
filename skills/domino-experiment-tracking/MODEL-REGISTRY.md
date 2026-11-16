@@ -1,6 +1,6 @@
 # Domino Model Registry
 
-Domino's registry stores MLflow registered models with Domino additions: project-scoped access control, model cards with lineage, discoverability across projects, and deployment to Domino endpoints. Use the MLflow client for versions, aliases and tags, and Domino's `/api/registeredmodels/...` routes for Domino-only attributes. R models are not supported.
+Domino's registry stores MLflow registered models with Domino additions: project-scoped access control, model cards with lineage, discoverability across projects, and deployment to Domino endpoints. Use the MLflow client for versions, aliases and tags, and Domino's `/api/registeredmodels/v1` routes for Domino-only attributes. R models are not supported. If **Models** is missing from the navigation, the registry may be turned off by the `ShortLived.ModelRegistry` feature flag; ask an administrator.
 
 ## Register
 
@@ -28,11 +28,11 @@ Or register an existing run's model: `mlflow.register_model("runs:/<run_id>/mode
 
 ### By REST (Domino)
 
-`POST /api/registeredmodels/v2` registers from an MLflow run or a Hugging Face model (`modelName`, `modelSource{sourceType, mlflowSource{experimentRunId, loggedModelId|artifactPath}|huggingFaceSource{modelId}}`, `create`, optional `projectId`, `description`, `discoverable`). With an MLflow 3 client pass `loggedModelId` (`m-<id>`): a version registered with `artifactPath: "model"` points at a run artifact that MLflow 3 never wrote and does not load. `POST /api/registeredmodels/v1/{modelName}/versions` is deprecated. Worked example: [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md).
+`POST /api/registeredmodels/v1` creates a registered model from an experiment run; `POST /api/registeredmodels/v1/{modelName}/versions` adds a version from a run (`description`, `experimentRunId`, `artifact`). The public spec lists `modelName`, `experimentRunId`, `discoverable` (required), `description` and `tags` for the create body; confirm the request schemas in your deployment's `/docs` (`/docs/openapi/openapi-public.json`) before scripting them. Registering with the MLflow client (above) needs no Domino route. Worked example: [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md).
 
 ## Versions, aliases and tags
 
-MLflow stages (`Staging`, `Production`, `transition_model_version_stage`) are deprecated upstream since MLflow 2.9. Domino's registry still shows `current_stage` for compatibility, but promotion should use **aliases** (one version per alias name) and **tags**. On Domino Cloud aliases work through the client (`set_registered_model_alias`, `get_model_version_by_alias`, `get_registered_model(name).aliases`, `mlflow.pyfunc.load_model("models:/<name>@champion")`) and through `/api/2.0/mlflow/registered-models/alias` on the deployment URL with a bearer token (`GET ?name=...&alias=...` returns the version; `POST` with `{"name": ..., "alias": ..., "version": ...}` sets one). On Domino 6.3 run that GET first; a 404 means the server predates aliases, so use tags instead.
+MLflow stages (`Staging`, `Production`, `transition_model_version_stage`) are deprecated upstream since MLflow 2.9. Domino's registry still shows `current_stage` for compatibility, but promotion should use **aliases** (one version per alias name) and **tags**. Aliases work through the client (`set_registered_model_alias`, `get_model_version_by_alias`, `get_registered_model(name).aliases`, `mlflow.pyfunc.load_model("models:/<name>@champion")`) and through `/api/2.0/mlflow/registered-models/alias` on the deployment URL with a bearer token (`GET ?name=...&alias=...` returns the version; `POST` with `{"name": ..., "alias": ..., "version": ...}` sets one). Run that GET first; a 404 means the server's MLflow has no aliases, so use tags instead.
 
 ```python
 import mlflow
@@ -75,16 +75,15 @@ Or edit it under **Models** > model > **Overview**. From a version you can walk 
 
 | Task | Route |
 |------|-------|
-| List registered models | `GET /api/registeredmodels/v2?projectId=&searchPattern=&maxResults=25` (token-paginated with `pageToken`) |
+| List registered models | `GET /api/registeredmodels/v1?projectId=&searchPattern=&maxResults=25` (token-paginated with `pageToken`) |
 | Names only | `GET /api/registeredmodels/v1/names` |
 | Get a model | `GET /api/registeredmodels/v1/{modelName}` (`name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `requestingUserAccess`; it returns neither `discoverable` nor aliases, which only MLflow's API shows) |
 | Update description or discoverability | `PATCH /api/registeredmodels/v1/{modelName}` with `{"description": "...", "discoverable": true}` (200; the description persists, `discoverable` is not echoed back by `GET`) |
 | Versions | `GET /api/registeredmodels/v1/{modelName}/versions`, `GET .../versions/{version}` |
 | Endpoints serving a model or version | `GET /api/registeredmodels/v1/{modelName}/modelapis`, `GET .../versions/{version}/modelapis` |
-| Unregistered models in an experiment | `GET /api/registeredmodels/v1/experiments/{experimentId}/unregistered-models` |
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: PAT or service-account token
+TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: a service-account token, or send X-Domino-Api-Key instead
 curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   "$DOMINO_API_HOST/api/registeredmodels/v1/churn-rf" -d '{"discoverable": true}'
 ```

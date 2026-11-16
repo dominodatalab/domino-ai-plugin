@@ -6,8 +6,8 @@ They are documented on the product pages cited below and in each deployment's
 
 ## NVIDIA Fleet Command (edge)
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/export-nvidia
-(same on 6.3). Domino pushes the endpoint container image and a Helm chart to private
+Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/export-nvidia.
+Domino pushes the endpoint container image and a Helm chart to private
 repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The route is
 labelled beta.
 
@@ -44,8 +44,8 @@ Constraints:
 
 ## Snowflake (Snowpark UDF)
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/snowflake-queries
-(same on 6.3). Domino uploads the model artifact, the file holding the predict function and its
+Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/snowflake-queries.
+Domino uploads the model artifact, the file holding the predict function and its
 dependent modules to a Snowflake stage and registers the function as a Snowpark Python UDF, so
 scoring runs where the data lives. The documented path is the UI publish flow.
 
@@ -95,7 +95,7 @@ the next export).
 
 Two mechanisms exist; prefer the first.
 
-**Deployment targets (Public API, 6.3 and Cloud).** An admin registers an external
+**Deployment targets (Public API).** An admin registers an external
 deployment target (`GET/POST /api/admin/v1/deploymentTargets`, types from
 `/api/admin/v1/deploymentTargetTypes`, resource configurations under
 `.../{deploymentTargetId}/resourceConfigurations`). A user then deploys a **registered model**

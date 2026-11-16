@@ -1,6 +1,6 @@
 # The Domino R package
 
-Docs: https://docs.domino.ai/cloud/reference/r-package/domino-r-package (6.3 page identical).
+Docs: https://docs.domino.ai/cloud/reference/r-package/domino-r-package.
 CRAN package: `domino` 0.3.1.
 
 ## What it is
@@ -22,14 +22,15 @@ library(domino)
 
 ## Sign in
 
-Sign in from a terminal with the CLI (`domino login https://<your-domino-url>`, or
-`domino login --device ...` without a local browser). The CLI keeps the session; R commands then
-work.
+Sign in from a terminal with the CLI: `domino login https://<your-domino-url>`, then open
+`https://<your-domino-url>/authorizeCli` in a browser and paste the code it shows at the prompt.
+The CLI keeps the session; R commands then work.
 
 `domino.login(usernameOrEmail, password, approvalForSendingErrorReports = FALSE, host)` pipes
 `username`, `password` and a `Y`/`N` into `domino login <host>`'s legacy interactive prompt
-(password prompted in RStudio or the console when omitted). The current CLI signs in through a
-browser or device code, so `domino.login()` may fail against it; prefer the terminal login.
+(password prompted in RStudio or the console when omitted). The current CLI signs in with an
+authorization code from `/authorizeCli`, so `domino.login()` may fail against it; prefer the
+terminal login.
 
 ## Functions
 
@@ -79,7 +80,7 @@ Inside `myScript.R`, read the arguments with `commandArgs(trailingOnly = TRUE)`.
 
 For anything beyond file sync and runs (listing Jobs, Datasets, model serving), call the REST API
 from R with `httr` and the same authentication rules as every other client
-(https://docs.domino.ai/cloud/reference/api/domino-api-authentication):
+(https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/):
 
 ```r
 library(httr); library(jsonlite)
@@ -90,8 +91,10 @@ if (in_run && nzchar(Sys.getenv("DOMINO_API_PROXY"))) {
 } else if (in_run) {
   tok  <- content(GET("http://localhost:8899/access-token"), as = "text")
   base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", tok))
-} else {                                                           # laptop: export DOMINO_API_HOST=<deployment URL> and PAT=<Personal Access Token or service account token>
-  base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", Sys.getenv("PAT")))
+} else if (nzchar(Sys.getenv("SA_TOKEN"))) {                      # laptop: export DOMINO_API_HOST=<deployment URL> and SA_TOKEN=<service account token>
+  base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(Authorization = paste("Bearer", Sys.getenv("SA_TOKEN")))
+} else {                                                           # laptop fallback: DOMINO_USER_API_KEY=<your user API key>
+  base <- Sys.getenv("DOMINO_API_HOST"); auth <- add_headers(`X-Domino-Api-Key` = Sys.getenv("DOMINO_USER_API_KEY"))
 }
 
 r <- POST(paste0(base, "/api/jobs/v1/jobs"), auth, encode = "json",

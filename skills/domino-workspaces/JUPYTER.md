@@ -50,7 +50,7 @@ Platform API calls go through `os.environ["DOMINO_API_PROXY"]` with no `Authoriz
 
 ## Coding assistants in Jupyter
 
-The DSE includes CLI coding agents that work from a JupyterLab terminal; VS Code adds the extension panels. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+The DSE does not include coding assistants. A CLI agent the user installs (in the environment Dockerfile, or with Package or Home Directory Persistence) runs from a JupyterLab terminal; see [SKILL.md](./SKILL.md#coding-assistants-and-extra-apps).
 
 ## Notebooks as Jobs
 

@@ -1,7 +1,7 @@
 # Domino CLI command reference
 
 Source: https://docs.domino.ai/cloud/reference/cli/cli-reference and
-https://docs.domino.ai/cloud/reference/cli/download-files-with-the-cli (6.3 pages identical).
+https://docs.domino.ai/cloud/reference/cli/download-files-with-the-cli.
 `domino help` prints the same list; `domino help run` prints one command.
 
 The file and run commands act on the project folder you run them in; the CLI records the link in

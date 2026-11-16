@@ -1,12 +1,12 @@
 ---
 name: domino-model-delivery
 description: Deliver a Domino model outside a Domino endpoint. Covers batch scoring Jobs (a scoring script run once or on a schedule, results, notifications, the async endpoint alternative), the Model Export API (buildModelImage, exportImageToRegistry, build and export status and logs, .modelignore, running the exported image on your own Kubernetes), and the export targets NVIDIA Fleet Command (exportImageForNvidia) and Snowflake (Snowpark UDF), and SageMaker. Use when the user wants to batch-score a dataset or table with a trained model, run scoring on a schedule, export a model image out of Domino to a container registry from GitHub Actions, Jenkins or another CI/CD pipeline, push a model to NVIDIA Fleet Command or Snowflake, deploy a registered model to a SageMaker external endpoint, or asks about the Exports page. Not for deploying or updating a Domino-hosted endpoint, from CI/CD or otherwise; that belongs to domino-model-serving (REST) and domino-model-endpoints (UI).
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token. The Model Export routes (/v4/models) are non-public, documented per deployment, and may change in a future Domino version.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token or a user API key. The Model Export routes (/v4/models) are non-public, documented per deployment, and may change in a future Domino version.
 ---
 
 # Domino model delivery: batch scoring, model export, CI/CD
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 Ways to get predictions out of a trained model without serving it as a Domino endpoint.
 Deploying or updating a Domino-hosted endpoint, including from CI/CD, is
@@ -23,7 +23,8 @@ Deploying or updating a Domino-hosted endpoint, including from CI/CD, is
 ## Authentication
 
 Base URL and credential per context: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
-Legacy API keys (`X-Domino-Api-Key`) are deprecated; send a Bearer token.
+Outside a run, send a service-account token as `Authorization: Bearer`, or a user API key in
+`X-Domino-Api-Key`.
 
 ## Batch scoring in one screen
 
@@ -60,7 +61,7 @@ GET  /v4/models/{exportId}/getExportImageStatus                   -> status (ter
 GET  /v4/models/{exportId}/getExportLogs                          -> logs
 ```
 
-Public API complement (both specs): `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/exportLogs`.
+Public API complement: `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/exportLogs`.
 
 python-domino ([domino-python-sdk](../domino-python-sdk/SKILL.md)) wraps export, status and logs
 but not the build call. Request bodies, a pipeline script with a GitHub Actions job, the

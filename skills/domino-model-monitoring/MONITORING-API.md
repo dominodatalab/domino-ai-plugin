@@ -7,7 +7,8 @@ Routes: the Model Monitor service under `/model-monitor/...` and custom metrics 
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication). The examples use `$TOKEN`:
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)   # in a run; outside Domino a PAT or service-account token
+TOKEN=$(curl -s http://localhost:8899/access-token)   # in a run; outside Domino a service-account token
+# with a user API key, send -H "X-Domino-Api-Key: $DOMINO_USER_API_KEY" instead of the Bearer header
 ```
 
 ## Routes

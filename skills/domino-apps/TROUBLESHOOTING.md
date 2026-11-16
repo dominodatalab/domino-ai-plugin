@@ -15,9 +15,9 @@ python -m flask run --host=0.0.0.0 --port=8888
 Other causes, visible in the logs:
 
 - `streamlit: not found` / `ModuleNotFoundError` / `exit code 127`: the framework is not in the Compute Environment. Packages pip-installed in a Workspace are not in the App. Use an environment that has it, a `requirements.txt` at the project root, or (prototype) `python -m pip install --user -q <pkg>` at the top of `app.sh`; see [FRAMEWORKS.md](./FRAMEWORKS.md), Dependencies.
-- `entry script 'app.sh' not found in the root directory of your project`: the file was never synced or committed, or the version was created over the API right after the upload, before the DFS head included it, and resolved the previous head. DFS project: **File Changes > Sync to Domino**; Git-based: commit and push; over the API pin `content.dfsCommitId` to the uploaded commit (see [API-APPS.md](./API-APPS.md)). Then publish a new version.
+- `entry script 'app.sh' not found in the root directory of your project`: the file was never synced or committed, or the App was started right after an upload, before the project's head included it. DFS project: **File Changes > Sync to Domino**; Git-based: commit and push. Then publish again.
 - `Port 8888 is already in use` while testing in a Workspace: that port belongs to the IDE there. Test on another port in one command, since each tool call is a new shell: `streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true & pid=$!; sleep 8; curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8501/; kill $pid` (never `pkill -f`, which matches your own shell). Leave 8888 in `app.sh`, where the App's own container needs it.
-- `app.sh: no build matches these sources`: the saved code changed after the last build, or the build was never saved. Run `scripts/build-dist.sh`, save (**Sync All Changes** or **Sync to Domino**), publish a new version ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)).
+- `app.sh: no build matches these sources`: the saved code changed after the last build, or the build was never saved. Run `scripts/build-dist.sh`, save (**Sync All Changes** or **Sync to Domino**), publish again ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)).
 - `npm: command not found` or a Vite error about the Node version while building: building needs Node 20.19 or later with npm; the App itself needs only `node` ([REACT-VITE-GUIDE.md](./REACT-VITE-GUIDE.md#build-once-serve-the-build)).
 - `app.sh` not executable (`git update-index --chmod=+x app.sh`); wrong working directory (start `app.sh` with `cd "$(dirname "$0")"` so it runs next to `package.json` or `app.py`).
 
@@ -35,8 +35,8 @@ Verify after `npm run build`: `grep -o 'src="[^"]*"' build/index.html` must show
 ## 3. Blank page
 
 1. Browser console: a JavaScript error, or assets loaded from the wrong path (see 2).
-2. The App serves an older build than expected: `/healthz` and the App log (`app.sh: serving build <label>`) name the build. Rebuild and save, then publish a new version.
-3. The App was not republished after the code change: publishing pins a commit, so edit, commit, publish a new version, deploy it.
+2. The App serves an older build than expected: `/healthz` and the App log (`app.sh: serving build <label>`) name the build. Rebuild and save, then publish again.
+3. The App was not republished after the code change: the App runs the commit it was published with, so edit, commit and publish again.
 4. The URL lacks its trailing slash (`.../apps/<vanity>`): relative assets resolve one level up. Add the trailing-slash script ([FRAMEWORKS.md](./FRAMEWORKS.md#behind-dominos-app-proxy)).
 
 ## 4. Deep links or page refresh return 404 (React Router)
@@ -48,14 +48,14 @@ Verify after `npm run build`: `grep -o 'src="[^"]*"' build/index.html` must show
 
 ## 5. Dash or another Python app worked before and fails after a restart
 
-**Cause:** the app builds its URL prefix from `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID`. The prefix is not derived from them: App Preview (`/preview/<id>/`), deployed Apps (`/apps-internal/<id>/`, `/apps/<vanity>/`) and `/modelproducts/<id>/` differ, so a hand-built prefix breaks on the next restart or deploy. Symptoms: blank page, 404 or 502 after restart; Dash cannot load assets or callbacks.
+**Cause:** the app builds its URL prefix from `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID`. The prefix is not derived from them: Apps are served under `/apps-internal/<id>/`, `/apps/<vanity>/` or `/modelproducts/<id>/`, so a hand-built prefix breaks on the next restart or publish. Symptoms: blank page, 404 or 502 after restart; Dash cannot load assets or callbacks.
 
 ```python
 app = Dash(__name__, routes_pathname_prefix="/",
            requests_pathname_prefix=os.environ.get("DOMINO_RUN_HOST_PATH"))
 ```
 
-Publish a new version with the change and deploy it. Reference: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/configuration
+Publish the App again with the change. Reference: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/configuration
 
 ## 6. Model endpoint calls fail (401, 403, CORS)
 
@@ -85,15 +85,14 @@ Domino's Streamlit example sets the same two options in `~/.streamlit/config.tom
 
 ## 10. Domino API calls from the App fail (401, 403, 500) or return the publisher's data
 
-- **500 (or 401/403) on a viewer call:** without extended identity propagation the viewer's token works only for Dataset snapshot file reads and Data Source lookup by name. Publish with extended identity propagation (SysAdmin or CloudAdmin) or call as the publisher ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
-- **403 from `$DOMINO_API_HOST`:** the call sent a Domino CLI login token. Send the viewer's token, a Personal Access Token or a service account token.
-- **The viewer sees the publisher's data:** the code called `$DOMINO_API_HOST` without `Authorization`, which runs as the publisher. Forward the viewer's token and return 401 when it is missing.
+- **500 (or 401/403) on a call with the viewer's token:** acting for viewers is not available on Domino 6.1, so Domino API routes reject the viewer's token. Call as the publisher and scope per-viewer data in the App by the viewer's username ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
+- **Every viewer sees the publisher's data:** calls without `Authorization` run as the publisher. Filter the results by the viewer's username where data is per viewer.
 - **Publisher calls:** `$DOMINO_API_PROXY/...` with no header, or a bearer fetched per request from `$DOMINO_API_PROXY/access-token`.
 
-## 11. Identity, consent, limits and streaming
+## 11. Identity, limits and streaming
 
-- **Viewer name missing or `Anonymous`:** the App reads `domino-username`, which Apps with extended identity propagation do not receive. Read the token's `preferred_username` ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
-- **A script or `fetch` gets HTML or a 302:** a 302 to the sign-in page means no credentials; a 302 to `/app-consent?appId=...` means the user has not consented to an App with extended identity propagation. Consent once in a browser, then send a Personal Access Token.
+- **Viewer name missing or `Anonymous`:** `Anonymous` is an anonymous viewer of a public App. Otherwise read the `domino-username` header, or the token's `preferred_username` when a token arrives ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
+- **A script or `fetch` gets HTML or a 302:** a 302 to the sign-in page means the request had no browser credentials. Open the App in a browser, or reload the page when a session expired.
 - **413:** the request body exceeds 25 MiB (the default limit). Upload in parts.
 - **No response after 300 s:** the proxy gives up on a response that sends nothing for 300 s. Run long work as a Job and poll for its result.
 - **WebSocket or server-sent-events connection closes after 300 s idle:** send a heartbeat more often. **Server-sent events arrive all at once:** send `X-Accel-Buffering: no` on the response.
@@ -103,16 +102,16 @@ Domino's Streamlit example sets the same two options in `~/.streamlit/config.tom
 
 ## Diagnostics
 
-Logs over the API (instance reads are beta-only; in a run, no `Authorization` header on `$DOMINO_API_PROXY`; outside one, the deployment URL with a Personal Access Token):
+Logs over the API (in a run, no `Authorization` header on `$DOMINO_API_PROXY`; outside one, the deployment URL with a service account token or a user API key):
 
 ```bash
 curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances"
 curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances/$INSTANCE_ID/logs?logType=stderr"
 ```
 
-`APP_ID` comes from `GET /api/apps/v1/apps?projectId=$DOMINO_PROJECT_ID&name=<app name>` (`items[].id`) and `VERSION_ID` from that record's `currentVersion.id`. The App details page offers the same logs and a support bundle (`execution.log`, `executor.log`, Kubernetes events, nginx logs).
+`APP_ID` comes from `GET /api/apps/beta/apps?projectId=$DOMINO_PROJECT_ID&name=<app name>` (`items[].id`) and `VERSION_ID` from `GET /api/apps/beta/apps/$APP_ID` (`currentVersion.id`). The App details page shows the same logs.
 
-Reproduce first with App Preview in a Workspace: it runs behind the real proxy with the identity headers. A local run only checks the build and the start command:
+Reproduce behind the real proxy by publishing the App. A local run only checks the build and the start command:
 
 ```bash
 DIST_DIR=dist bash scripts/build-dist.sh && DIST_DIR=dist ./app.sh   # then open http://localhost:8888/healthz
@@ -131,7 +130,7 @@ DIST_DIR=dist bash scripts/build-dist.sh && DIST_DIR=dist ./app.sh   # then open
 | Env var undefined | `VITE_` prefix for build-time values; project variables plus restart for runtime values |
 | `no build matches these sources` | `scripts/build-dist.sh`, save, publish |
 | Slow start | Build once; nothing installed or built in `app.sh`; packages in the environment |
-| Viewer calls 500/403, or publisher data | Section 10 |
-| Missing username, consent redirects, 413, timeouts, buffered streams | Section 11 |
+| Viewer-token calls 500/403, or publisher data | Section 10 |
+| Missing username, sign-in redirects, 413, timeouts, buffered streams | Section 11 |
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/operate (logs and support bundle) and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/develop-and-test/app-frameworks (minimal working examples).
+Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/operate (logs) and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/develop-and-test/app-frameworks (minimal working examples).

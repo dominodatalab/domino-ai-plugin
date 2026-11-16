@@ -1,14 +1,14 @@
 ---
 name: domino-distributed-computing
-description: Work with Domino on-demand compute clusters - Apache Spark, Ray, Dask and Open MPI - attached to a Workspace or Job. Covers choosing a framework, the cluster and execution environments, attaching a cluster from the UI or the Jobs API (computeCluster), connecting from code, autoscaling, cluster web UIs and lifecycle, and troubleshooting. Use when processing large datasets, running distributed or multi-GPU training, or scaling Python workloads. Slurm is domino-hpc-slurm.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
+description: Work with Domino on-demand compute clusters - Apache Spark, Ray, Dask and Open MPI - attached to a Workspace or Job. Covers choosing a framework, the cluster and execution environments, attaching a cluster from the UI or the Jobs API (computeCluster), connecting from code, autoscaling, cluster web UIs and lifecycle, and troubleshooting. Use when processing large datasets, running distributed or multi-GPU training, or scaling Python workloads.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token (Bearer) or a user API key.
 ---
 
 # Domino distributed computing
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
-Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. It belongs to that execution alone and its nodes run a separate **cluster environment**. Slurm: [domino-hpc-slurm](../domino-hpc-slurm/SKILL.md).
+Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. It belongs to that execution alone and its nodes run a separate **cluster environment**. Slurm clusters are not available on Domino 6.1.
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-clusters-hpc (same paths under `/6.3/`).
 
@@ -20,7 +20,6 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-cluste
 | Ray | Ray Train, Ray Tune, RLlib, parallel Python | serving (clusters are ephemeral; use a Domino endpoint) |
 | Dask | pandas/NumPy/scikit-learn at scale, custom task graphs | |
 | Open MPI | multi-node, multi-GPU `mpirun` training (Horovod, PyTorch, TF) | Apps, Launchers, endpoints (not supported) |
-| Slurm | existing `sbatch` scripts: [domino-hpc-slurm](../domino-hpc-slurm/SKILL.md) | Jobs (Workspace only) |
 
 ## Environments
 
@@ -28,6 +27,8 @@ Each cluster type needs two environments with the **same Python version**:
 
 1. **Cluster environment** (head/master/scheduler and workers): create it from the catalog image (`quay.io/domino/{spark,ray,dask,mpi}-cluster-environment`, plus `ray-cluster-gpu-environment`; tags change per release), tick the framework under **Supported Clusters**, leave Pluggable Workspace Tools empty. A DSE cannot be a worker environment. Pre/post setup and run scripts never run on cluster nodes.
 2. **Execution environment** for the Workspace or Job (driver/client): the matching `domino-{spark,ray,dask,mpi}-environment` image with workspace tools. MPI needs the same Open MPI version in both.
+
+Domino 6.1 images are tagged `...-domino6.1` (MPI tags also carry the Open MPI version); take the exact tag from Domino's 6.1 environment catalog; do not guess.
 
 Add packages to **both** with Dockerfile instructions (`RUN pip install torch==2.14.1`; [domino-environments](../domino-environments/SKILL.md)).
 

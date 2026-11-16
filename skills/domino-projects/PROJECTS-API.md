@@ -1,6 +1,6 @@
 # Projects over REST and python-domino
 
-Routes marked (Cloud) are Domino Cloud only. The python-sdk catalog for the same surface is [API-PROJECTS.md](../domino-python-sdk/API-PROJECTS.md).
+The python-sdk catalog for the same surface is [API-PROJECTS.md](../domino-python-sdk/API-PROJECTS.md).
 
 ## Setup
 
@@ -17,7 +17,7 @@ base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run with the proxy
 | List projects you can see | `GET /api/projects/beta/projects?offset=0&limit=10` → `projects[]` (`id`, `name`, `description`, `visibility`, `ownerId`, `ownerUsername`, `collaborators[]`, `isRestricted`), `metadata.totalCount` |
 | Get one | `GET /api/projects/v1/projects/{projectId}` → `project` with the same fields; `collaborators[]` entries are `{id, role}` |
 | Current project in a run | `$DOMINO_PROJECT_ID` (also `DOMINO_PROJECT_NAME`, `DOMINO_PROJECT_OWNER`) |
-| Latest commit (beta) | `GET /api/projects/beta/projects/{projectId}/commits/latest` |
+| Commit ids, newest first | python-domino `commits_list()` (legacy `/v1/projects/{owner}/{project}/commits`) |
 | File content at a commit | `GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` |
 | Imported Git repositories | `GET /api/projects/v1/projects/{projectId}/repositories` |
 | Goals | `GET /api/projects/v1/projects/{projectId}/goals` |
@@ -40,7 +40,7 @@ mine = [p for p in projects if p["name"] == "churn-model"]
 
 ## Create
 
-`POST /api/projects/v2/projects` (permissions `CreateProject`, `UseFileStorage`). Required: `name` (unique, no whitespace), `description`, `visibility` (`private`, `searchable`; `public` on 6.3 only). The caller owns the project unless `ownerId` names another user (organizations cannot own a project through this route). The create returns 200 with `{project{...}}`; `visibility` is accepted in either case and comes back capitalized (`Private`); a Git-based create takes `mainRepository{uri, serviceProvider, defaultRef{refType: "head"}}`; `DELETE /api/projects/beta/projects/{id}` returns `{"success": true}`, after which `GET` is 404.
+`POST /api/projects/v2/projects` (permissions `CreateProject`, `UseFileStorage`). Required: `name` (unique, no whitespace), `description`, `visibility` (`private`, `searchable`, `public`). The caller owns the project unless `ownerId` names another user (organizations cannot own a project through this route). The create returns 200 with `{project{...}}`; `visibility` is accepted in either case and comes back capitalized (`Private`); a Git-based create takes `mainRepository{uri, serviceProvider, defaultRef{refType: "head"}}`; `DELETE /api/projects/beta/projects/{id}` returns `{"success": true}`, after which `GET` is 404.
 
 DFS project:
 
@@ -66,7 +66,7 @@ r = requests.post(f"{base}/api/projects/v2/projects", headers=headers, json={
 
 ### Git credentials
 
-List: public `GET /api/users/beta/credentials/{userId}` (6.3 and Cloud; needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); on 6.3 confirm it in your deployment's `/docs`). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
+List: public `GET /api/users/beta/credentials/{userId}` (needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); confirm it in your deployment's `/docs`). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
 
 ```python
 user_id = requests.get(f"{base}/api/users/v1/self", headers=headers).json()["user"]["id"]
@@ -94,7 +94,7 @@ requests.delete(f"{base}/api/projects/v1/projects/{project_id}/collaborators/<co
 
 Needs `ManageCollaborators`; adding a user who is already a member returns 400. User ids are the `ownerId` and `collaborators[].id` values returned by the project routes; the users API is in [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md).
 
-No public route changes visibility after creation. Use **Settings** > **Access & Sharing**, or the Domino Internal API route `PATCH /v4/projects/{projectId}/visibility` with `{"visibility": "Private"}` (`Public`, `Searchable` or `Private`; non-public route; may change in a future Domino version). It answers 200 with an empty body, `GET /api/projects/v1/projects/{projectId}` then reports the new value, and an unknown value returns 400 with a JSON validation error; `Public` is not offered on Domino Cloud. On 6.3, confirm the route in your deployment's `/docs` first.
+No public route changes visibility after creation. Use **Settings** > **Access & Sharing**, or the Domino Internal API route `PATCH /v4/projects/{projectId}/visibility` with `{"visibility": "Private"}` (`Public`, `Searchable` or `Private`; non-public route; may change in a future Domino version). It answers 200 with an empty body, `GET /api/projects/v1/projects/{projectId}` then reports the new value, and an unknown value returns 400 with a JSON validation error. Confirm the route in your deployment's `/docs` first.
 
 ```python
 requests.patch(f"{base}/v4/projects/{project_id}/visibility", headers=headers,   # non-public route; may change in a future Domino version
@@ -103,7 +103,7 @@ requests.patch(f"{base}/v4/projects/{project_id}/visibility", headers=headers,  
 
 ## Project settings (defaults)
 
-No python-domino method and no public route cover the defaults every Workspace and Job starts with; set them in **Settings** > **Hardware & Environment**, or with the Domino Internal API (`GET` and `PUT /v4/projects/{projectId}/settings`, non-public route; may change in a future Domino version; `PUT` answers 200 and the following `GET` returns the new tier; on 6.3 confirm in `/docs`). The `PUT` body (`ProjectSettingsUpdateDto`) takes `defaultEnvironmentId`, `defaultEnvironmentRevisionSpec` (`ActiveRevision`, `LatestRevision`, `RestrictedRevision`, or `{"revisionId": "..."}`), `defaultHardwareTierId` and `defaultVolumeSizeGiB`; `GET` also returns `sparkClusterMode` and `minVolumeSizeGiB`, `maxVolumeSizeGiB`, `recommendedVolumeSizeGiB`, which are not settable here.
+No python-domino method and no public route cover the defaults every Workspace and Job starts with; set them in **Settings** > **Hardware & Environment**, or with the Domino Internal API (`GET` and `PUT /v4/projects/{projectId}/settings`, non-public route; may change in a future Domino version; `PUT` answers 200 and the following `GET` returns the new tier; confirm in `/docs`). The `PUT` body (`ProjectSettingsUpdateDto`) takes `defaultEnvironmentId`, `defaultEnvironmentRevisionSpec` (`ActiveRevision`, `LatestRevision`, `RestrictedRevision`, or `{"revisionId": "..."}`), `defaultHardwareTierId` and `defaultVolumeSizeGiB`; `GET` also returns `sparkClusterMode` and `minVolumeSizeGiB`, `maxVolumeSizeGiB`, `recommendedVolumeSizeGiB`, which are not settable here.
 
 ```python
 settings = requests.get(f"{base}/v4/projects/{project_id}/settings", headers=headers).json()   # non-public route; may change in a future Domino version
@@ -122,7 +122,7 @@ requests.put(f"{base}/v4/projects/{project_id}/settings", headers=headers, json=
 # (reference copy instead: "gitCodeRepoSpec": {"credentialId": ..., "referenceCopy": {"mainRepoUrl": "https://github.com/acme/churn-model.git"}})
 requests.post(f"{base}/api/projects/v1/projects/{project_id}/copy-project", headers=headers, json={
     "name": "churn-model-v2", "visibility": "private", "copyDatasets": True,
-    "gitCodeRepoSpec": {"credentialId": "<PAT credential id>",
+    "gitCodeRepoSpec": {"credentialId": "<Git token credential id>",
                         "deepCopy": {"newRepoName": "churn-model-v2", "newRepoOwnerName": "acme", "visibility": "private"}}})
 
 requests.put(f"{base}/api/projects/v1/projects/{project_id}/status", headers=headers,
@@ -147,7 +147,7 @@ requests.post(f"{base}/api/projects/v1/projects/{project_id}/repositories", head
 requests.delete(f"{base}/api/projects/v1/projects/{project_id}/repositories/<repositoryId>", headers=headers)
 ```
 
-(Cloud) `PUT /api/projects/v1/projects/{projectId}/repositories/{repositoryId}/default-ref` with `{"refType": "branch", "value": "develop"}` changes what later runs check out; use `_` as the repository id for a Git-based project's main repository. Also (Cloud): `GET .../repositories/{repositoryId}/readme`, `/file-metadata`, `/rendered-file`. Imported repositories mount at `/mnt/imported/code/<name>` (Git-based) or `/repos/<name>` (DFS).
+Imported repositories mount at `/mnt/imported/code/<name>` (Git-based) or `/repos/<name>` (DFS).
 
 ## Shared datasets
 
@@ -162,7 +162,7 @@ Every method needs a client bound to one project: `Domino("owner/project")`; the
 | `project_create(project_name, owner_username=None)` | Creates a DFS project through the legacy `POST /project` route (non-public route; may change in a future Domino version) | Prefer the REST v2 route above for Git-based projects and templates |
 | `projects_list(relationship="Owned", show_completed=False)` | Lists projects through `GET /v4/gateway/projects` (non-public route; may change in a future Domino version) | |
 | `project_archive(project_name)` | Archives by name through `DELETE /v4/projects/{id}` (non-public route; may change in a future Domino version) | The public equivalent is `DELETE /api/projects/beta/projects/{projectId}` |
-| `fork_project(target_name)` | Forks the bound project through the internal `/v4/projects/{id}/fork` route (may change in a future Domino version) | Forks are unavailable on Domino Cloud |
+| `fork_project(target_name)` | Forks the bound project through the internal `/v4/projects/{id}/fork` route (may change in a future Domino version) | DFS projects only |
 | `collaborators_get()`, `collaborators_add(username_or_email, message="")`, `collaborators_remove(username_or_email)` | Collaborators | All three use Domino Internal API routes (non-public; may change in a future Domino version) |
 | `get_user_id(username_or_email)` | Resolves a username or email to a user id (`/v4/users`, non-public route; may change in a future Domino version) | Useful before the public collaborator route above |
 | `project_billing_tag(...)`, `project_billing_tag_update(...)`, `project_billing_tag_reset(...)` | Billing tags | |

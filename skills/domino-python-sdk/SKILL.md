@@ -1,19 +1,19 @@
 ---
 name: domino-python-sdk
 description: Programmatically interact with Domino using the python-domino SDK and the Domino REST API. Covers authentication, starting and monitoring jobs, managing projects, files, datasets, environments and Model APIs, and automation from CI/CD. Use when automating Domino workflows, integrating Domino with external systems, or building custom tooling around Domino. For multi-step pipelines inside Domino use domino-flows; for an existing Airflow or Kubeflow deployment use domino-airflow-kubeflow; for exporting a model image from CI/CD use domino-model-delivery; for the domino command-line client and the R package use domino-cli.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token. python-domino (dominodatalab 2.2.0) needs Python 3.10 or later.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service account token or a user API key. python-domino (dominodatalab 2.2.0) needs Python 3.10 or later.
 ---
 
 # Domino Python SDK and REST API
 
-Applies to Domino 6.3 and Domino Cloud. Read
+Applies to Domino 6.1. Read
 [domino-api-intro](../domino-api-intro/SKILL.md) first for auth and base URLs.
 
 ## Two surfaces
 
 | | python-domino (`dominodatalab` on PyPI) | REST Public API |
 |---|---|---|
-| Covers | Projects, jobs and legacy runs, files, datasets, environments, hardware tiers, Model APIs, apps, budgets and billing tags | Everything in the published spec, including what the SDK does not wrap: NetApp volume mounts on jobs, taxonomy, governance, audit trail, service accounts, PATs |
+| Covers | Projects, jobs and legacy runs, files, datasets, environments, hardware tiers, Model APIs, apps, budgets and billing tags | Everything in the published spec, including what the SDK does not wrap: NetApp volume mounts on jobs, audit trail, service accounts |
 | Use for | Quick scripts inside Domino, existing automation | New automation and anything the SDK lacks |
 
 Other Domino skills show REST, not python-domino; the SDK wraps older routes and lags the
@@ -33,13 +33,12 @@ Docs: https://docs.domino.ai/cloud/reference/python-sdk/python-domino
 Follow [domino-api-intro](../domino-api-intro/SKILL.md#authentication). python-domino
 resolves credentials in this order (from the docs page above): `api_proxy`, `auth_token`,
 `domino_token_file`, `api_key`, then the environment variables `DOMINO_API_PROXY`,
-`DOMINO_TOKEN_FILE`, `DOMINO_USER_API_KEY`. Never pass `api_key=` or rely on
-`DOMINO_USER_API_KEY`; both are deprecated.
+`DOMINO_TOKEN_FILE`, `DOMINO_USER_API_KEY`.
 
 Inside a Domino execution with `DOMINO_API_PROXY` set, no credential argument is needed:
 the constructor reads `DOMINO_API_HOST` and `DOMINO_API_PROXY` from the environment. If
 the proxy is not set, pass the short-lived access token explicitly; otherwise the client
-falls back to `DOMINO_TOKEN_FILE` and then the deprecated `DOMINO_USER_API_KEY`.
+falls back to `DOMINO_TOKEN_FILE` and then `DOMINO_USER_API_KEY`.
 
 ```python
 import os
@@ -55,15 +54,17 @@ else:
 
 `domino.authenticate(auth_token=...)` refreshes the token on a long-running client.
 
-Outside Domino, pass the deployment URL and a Personal Access Token or service account
-token; `auth_token` is sent as `Authorization: Bearer`:
+Outside Domino, pass the deployment URL and a service account token as `auth_token` (sent
+as `Authorization: Bearer`); the fallback is your user API key as `api_key` (sent as
+`X-Domino-Api-Key`):
 
 ```python
 domino = Domino(
     "owner/project-name",
     host=os.environ["DOMINO_API_HOST"],          # deployment URL
-    auth_token=os.environ["PAT"],                # PAT or service account token
+    auth_token=os.environ["SA_TOKEN"],           # service account token
 )
+# fallback: Domino("owner/project-name", host=..., api_key=os.environ["DOMINO_USER_API_KEY"])
 ```
 
 Notes: the `project` argument (`owner/name`) is required; the constructor calls
@@ -90,16 +91,16 @@ Per-area files:
 | [API-JOBS.md](./API-JOBS.md) | Start, list, inspect and poll jobs; logs, tags, goals |
 | [API-DATASETS.md](./API-DATASETS.md) | Datasets, snapshots, tags, grants, mount paths |
 | [API-MODELS.md](./API-MODELS.md) | Model APIs, model deployments, registered models, invoking endpoints |
-| [API-MODEL-SERVING.md](./API-MODEL-SERVING.md) | Registry v1/v2 split, lifecycle, invoke vs management |
+| [API-MODEL-SERVING.md](./API-MODEL-SERVING.md) | Registry routes, lifecycle, invoke vs management |
 | [API-ENVIRONMENTS.md](./API-ENVIRONMENTS.md) | Environments, revisions, build status |
-| [API-APPS.md](./API-APPS.md) | Apps beta catalog (v1 publish chain is in [domino-apps](../domino-apps/API-APPS.md)) |
-| [API-ADMIN.md](./API-ADMIN.md) | Users, organizations, service accounts, PATs, hardware tiers, data sources, cost, audit trail |
+| [API-APPS.md](./API-APPS.md) | Apps beta catalog; app lifecycle in [domino-apps](../domino-apps/API-APPS.md) |
+| [API-ADMIN.md](./API-ADMIN.md) | Users, organizations, service accounts, hardware tiers, data sources, cost, audit trail |
 | [API-REFERENCE.md](./API-REFERENCE.md) | Complete route index and shared conventions |
 
 ## Rules
 
-- Verify every route against both published specs before using it
-  ([API-SPECS.md](../domino-api-intro/API-SPECS.md)). `/v4/*` routes are the Domino
+- Verify every route against the Domino 6.1 API reference or your deployment's `/docs`
+  before using it ([API-SPECS.md](../domino-api-intro/API-SPECS.md)). `/v4/*` routes are the Domino
   Internal API: non-public routes that may change in a future Domino version; the files above label the few that remain.
 - Field names are not interchangeable across routes: `POST /api/jobs/v1/jobs` takes
   `runCommand` and `hardwareTier`; python-domino `job_start` takes `command` and
@@ -122,6 +123,6 @@ Per-area files:
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/reference/api/domino-api-authentication
+- https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/
 - https://docs.domino.ai/cloud/reference/python-sdk/python-domino
 - https://github.com/dominodatalab/python-domino

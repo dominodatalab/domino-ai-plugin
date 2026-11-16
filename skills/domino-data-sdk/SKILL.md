@@ -1,18 +1,19 @@
 ---
 name: domino-data-sdk
 description: Use the domino-data Python library (PyPI dominodatalab-data, import domino_data) for programmatic data access inside Domino executions. Covers DataSourceClient for SQL queries and object-store reads and writes against Domino Data Sources, DatasetClient for reading Domino Dataset files and snapshots, TrainingSets for versioned training DataFrames, and the Pinecone helpers in domino_data.vectordb. Use when querying a Data Source from Python, downloading Dataset files by API, creating or loading TrainingSet versions, or connecting a Pinecone client through a Domino Data Source.
-compatibility: Domino 6.3 and Domino Cloud. Requires dominodatalab-data 6.7.4 or later (Python 3.10+). Designed for Domino executions, where the clients authenticate through DOMINO_API_PROXY and reach the Data Source proxy automatically; outside a run the proxy hosts are not normally reachable.
+compatibility: Domino 6.1. Requires dominodatalab-data 6.3.0 on Domino 6.1.1 and later, 6.2.0 on Domino 6.1.0 (Python 3.9+). Designed for Domino executions, where the clients authenticate through DOMINO_API_PROXY and reach the Data Source proxy automatically; outside a run the proxy hosts are not normally reachable.
 ---
 
 # Domino Data SDK (domino-data)
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 `dominodatalab-data` is the Python half of the Domino Data API. It talks to the Data Source
 proxy that Domino injects into every execution, so the Data Source credentials stay with the
-Data Source, managed by Domino, and never appear in code. Docs: https://docs.domino.ai/cloud/reference/api/data_api (same path under
-`/6.3/`). Source: https://github.com/dominodatalab/domino-data. Requires
-`dominodatalab-data>=6.7.4`; 6.7.4 needs Python 3.10 or later.
+Data Source, managed by Domino, and never appear in code. Docs: https://docs.domino.ai/cloud/reference/api/data_api. Source:
+https://github.com/dominodatalab/domino-data. Pin `dominodatalab-data==6.3.0` on Domino 6.1.1 and
+later and `dominodatalab-data==6.2.0` on Domino 6.1.0. These are Python package versions, not
+Domino versions; both need Python 3.9 or later.
 
 ## Install
 
@@ -20,11 +21,11 @@ Pre-installed in Domino Standard Environments. In a custom environment Dockerfil
 
 ```dockerfile
 USER root
-RUN python -m pip install "dominodatalab[data]" "dominodatalab-data>=6.7.4"
+RUN python -m pip install "dominodatalab[data]" "dominodatalab-data==6.3.0"   # ==6.2.0 on Domino 6.1.0
 USER ubuntu
 ```
 
-The `[data]` extra alone only requires `dominodatalab-data>=0.1.0`, so name the floor
+The `[data]` extra alone only requires `dominodatalab-data>=0.1.0`, so pin the version
 explicitly or an older preinstalled copy stays.
 
 Two import styles work: `from domino_data.data_sources import DataSourceClient` (the package)
@@ -40,8 +41,8 @@ or `from domino.data_sources import DataSourceClient` (python-domino re-exports 
 | `domino_data.training_sets.client` | TrainingSets: versioned DataFrames with key, target and monitoring columns | [TRAINING-SETS.md](./TRAINING-SETS.md) |
 | `domino_data.vectordb` | Parameters that route the `pinecone` client through a Domino Data Source | [VECTORDB.md](./VECTORDB.md) |
 
-The package also ships `domino_data.netapp_volumes`; the netapp-volumes skill covers that
-storage type. Feature Store is not in this library and is not covered.
+Feature Store is not covered. NetApp Volumes have no client in this library; use their mount
+path or REST API (netapp-volumes skill).
 
 ## Quick start
 
@@ -90,29 +91,26 @@ The UI generates copy-ready snippets for any Data Source or Dataset: **Data > Da
 Inside a Workspace, Job, scheduled Job, Launcher or App (as the publisher) the clients authenticate on their own
 from `token=` (if you pass one), `DOMINO_API_PROXY` (a short-lived JWT fetched from
 `$DOMINO_API_PROXY/access-token`), `DOMINO_TOKEN_FILE` (if that file exists) and
-`DOMINO_USER_API_KEY` (legacy API key, deprecated, never rely on it). The precedence differs
+`DOMINO_USER_API_KEY` (the user API key). The precedence differs
 per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. Hosts come from
 `DOMINO_API_PROXY`, else `DOMINO_API_HOST`, plus `DOMINO_DATASOURCE_PROXY_HOST` and
 `DOMINO_DATASOURCE_PROXY_FLIGHT_HOST` for the Data Source proxy; Domino injects all of them.
 
 - **Domino endpoints (model APIs)** get no automatic token. Store a service-account token as
   an environment variable on the endpoint and pass it: `DataSourceClient(token=os.environ["DATA_API_TOKEN"])`
-  (`token=`, not the deprecated `api_key=`).
-- **Apps acting for the calling user**: pass the incoming request's bearer token,
-  `DatasetClient(token=token)`, built per request. Without
-  extended identity propagation that token covers only Dataset file reads and Data Source
-  lookup by name. With no bearer or an empty one, answer 401; never pass `token=None`, which
-  uses the publisher's credentials.
+  (`token=`; `api_key=` takes a user API key instead).
+- **Apps** read as the publisher. Reading data as the App's viewer is not available on
+  Domino 6.1.
 - **Outside Domino**: the Data Source proxy hosts are internal to the deployment, so run Data
   API code inside a Domino execution. If your admin exposes them, set `DOMINO_API_HOST` to the
   deployment URL, the two proxy host variables as the admin gives them, and pass `token=` a
-  Personal Access Token (https://docs.domino.ai/cloud/reference/api/domino-api-authentication).
+  service-account token (or `api_key=` a user API key).
 
 Docs: https://docs.domino.ai/cloud/reference/api/data_api/authentication.
 
 ## Errors
 
-Exceptions raised by 6.7.4 (examples in the reference files):
+Exceptions raised by the pinned versions (examples in the reference files):
 
 - Client construction with no credential source, and `get_datasource` on a non-200: a bare
   `Exception` with the message.

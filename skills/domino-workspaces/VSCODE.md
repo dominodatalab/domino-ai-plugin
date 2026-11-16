@@ -2,7 +2,7 @@
 
 Launching, persistence, SSH and the session API are in [SKILL.md](./SKILL.md).
 
-Domino serves VS Code in the browser with code-server. The Domino Standard Environment includes it with the Python and Jupyter tooling and the AI coding-assistant extensions pre-installed.
+Domino serves VS Code in the browser with code-server. The Domino Standard Environment includes it with the Python and Jupyter tooling pre-installed; it does not include AI coding assistants.
 
 ## Start a VS Code Workspace
 
@@ -55,7 +55,7 @@ Cursor users import the Remote-SSH extension the same way. Custom TLS CAs must b
 
 ## Coding assistants
 
-The DSE pre-installs AI coding-assistant extensions and CLIs; sign in once in the extension panel (copy the login URL manually if the link does not open) and keep **Home Directory Persistence** on so the login survives restarts. Where an administrator has installed the LLM Gateway 2.0 Extension, offer to route the assistant through it, never by default ([CODING-ASSISTANTS.md](../domino-llm-gateway/CODING-ASSISTANTS.md)). Details and troubleshooting: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+The DSE does not include AI coding assistants. Install the assistant's extension from the Extensions panel, sign in (copy the login URL manually if the link does not open), and keep **Home Directory Persistence** on so the extension and login survive restarts; for every Workspace, add it to the environment instead ([domino-environments](../domino-environments/SKILL.md)).
 
 ## Troubleshooting
 

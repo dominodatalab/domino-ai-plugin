@@ -7,8 +7,8 @@ How a Vite-built React app is served behind Domino's reverse proxy, and how it c
 ```
 Viewer opens:  the App's `url` field (an apps hostname or an /apps/<vanity>/ path; both end in a prefix)
 Proxy:         authenticates the viewer, strips the prefix, forwards to the container on port 8888,
-               adds `Authorization: Bearer <viewer token>` (secure identity propagation, the default) and,
-               except for Apps with extended identity propagation, a `domino-username` copy of the name
+               adds the viewer's name in `domino-username` and, when the deployment setting
+               SecureIdentityPropagationToAppsEnabled is on, `Authorization: Bearer <viewer token>`
 Container:     GET /              -> index.html
                GET /assets/x.js   -> served from the build app.sh selected
 ```
@@ -32,7 +32,7 @@ export default defineConfig({
 })
 ```
 
-`server` matters only for `npm run dev` on a laptop. Neither the dev server nor `vite preview` is a way to serve the App on Domino: Vite ignores a relative `base` in dev mode and its host check rejects proxied hostnames, so a published App serves a build as described below and in-Domino testing goes through App Preview. `outDir` is `build/` because `npm run build` empties its output folder, and the dated builds in `dist/` must survive it.
+`server` matters only for `npm run dev` on a laptop. Neither the dev server nor `vite preview` is a way to serve the App on Domino: Vite ignores a relative `base` in dev mode and its host check rejects proxied hostnames, so a published App serves a build as described below, and testing in Domino uses the published App. `outDir` is `build/` because `npm run build` empties its output folder, and the dated builds in `dist/` must survive it.
 
 ## Router
 
@@ -60,14 +60,14 @@ The App URL also answers without its trailing slash, where `./assets/...` resolv
 
 ## Build once, serve the build
 
-`app.sh` never installs or builds. Build in a Workspace or a Job with `scripts/build-dist.sh`, save the build, then publish. Dated builds, the previous build kept for rollbacks, and how `app.sh` picks one: [FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds). Copy `app.sh`, `server.js`, `scripts/build-dist.sh` and `scripts/stamp.sh` from the `domino-app-init` template ([assets/vite-react](../domino-app-init/assets/vite-react/server.js)).
+`app.sh` never installs or builds. Build in a Workspace or a Job with `scripts/build-dist.sh`, save the build, then publish. Dated builds, the previous build kept, and how `app.sh` picks one: [FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds). Copy `app.sh`, `server.js`, `scripts/build-dist.sh` and `scripts/stamp.sh` from the `domino-app-init` template ([assets/vite-react](../domino-app-init/assets/vite-react/server.js)).
 
 - **Node.** Building needs Node 20.19 or later with npm (Vite 8). The App needs only `node` 18 or later, because `server.js` uses Node built-ins and the App never runs npm. A Compute Environment can ship an older Node without npm: check `node -v` and `npm -v` in the Workspace, and if either is missing or older, add Node 26 (LTS) to the environment, or install it for your user with nvm v0.41.0: `git clone --depth 1 --branch v0.41.0 https://github.com/nvm-sh/nvm.git ~/.nvm`, then `export NVM_DIR=~/.nvm && . ~/.nvm/nvm.sh && nvm install 26` (repeat the `export` and `.` in each new shell).
 - **Build.** `bash scripts/build-dist.sh` runs `npm ci` and `npm run build` (Vite writes `build/`), then copies `build/` into a dated folder under `/mnt/artifacts/dist/<package name>/` in a Git-based Project, or `dist/` with `DIST_DIR=dist` in a DFS Project. Registry access (or a mirror in `.npmrc`) is needed only here. `VITE_` variables come from the shell that runs the build, not from the App.
 - **Save.** Git-based: commit and push the code, and **File Changes > Sync All Changes** saves the build. DFS: **Sync to Domino**, with `node_modules/` and `build/` listed in the `.dominoignore` at the Project root (Domino reads only that file; a folder pattern matches at any depth).
 - **Serve.** `app.sh` hashes the committed build inputs (`index.html`, `package.json`, `package-lock.json`, `src/`, `public/`, Vite and TypeScript config), picks the newest build whose stamp matches, and runs `node server.js` with `BUILD_DIR` and `APP_BUILD` set. It never falls back to an older or newer build.
 
-`server.js` serves the build with an SPA fallback for extension-less paths (a missing asset stays 404), answers `healthz` with the build label, calls the model endpoint server-side (`POST api/predict`), and calls the Domino API as the viewer by forwarding the request's `Authorization` header (`GET api/projects`); without the header it answers 401 instead of calling without one, because `$DOMINO_API_HOST` runs header-less calls as the publisher. Calls as the publisher go to `$DOMINO_API_PROXY` with no header. Which routes accept the viewer's token: [FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls).
+`server.js` serves the build with an SPA fallback for extension-less paths (a missing asset stays 404), answers `healthz` with the build label, calls the model endpoint server-side (`POST api/predict`), and has an example route that forwards the request's `Authorization` header to the Domino API (`GET api/projects`), answering 401 when there is none, because `$DOMINO_API_HOST` runs header-less calls as the publisher. Domino 6.1 rejects the viewer's token on API routes, so for real data replace that route with calls as the publisher to `$DOMINO_API_PROXY` with no header, scoped by the viewer's username ([FRAMEWORKS.md](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
 
 ### Frontend call
 
@@ -101,9 +101,9 @@ A changed variable takes effect on the next start of the App. `.env.example` doc
 
 ## Developing in a Domino Workspace
 
-Use **App Preview**: open the App Preview tab in the workspace, set the App file (`app.sh`), Compute Environment and Hardware Tier, and start it. Preview runs the saved code in a real App pod on port 8888 with the production proxy, `DOMINO_RUN_HOST_PATH` and identity headers, at `/preview/<draftAppId>` (author only). After a code change, run `scripts/build-dist.sh` and save before Preview restarts: `app.sh` serves only a build of the saved code and otherwise stops with `no build matches these sources`. Publish from the same workspace with **Publish App**.
+Test in Domino by publishing the App (**Deployments > Apps > Publish Domino App**, App file `app.sh`, Compute Environment and Hardware Tier): it runs the saved code in a real App container on port 8888 behind the production proxy, with `DOMINO_RUN_HOST_PATH` and the identity headers. After a code change, run `scripts/build-dist.sh`, save, and publish again: `app.sh` serves only a build of the saved code and otherwise stops with `no build matches these sources`.
 
-Do not try to run the Vite dev server inside the workspace instead: the workspace IDE owns port 8888, Vite serves `/@vite/client` and `/src/main.jsx` from the domain root in dev mode (it ignores a relative `base`), and its host check rejects proxied hostnames, so the page comes up blank behind Jupyter Server Proxy. Keep `npm run dev` for a laptop and App Preview for Domino.
+Do not try to run the Vite dev server inside the workspace instead: the workspace IDE owns port 8888, Vite serves `/@vite/client` and `/src/main.jsx` from the domain root in dev mode (it ignores a relative `base`), and its host check rejects proxied hostnames, so the page comes up blank behind Jupyter Server Proxy. Keep `npm run dev` for a laptop and the published App for Domino.
 
 ## Project layout
 

@@ -87,7 +87,7 @@ git clone -q https://github.com/dominodatalab/domino-ai-plugin builds/main && gi
 
 uv run e2e.py provision --lane dfs-0 --lane dfs-1 --lane dfs-2 --lane git-0 --lane git-1 --lane git-2
 uv run e2e.py prep
-uv run e2e.py run --run-dir runs/<name> --scenario s12-hpc-submit --scenario s13-hpc-author-dfs \
+uv run e2e.py run --run-dir runs/<name> --scenario s05-app-publish --scenario s14-mpi-disambiguation \
     --variant next --variant next-r2 --variant none
 uv run e2e.py report runs/<name>        # writes runs/<name>/results.md
 uv run e2e.py teardown                  # every lane; --lane dfs-1 for one
@@ -106,7 +106,6 @@ Other tools (run them with `uv run tools/<tool>.py`; those that talk to Domino t
 | `tools/regrade.py CONFIG RUN_DIR SCENARIO VARIANT [--cleanup]` | re-run the current checks against a finished session while its lane exists |
 | `tools/evidence.py RUN_DIR [--json OUT]` | per-run write-path evidence: pinned commits, creates, log queries, port collisions, `pkill -f` |
 | `tools/smoke.py CONFIG [TYPE] [VARIANTS]` | one tiny session per build: auth, model id, plugin and MCP load, token invisible to tools |
-| `tools/probe_hpc.py CONFIG` | probes a deployment's HPC/Slurm surface (data planes, `submit-supported`, a start, a Slurm Workspace attach) in a scratch Project, then cleans up |
 
 ## Scenarios
 
@@ -121,12 +120,8 @@ Other tools (run them with `uv run tools/<tool>.py`; those that talk to Domino t
 | s05-app-publish | DFS | App Running and its URL answers 200 |
 | s06-mlflow-tracking | Git | MLflow run with the metric in an experiment named with the run tag |
 | s07-model-api | DFS | Model API Running, still Running after 60 s, model container loaded, no crash loop; prediction optional (endpoint tokens come only from the UI) |
-| s08-genai-tracing | Git | traces in the run's experiment |
 | s09-mcp-job | DFS | Job started through the bundled MCP server, Succeeded before the reply, output reported |
 | s10-docs-answer | Git | reply carries the documented port and host |
-| s11-hpc-availability | Git | platform queried (data planes, `submit-supported`); honest verdict with the prerequisites; nothing created |
-| s12-hpc-submit | DFS | support checked or a start attempted with a correct body after an upload; no fallback; nothing created; honest reply |
-| s13-hpc-author-dfs / -git | DFS / Git | the written sbatch script: `bash -n`, `--array`, `$SLURM_ARRAY_TASK_ID`, `umask`, results under an existing Dataset, no Workspace paths |
 | s14-mpi-disambiguation | Git | an MPI cluster recommended, not Slurm; nothing launched |
 | s15-rust-app-author-git | Git | pinned toolchain, Clippy pedantic, `target/` ignored, `app.sh` runs a binary without compiling, Clippy and tests pass; nothing started |
 | s16-rust-app-publish-dfs | DFS | App Running and its URL answers 200; `app.sh` runs the prebuilt binary without compiling |
@@ -138,20 +133,20 @@ s15 and s16 install the pinned Rust toolchain into the Workspace in setup (`~/.c
 ### Scenario format
 
 ```yaml
-id: s12-hpc-submit
+id: s14-mpi-disambiguation
 title: ...
-project_type: dfs                 # dfs or git
+project_type: git                 # dfs or git
 timeout_s: 1200
 setup:                            # actions before the session: ws_file {path, content}, ws_shell {cmd}
   - type: ws_file
-    path: '{{run_dir}}/hpc/sweep.sh'
+    path: '{{run_dir}}/train.py'
     content: ...
 prompt: |
   ... as a user would write it ...
 check:                            # every required check must pass
   - type: nothing_started
   - type: skill_loaded
-    skill_regex: 'domino-hpc-slurm'
+    skill_regex: 'domino-distributed-computing'
     only_builds: [next]           # skipped for other builds
   - type: reply_regex
     patterns: ['...']

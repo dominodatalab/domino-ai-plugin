@@ -147,7 +147,7 @@ async fn index(headers: HeaderMap) -> Response {
     }
 }
 
-/// Liveness plus the running build's label, so a deploy or rollback can be confirmed from outside.
+/// Liveness plus the running build's label, so a publish can be confirmed from outside.
 async fn healthz(State(state): State<AppState>) -> Json<Value> {
     Json(json!({ "status": "ok", "build": state.build.as_deref() }))
 }
@@ -174,7 +174,7 @@ async fn me(
         .map(Json)
 }
 
-/// Projects visible to the viewer (default) or the publisher; the two lists differ.
+/// Projects visible to the viewer (default) or the publisher (`?as=publisher`).
 async fn projects(
     State(state): State<AppState>,
     Query(call): Query<CallAs>,
@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rejected_viewer_call_names_extended_identity_propagation() {
+    async fn rejected_viewer_call_suggests_the_publisher() {
         let failing = Router::new().fallback(|| async { StatusCode::INTERNAL_SERVER_ERROR });
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -386,7 +386,7 @@ mod tests {
         assert!(
             body_text(response)
                 .await
-                .contains("extended identity propagation")
+                .contains("as the publisher")
         );
     }
 
@@ -467,7 +467,7 @@ mod tests {
 
     #[tokio::test]
     async fn whoami_reads_the_forwarded_token() {
-        // Apps with extended identity propagation receive the token without `domino-username`.
+        // The token's claim names the viewer when a token arrives.
         let request = Request::get("/api/whoami")
             .header(header::AUTHORIZATION, token_for("jane.doe"))
             .body(Body::empty())

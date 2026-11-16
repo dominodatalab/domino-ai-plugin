@@ -1,7 +1,7 @@
 # Dataset REST API
 
 Public API routes (tag `Datasets`) plus the `/v4` routes labelled non-public route; may change in
-a future Domino version, at their point of use; on Domino 6.3 confirm each `/v4` route in your
+a future Domino version, at their point of use; confirm each `/v4` route in your
 deployment's `/docs`.
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/create-and-manage-datasets
 (REST tab) and the API reference under https://docs.domino.ai/cloud/reference/api.
@@ -16,13 +16,13 @@ import os
 import requests
 
 # base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
-base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run; outside Domino: DOMINO_API_HOST plus a Bearer token
+base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run; outside Domino: DOMINO_API_HOST plus a service-account Bearer token or X-Domino-Api-Key
 r = requests.get(f"{base}/api/datasetrw/v2/datasets", headers=headers, params={"limit": 50})
 r.raise_for_status()
 ```
 
 Every 2xx response wraps the payload with `metadata` (`requestId`, `notices`; lists carry
-`offset` and `limit`, the snapshot list also `totalCount` on Domino Cloud). The spec describes
+`offset` and `limit`, the snapshot list sometimes also `totalCount`). The spec describes
 errors as `{"code", "message"}` for 401 and 403 and `{"error"}` for 400, 404 and 500; a 400 or
 404 can also arrive as `{"requestId": ..., "errors": ["..."]}`, so read either shape.
 
@@ -146,7 +146,7 @@ per-snapshot delete or limit route; the non-public routes in the next section co
 ## Snapshot deletion and limits (non-public routes)
 
 Every call here is **non-public route; may change in a future Domino version**; a non-admin Dataset
-Owner can make them (on 6.3, confirm each in your deployment's `/docs`).
+Owner can make them (confirm each in your deployment's `/docs`).
 
 | Call (non-public route; may change in a future Domino version) | Behaviour |
 |---|---|

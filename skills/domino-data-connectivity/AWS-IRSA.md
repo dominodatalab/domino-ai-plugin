@@ -2,7 +2,7 @@
 
 Three ways to give code in a Workspace or Job an AWS identity without long-lived keys, from the
 documented product feature to the Professional Services blueprints. All three are self-managed
-(Domino 6.3) procedures that need AWS and cluster administration; on Domino Cloud, ask Domino
+(Domino 6.1) procedures that need AWS and cluster administration; on Domino Cloud, ask Domino
 Support for the equivalent.
 
 First check whether a Data Source fits: an S3, Redshift, MySQL or PostgreSQL Data Source
@@ -12,7 +12,7 @@ attributable to the user in CloudTrail, or the code needs an AWS service no conn
 | Option | Identity | Workload types | Where documented |
 |---|---|---|---|
 | AWS credential propagation (SAML) | The user's own IAM roles, chosen by the identity provider | Workspaces and Jobs started by the user | https://docs.domino.ai/6.3/admin/identity-and-access/authentication/sso/aws-credential-propagation |
-| IAM-authenticated Data Sources | The user's SAML-propagated AWS role, read from `AWS_SHARED_CREDENTIALS_FILE` (requires credential propagation; 6.3 admins add `AWSIAMRole` to `com.cerebro.domino.datasource.<Type>Config.enabledAuthTypes`, Cloud asks Domino Support) | Workspaces and Jobs (not scheduled Jobs or endpoints) | https://docs.domino.ai/6.3/admin/data-administration/external-data#iam-authentication-for-aws-data-sources |
+| IAM-authenticated Data Sources | The user's SAML-propagated AWS role, read from `AWS_SHARED_CREDENTIALS_FILE` (requires credential propagation; 6.1 admins add `AWSIAMRole` to `com.cerebro.domino.datasource.<Type>Config.enabledAuthTypes`, Cloud asks Domino Support) | Workspaces and Jobs (not scheduled Jobs or endpoints) | https://docs.domino.ai/6.3/admin/data-administration/external-data#iam-authentication-for-aws-data-sources |
 | IRSA through Domsed (blueprint) | A Kubernetes service account mapped per Domino user, trusted by IAM roles in any account | Workspace, Batch (Job), Scheduled; selectable by label | https://domino.ai/resources/blueprints/aws-irsa, code in https://github.com/dominodatalab/domino-blueprints (IRSA-README.md, advanced-credential-propagation/irsa) |
 | EKS Pod Identity (blueprint) | A static service account mapped per Domino service account | Same as IRSA; EKS only | https://domino.ai/resources/blueprints/advanced-credential-propagation-aws-eks, code in advanced-credential-propagation/eks-pod-identity |
 

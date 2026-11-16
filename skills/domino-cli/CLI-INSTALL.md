@@ -3,7 +3,7 @@
 Sources: https://docs.domino.ai/cloud/reference/cli/install-the-cli,
 https://docs.domino.ai/cloud/reference/cli/use-the-cli-behind-a-proxy,
 https://docs.domino.ai/cloud/reference/cli/force-restore-a-local-project,
-https://docs.domino.ai/cloud/reference/cli/move-project-between-deployments (6.3 pages identical).
+https://docs.domino.ai/cloud/reference/cli/move-project-between-deployments.
 
 ## Graphical install (laptop)
 
@@ -40,24 +40,12 @@ sed -i 's/^assistive_technologies=/#assistive_technologies=/g' /etc/java-8-openj
 domino login https://<your-domino-url>
 ```
 
-The CLI opens the default browser on the sign-in page and receives the authorization when you
-finish; the browser tab then says authentication succeeded. If no browser opens, the terminal
-prints the URL: open it on the **same machine**, because the sign-in redirects to a local address.
+The CLI prompts you to authorize it with Domino:
 
-Machine without a usable browser (SSH session, Workspace, headless server):
-
-```bash
-domino login --device https://<your-domino-url>
-# To sign in, use a web browser to open the page https://<your-domino-url>/auth/realms/DominoRealm/device
-# and enter the code ABCD-EFGH.
-```
-
-Open the verification URL on any device, enter the code, sign in, review the requested access
-and choose **Grant Access**; the CLI, which polls in the background, prints `Login succeeded`.
-Codes expire after a short time; rerun the command to get a new one.
-
-CLI versions older than **6.2.3** use a different authentication client and fail to log in after
-a Domino upgrade: download and reinstall the current CLI from **Download CLI**.
+1. Open `https://<your-domino-url>/authorizeCli` in a browser. It can be on any device, so this
+   also works from an SSH session, a Workspace or a headless server. Sign in if asked.
+2. Copy the authorization code the page shows.
+3. Paste it at the CLI prompt and press Enter. The CLI prints that the login succeeded.
 
 ## Behind an HTTP proxy
 

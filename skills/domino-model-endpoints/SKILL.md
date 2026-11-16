@@ -1,12 +1,12 @@
 ---
 name: domino-model-endpoints
 description: Publish and call Domino endpoints (model APIs) for synchronous or asynchronous predictions. Covers the prediction function and request JSON, how the endpoint image is built (environment, required packages, no requirements.txt), sync Basic-auth vs async Bearer invocation, versions and routing, instance counts and endpoint hardware tiers, health checks, metrics and logs. Use when deploying a model as an API from the UI, writing predict code, calling an endpoint, or debugging a slow or failing endpoint. For scripted lifecycle automation over REST (create, version, archive, logs) use domino-model-serving; for drift and model-quality monitoring use domino-model-monitoring; for batch scoring Jobs and for exporting a model out of Domino (an image to your registry, NVIDIA Fleet Command, a Snowflake UDF, SageMaker) use domino-model-delivery.
-compatibility: Domino 6.3 and Domino Cloud. Management calls need DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token. Prediction calls use the endpoint's own access token.
+compatibility: Domino 6.1. Management calls need DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token or a user API key. Prediction calls use the endpoint's own access token.
 ---
 
 # Domino endpoints (model APIs)
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 A Domino endpoint (**Model API** in the API) wraps a function from your project in an HTTP API: Domino builds an image from the selected compute environment plus the project files, adds a Flask (Python) or Plumber (R) harness, sources your script once at publish time, and routes each request to your function.
 
@@ -25,7 +25,7 @@ A Domino endpoint (**Model API** in the API) wraps a function from your project 
 |------|----------|
 | [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md) | Predict function, sync before publish, API and registry publish, health check, calling, versions, access |
 | [SCALING.md](./SCALING.md) | Instance count, endpoint tiers, routing modes, parallelism |
-| [MONITORING.md](./MONITORING.md) | CPU, memory, status codes, health checks, timeouts, logs |
+| [MONITORING.md](./MONITORING.md) | Health checks, timeouts, logs, status codes |
 
 ## Packaging rules (what breaks publishes)
 
@@ -83,7 +83,7 @@ Each publish creates a version. **Basic** routing (default) points `/models/<mod
 |---------|-------|
 | Build fails on an import | Put the package in the environment Dockerfile, not `requirements.txt` |
 | `IOException ... 500` in the build log | Image over 500 MB; add large files to `.modelignore` |
-| 401 on predictions | Sync: Basic auth with the endpoint token; async: Bearer; user tokens and PATs never work |
+| 401 on predictions | Sync: Basic auth with the endpoint token; async: Bearer; user tokens and API keys never work |
 | `Running` but 503, or `Running` / `Starting` alternating | Crash loop; model-container logs (no `tail`, `maxResults=3000`) show `FileNotFoundError` ... `no app loaded`. Sync, pin the commit, republish |
 | 504 | Request timeout (default 60 s) under **Settings** > **Advanced**; restart after changing |
 | Not Running | Build, export, instance logs (**Logs** column); health-check settings |

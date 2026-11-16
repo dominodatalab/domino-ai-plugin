@@ -1,6 +1,6 @@
 schema_version: '1.1'
 name: mcp-server-from-laptop
-description: 'Modeling assistant: outside Domino the MCP server authenticates with a Personal Access Token or service-account token, not a legacy API key.'
+description: 'Modeling assistant: outside Domino the MCP server authenticates with a service-account token, or a user API key as the fallback.'
 tags: [trigger, domino-modeling-assistant, mcp]
 execution:
   max_turns: 10
@@ -17,13 +17,13 @@ graders:
 - name: laptop-auth
   type: llm
   criteria: |
-    PASS if the reply configures the Domino MCP server for the user's assistant (the plugin's bundled server, or its registration steps) with the deployment URL in `DOMINO_HOST` and a Personal Access Token (or a Domino service-account token) in `DOMINO_TOKEN`, which the server sends as `Authorization: Bearer`, for project `alice/churn`.
-    FAIL if it instructs the user to generate and export a legacy Domino API key (`DOMINO_API_KEY` / `X-Domino-Api-Key`) as the credential, or says the server accepts no token outside Domino.
+    PASS if the reply configures the Domino MCP server for the user's assistant (the plugin's bundled server, or its registration steps) with the deployment URL in `DOMINO_HOST` and a Domino service-account token in `DOMINO_TOKEN` (sent as `Authorization: Bearer`) or, without one, a user API key in `DOMINO_API_KEY` (sent as `X-Domino-Api-Key`), for project `alice/churn`.
+    FAIL if it tells the user to create a Personal Access Token, or says the server accepts no token outside Domino.
 - name: pat-or-sa
   type: regex
   target: last_message
   flags: i
-  pattern: Personal Access Token|\bPAT\b|service account
+  pattern: service account|DOMINO_API_KEY
 - name: skill-fired
   type: tool_used
   tool: Skill

@@ -1,12 +1,12 @@
 ---
 name: domino-modeling-assistant
 description: Enable AI-assisted model development (vibe modeling) in Domino. The assistant writes the data-analysis, model and training code and uses the bundled Domino MCP server to run it as Domino Jobs, wait for and read their output, and read, upload and sync files (text or binary) for DFS projects, so work stays reproducible, governed and tracked in Experiment Manager. Use when setting up an AI coding assistant to work with Domino, configuring or troubleshooting the Domino MCP server, or when the user asks to analyze a dataset, train or compare models, or run scripts as Domino Jobs from a coding assistant.
-compatibility: Domino 6.3 and Domino Cloud. Inside a Domino Workspace the bundled MCP server calls the platform through DOMINO_API_PROXY with no credentials; outside Domino it needs DOMINO_HOST and DOMINO_TOKEN (a Personal Access Token or service account token).
+compatibility: Domino 6.1. Inside a Domino Workspace the bundled MCP server calls the platform through DOMINO_API_PROXY with no credentials, and the Workspace needs a custom Compute Environment with the coding assistant, this plugin and uv; outside Domino it needs DOMINO_HOST and DOMINO_TOKEN (a service account token) or DOMINO_API_KEY (a user API key).
 ---
 
 # Modeling assistant
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 ## Key components
 
@@ -18,12 +18,10 @@ The server is **bundled with this plugin** (`mcp-servers/domino_mcp_server/`, na
 
 If the `domino_server` tools (such as `run_domino_job`) are not available in this session, do not pretend to call them. Tell the user, point them at [SETUP.md](./SETUP.md#register-the-server-manually), and meanwhile use the `domino-jobs` and `domino-python-sdk` skills to run work through the Domino REST API.
 
-- **Inside a Domino Workspace:** nothing to configure. The server calls the platform through `DOMINO_API_PROXY` (no `Authorization` header; the proxy adds the user's token) and reads the project from `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_IS_GIT_BASED`. On hosts that start MCP servers with a stripped environment (Codex), it recovers these variables from its parent process.
-- **Outside Domino (laptop, CI):** set `DOMINO_HOST` (the deployment's HTTPS URL) and `DOMINO_TOKEN` (a Personal Access Token or service account token, sent as `Authorization: Bearer`); Domino user and Project environment variables are not readable there, so the host's configuration or the env file holds the laptop's copy. Hosts with plugin settings ask for both at install; the others read the env file `~/.config/domino-mcp-server/.env` (Codex passes the server no other location). Per-host steps: [SETUP.md](./SETUP.md#give-the-url-and-token-to-the-server). Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated and not accepted. See [SETUP.md](./SETUP.md).
+- **Inside a Domino Workspace:** the Domino 6.1 standard environment does not include a coding assistant, this plugin or `uv`, so the Workspace needs a custom Compute Environment that installs them ([SETUP.md](./SETUP.md#step-4-choose-a-compute-environment)). Nothing else to configure: the server calls the platform through `DOMINO_API_PROXY` (no `Authorization` header; the proxy adds the user's token) and reads the project from `DOMINO_PROJECT_ID`, `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_IS_GIT_BASED`. On hosts that start MCP servers with a stripped environment (Codex), it recovers these variables from its parent process.
+- **Outside Domino (laptop, CI):** set `DOMINO_HOST` (the deployment's HTTPS URL) and `DOMINO_TOKEN` (a service account token, sent as `Authorization: Bearer`), or, without one, `DOMINO_API_KEY` (your user API key, sent as `X-Domino-Api-Key`); Domino user and Project environment variables are not readable there, so the host's configuration or the env file holds the laptop's copy. Hosts with plugin settings ask for both at install; the others read the env file `~/.config/domino-mcp-server/.env` (Codex passes the server no other location). Per-host steps: [SETUP.md](./SETUP.md#give-the-url-and-token-to-the-server).
 
 Tool failures come back as MCP tool errors whose message says what to fix; relay it to the user instead of retrying blindly.
-
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/modeling-assistant (6.3: replace `cloud` with `6.3`).
 
 ## Important considerations
 

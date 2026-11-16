@@ -3,3 +3,10 @@
 # removed skill sends the model looking for text that is not there. Point at the skill that
 # replaced it instead. One name per line; a trailing comment says what replaced it.
 domino-ui-design        # folded into domino-ui-bootstrap and domino-apps
+domino-hpc-slurm        # Slurm and HPC Jobs are not available on Domino 6.1
+tags-and-properties     # the taxonomy API is not available on Domino 6.1
+domino-extensions       # Extensions are not available on Domino 6.1
+domino-llm-gateway      # LLM Gateway 2.0 is not available on Domino 6.1; see domino-llm-access
+domino-genai-tracing    # GenAI tracing requires Domino 6.2 or later
+domino-trace-setup      # GenAI tracing requires Domino 6.2 or later
+domino-governance       # the Governance API is not available on Domino 6.1

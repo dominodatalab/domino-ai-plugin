@@ -1,29 +1,26 @@
 ---
 name: domino-api-intro
-description: Introduction to calling Domino platform APIs. Covers authentication (API proxy, access token, PAT, service account), which base URL to use, pagination, and common errors. Use before any other Domino API, SDK, app, extension, or governance automation skill, and whenever a request needs a Domino base URL or credential.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
+description: Introduction to calling Domino platform APIs. Covers authentication (API proxy, access token, service account token, user API key), which base URL to use, pagination, and common errors. Use before any other Domino API, SDK or app automation skill, and whenever a request needs a Domino base URL or credential.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service account token or a user API key.
 ---
 
 # Domino platform API intro
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 ## Authentication
 
-Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
-(same content under `/6.3/`).
+Reference: https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/
 
 | Where the code runs | Base URL | Credential |
 |---|---|---|
 | Inside a Domino execution (Workspace, Job, App, Launcher) and `DOMINO_API_PROXY` is set | `$DOMINO_API_PROXY` | None. Send **no** `Authorization` header; the proxy adds the starting user's token. |
 | Inside a Domino execution, `DOMINO_API_PROXY` not set | `$DOMINO_API_HOST` | `Authorization: Bearer` with the short-lived token from `http://localhost:8899/access-token` |
-| Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | `Authorization: Bearer` with a **Personal Access Token** (you; **Account Settings** or `POST /api/pat/v1/tokens`, value returned once: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#personal-access-tokens)) or a **service account token** (unattended automation) |
+| Outside Domino (laptop, CI, cron) | The deployment URL users open in the browser; set `DOMINO_API_HOST` to it yourself | First choice: `Authorization: Bearer` with a **service account token** (from an administrator: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#service-accounts)). Fallback: your **user API key** in the `X-Domino-Api-Key` header (**Account > Account Settings > API Key**; `DOMINO_USER_API_KEY`, or `api_key=` in python-domino) |
 
-In an App both in-run rows act as the publisher (the user the App run was started as) for every
-viewer; to act as the viewer, see [HOSTS.md](./HOSTS.md#inside-an-app).
-
-Legacy user API keys (`X-Domino-Api-Key`, `DOMINO_USER_API_KEY`, `api_key=`) are
-deprecated. Never recommend them, not even as a fallback.
+If `localhost:8899/access-token` does not answer, use `$DOMINO_API_PROXY`. In an App both
+in-run rows act as the publisher (the user who started the App) for every viewer; an App
+cannot call Domino APIs as the viewer ([HOSTS.md](./HOSTS.md#inside-an-app)).
 
 ### Environment variables as the secret store
 
@@ -33,7 +30,7 @@ Settings > User environment variables**) for a personal credential, injected int
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
 share. Set them in the UI or with the non-public routes below (no Public API or
-python-domino route; may change in a future Domino version; on 6.3 confirm the routes in
+python-domino route; may change in a future Domino version; confirm the routes in
 your deployment's `/docs`). When an
 agent stores a secret for the user it writes it with these routes and confirms by
 **name only**: the `GET`s return values, so never echo them into a reply or a log. Never
@@ -65,7 +62,6 @@ endpoint's own **Settings** (the update route has no variables field). Code read
 (`os.environ["NAME"]`) and never prints them. Outside Domino (CI, Airflow, a laptop) these
 variables are not readable; the external system holds its own copy of a token created in
 Domino. Docs: https://docs.domino.ai/cloud/admin/security-and-compliance/protecting-tokens-api-keys
-(same under `/6.3/`).
 
 ```bash
 # Inside a run (preferred)
@@ -75,8 +71,11 @@ curl -s "$DOMINO_API_PROXY/api/users/v1/self"
 curl -s -H "Authorization: Bearer $(curl -s http://localhost:8899/access-token)" \
   "$DOMINO_API_HOST/api/users/v1/self"
 
-# Outside Domino: DOMINO_API_HOST is the deployment URL, PAT a Personal Access Token or service account token
-curl -s -H "Authorization: Bearer $PAT" "$DOMINO_API_HOST/api/users/v1/self"
+# Outside Domino: DOMINO_API_HOST is the deployment URL, SA_TOKEN a service account token
+curl -s -H "Authorization: Bearer $SA_TOKEN" "$DOMINO_API_HOST/api/users/v1/self"
+
+# Fallback: user API key
+curl -s -H "X-Domino-Api-Key: $DOMINO_USER_API_KEY" "$DOMINO_API_HOST/api/users/v1/self"
 ```
 
 Python setup block used by every example in the API skills:
@@ -92,9 +91,12 @@ elif os.environ.get("DOMINO_RUN_ID"):           # inside a run, proxy not inject
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
     token = requests.get("http://localhost:8899/access-token").text.strip()
     headers = {"Authorization": f"Bearer {token}"}
-else:                                           # outside Domino: PAT or service account token
+elif os.environ.get("SA_TOKEN"):                # outside Domino: service account token
     base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
-    headers = {"Authorization": f"Bearer {os.environ['PAT']}"}
+    headers = {"Authorization": f"Bearer {os.environ['SA_TOKEN']}"}
+else:                                           # outside Domino, fallback: user API key
+    base_url = os.environ["DOMINO_API_HOST"].rstrip("/")
+    headers = {"X-Domino-Api-Key": os.environ["DOMINO_USER_API_KEY"]}
 base = base_url                                 # examples in other skills use either name
 ```
 
@@ -118,13 +120,13 @@ Discovery: [API-SPECS.md](./API-SPECS.md).
 
 | File | Use when |
 |------|----------|
-| [HOSTS.md](./HOSTS.md) | Base URL for each API family, Model API invocation, governance, 404 on the in-run base |
-| [LIMITS.md](./LIMITS.md) | Pagination envelopes, caps, deprecated credentials and variables |
+| [HOSTS.md](./HOSTS.md) | Base URL for each API family, Model API invocation, 404 on the in-run base |
+| [LIMITS.md](./LIMITS.md) | Pagination envelopes, caps, unsupported credential patterns |
 | [ERRORS.md](./ERRORS.md) | Status codes, retries, error bodies, job status fields |
 | [SDK-MAP.md](./SDK-MAP.md) | Which plugin skill covers each API surface |
 | [API-SPECS.md](./API-SPECS.md) | OpenAPI files (published and per deployment) and route discovery |
 
 ## Next steps
 
-Use the domain skills (domino-python-sdk, domino-jobs, domino-apps, domino-governance,
-domino-datasets, netapp-volumes, tags-and-properties, others); they assume the rules above.
+Use the domain skills (domino-python-sdk, domino-jobs, domino-apps, domino-datasets,
+netapp-volumes, others); they assume the rules above.

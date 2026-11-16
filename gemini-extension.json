@@ -1,7 +1,7 @@
 {
   "name": "dominodatalab",
-  "version": "2026.603.10",
-  "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, GenAI tracing, Flows, Spark/Ray/Dask clusters, governance, and the Domino APIs and SDKs",
+  "version": "2026.601.11",
+  "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, Flows, Spark/Ray/Dask/MPI clusters, LLM access, and the Domino APIs and SDKs, for Domino 6.1",
   "contextFileName": "rules/domino.md",
   "settings": [
     {
@@ -10,8 +10,8 @@
       "envVar": "DOMINO_HOST"
     },
     {
-      "name": "Domino Personal Access Token",
-      "description": "Only for use outside a Domino Workspace: in Domino, Account > Account settings > Personal Access Token > Generate new Token. Kept in your system keychain. Leave empty inside a Workspace.",
+      "name": "Domino service account token",
+      "description": "Only for use outside a Domino Workspace: a service account token from your Domino administrator. Kept in your system keychain. To use a user API key instead, leave this empty and set DOMINO_API_KEY in the env file. Leave empty inside a Workspace.",
       "envVar": "DOMINO_TOKEN",
       "sensitive": true
     }

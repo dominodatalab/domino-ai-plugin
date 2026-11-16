@@ -4,9 +4,9 @@ Authentication and hosts: [domino-api-intro](../domino-api-intro/SKILL.md#authen
 
 ## Which path applies
 
-Read `GET $DOMINO_API_HOST/version` (`{"version": "6.3.x"}` or a later version; Domino Cloud reports 6.4 or later). On `6.3.x` use only the "6.3" column; on 6.4 and later use the "6.4+" routes. When unsure, call the route: a `404` means it is absent on that deployment.
+Read `GET $DOMINO_API_HOST/version` (`{"version": "6.1.x"}`). On `6.1.x` use only the "6.1" column; the "6.4+" routes are absent there. When unsure, call the route: a `404` means it is absent on that deployment.
 
-| Route | 6.3 | 6.4+ (including Domino Cloud) |
+| Route | 6.1 | 6.4+ |
 |---|---|---|
 | `GET /api/environments/beta/environments` (list) | yes | yes |
 | `GET /api/environments/v1/environments/{environmentId}` | yes | yes |
@@ -18,7 +18,7 @@ Read `GET $DOMINO_API_HOST/version` (`{"version": "6.3.x"}` or a later version; 
 | `POST /api/environments/v2/environments/{environmentId}/revisions` | no | yes |
 | `PUT /api/environments/v1/environments/{environmentId}/name`, `/description` | no | yes |
 
-Use v2 on 6.4+ (it adds `architectures` and nests build fields under `buildConfiguration`); use beta on 6.3. The beta list and get routes return `metadata.notices: ["Beta endpoint with known limitations"]`.
+Use beta on 6.1; v2 (6.4+) adds `architectures` and nests build fields under `buildConfiguration`. The beta list and get routes return `metadata.notices: ["Beta endpoint with known limitations"]`.
 
 ## List and inspect
 
@@ -34,7 +34,7 @@ for e in envs["environments"]:
 
 env = requests.get(f"{base}/api/environments/v1/environments/{env_id}").json()["environment"]
 # env: id, name, archived, visibility (global|private|organization), owner, rebuildOnBaseChanges (never|followActive),
-#      supportedClusters [dask|mpi|ray|slurm|spark], latestRevision / selectedRevision / restrictedRevision
+#      supportedClusters [dask|mpi|ray|spark], latestRevision / selectedRevision / restrictedRevision
 #      {id, number, status (queued|starting|pulling|building|pushing|succeeded|failed|killed), availableTools[],
 #       architectures[] (6.4+ only)}
 ```
@@ -43,7 +43,7 @@ env = requests.get(f"{base}/api/environments/v1/environments/{env_id}").json()["
 
 ## Create an environment
 
-### 6.4+ (including Domino Cloud): `POST /api/environments/v2/environments`
+### 6.4+ only (not on Domino 6.1): `POST /api/environments/v2/environments`
 
 ```python
 body = {
@@ -71,9 +71,9 @@ env = r.json()["environment"]
 
 Add a revision: `POST /api/environments/v2/environments/{environmentId}/revisions` with the `initialRevision` fields at the top level. Send `{"duplicateFromEnvironmentId": "<id>"}` alone to clone an environment.
 
-### 6.3 (deprecated but present on 6.4+): `POST /api/environments/beta/environments`
+### 6.1: `POST /api/environments/beta/environments`
 
-Same fields, flat: `name`, `description`, `visibility`, `addBaseDependencies`, `rebuildOnBaseChanges`, `isRestricted`, `isCurated`, `orgOwnerId`, `image`, `dockerfileInstructions`, `preSetupScript`, `postSetupScript`, `preRunScript`, `postRunScript`, `environmentVariables`, `supportedClusters`, `workspaceTools`, `useVpn`, `skipCache`, `summary`. Revisions: `POST /api/environments/beta/environments/{environmentId}/revisions` with the revision fields. No `architectures`.
+Same fields as the v2 body above, flat: `name`, `description`, `visibility`, `addBaseDependencies`, `rebuildOnBaseChanges`, `isRestricted`, `isCurated`, `orgOwnerId`, `image`, `dockerfileInstructions`, `preSetupScript`, `postSetupScript`, `preRunScript`, `postRunScript`, `environmentVariables`, `supportedClusters`, `workspaceTools`, `useVpn`, `skipCache`, `summary`. Revisions: `POST /api/environments/beta/environments/{environmentId}/revisions` with the revision fields. No `architectures`.
 
 ### `workspaceTools[]`
 
@@ -87,7 +87,7 @@ The UI's YAML form of the same data is in [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS
 
 ## Rename, describe, archive
 
-- 6.4+: `PUT /api/environments/v1/environments/{environmentId}/name` and `/description`.
+- 6.4+ only: `PUT /api/environments/v1/environments/{environmentId}/name` and `/description`.
 - Both: `DELETE /api/environments/v1/environments/{environmentId}` archives (not while it is a Project's default). Archived environments still run existing executions but are not rebuilt.
 
 ## Hardware tiers (for pairing)
@@ -96,7 +96,7 @@ The UI's YAML form of the same data is in [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS
 
 ## Project default environment and tier
 
-A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (non-public route; may change in a future Domino version; on 6.3 confirm in your deployment's `/docs`). Every field is optional and a partial body changes only what it names:
+A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (non-public route; may change in a future Domino version; confirm in your deployment's `/docs`). Every field is optional and a partial body changes only what it names:
 
 ```python
 base = os.environ["DOMINO_API_PROXY"]

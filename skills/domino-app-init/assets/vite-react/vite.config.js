@@ -11,7 +11,7 @@ export default defineConfig({
   // which 404s behind the proxy. (Vite ignores a relative base in the dev server.)
   base: './',
 
-  // Local development on a laptop only (`npm run dev`). Inside Domino, test with App Preview, which
+  // Local development on a laptop only (`npm run dev`). Inside Domino, test the published App, which
   // runs app.sh and serves a build in a real App runtime; the App never uses the Vite dev server.
   server: {
     host: '0.0.0.0',

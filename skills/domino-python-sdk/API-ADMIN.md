@@ -1,15 +1,14 @@
 # Domino Admin API
 
-Users, organizations, service accounts, Personal Access Tokens, hardware tiers, data
-sources, cost and the platform audit trail. Routes marked **Cloud** exist only on Domino
+Users, organizations, service accounts, hardware tiers, data sources, cost and the
+platform audit trail. Routes marked **Cloud** exist only on Domino
 Cloud. Admin-only routes return `403` for other callers.
 
 ## Authentication
 
 Use the shared setup block (`base_url`, `headers`) from
-[domino-api-intro](../domino-api-intro/SKILL.md#authentication). Service-account and PAT
-administration pages: https://docs.domino.ai/cloud/admin/identity-and-access/manage-users/service-accounts
-and https://docs.domino.ai/cloud/admin/identity-and-access/manage-users/personal-access-tokens.
+[domino-api-intro](../domino-api-intro/SKILL.md#authentication). Service-account
+administration: https://docs.domino.ai/cloud/admin/identity-and-access/manage-users/service-accounts.
 
 ## Users
 
@@ -42,12 +41,12 @@ existing list plus the new one:
 
 ```python
 roles = requests.get(f"{base_url}/api/users/v1/user/{user_id}/roles", headers=headers).json()["roles"]
-if "Librarian" not in roles:
+if "Practitioner" not in roles:
     requests.post(f"{base_url}/api/users/v1/user/{user_id}/roles", headers=headers,
-                  json={"roles": roles + ["Librarian"]})
+                  json={"roles": roles + ["Practitioner"]})
 ```
 
-Posting `{"roles": ["Librarian"]}` alone would strip every other role, including admin
+Posting `{"roles": ["Practitioner"]}` alone would strip every other role, including admin
 roles. Role names are deployment-defined; read them from the user's current list or the
 admin UI.
 
@@ -55,7 +54,7 @@ admin UI.
 
 ```
 GET /api/users/beta/credentials/{userId}
-PUT /api/users/v1/user/{userId}/tokenCredentials/{credentialId}      GitHub and GitHub Enterprise PATs only
+PUT /api/users/v1/user/{userId}/tokenCredentials/{credentialId}      GitHub and GitHub Enterprise personal access tokens only
 ```
 
 ### Deactivation
@@ -64,23 +63,8 @@ Service accounts: `POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountI
 Human users have no Public API deactivate route. Administrators do it in the admin UI or
 with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
 body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
-`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only. On Domino 6.3 confirm it in your
+`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only. Confirm it in your
 deployment's `/docs` first.
-
-## Personal Access Tokens
-
-```
-GET, POST, DELETE /api/pat/v1/tokens                      your own tokens; POST body {"name": "...", "expiresIn": <seconds>, "description": "...", "scopes": [...]}
-POST /api/pat/v1/tokens/{patId}/invalidate;  DELETE /api/pat/v1/tokens/{patId}
-POST /api/pat/v1/tokens/invalidate | /invalidate/bulk | /delete/bulk
-GET  /api/pat/v1/tokens/expiration-policy;  GET /api/pat/v1/tokens/grantable-scopes (Cloud)
-GET  /api/pat/v1/users/tokens                              admin: all users' tokens
-GET, DELETE /api/pat/v1/users/{userId}/tokens;  POST .../invalidate;  DELETE .../{patId};  POST .../{patId}/invalidate
-```
-
-`name` and `expiresIn` are required on create; `description` is optional; `scopes`
-(**Cloud** only, values from `grantable-scopes`; omitted means none) restricts the token.
-The response includes `token` once.
 
 ## Organizations
 
@@ -109,8 +93,7 @@ GET /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/gitcredentials
 Create returns `{"serviceAccount": {"id", "idpId", "username", "email"}, "metadata": {...}}`.
 Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns a
 `ServiceAccountToken` (`name`, `serviceAccountIdpId`, `isValid`, `createdAt`, `expiresAt`,
-`token`) with the token value. Unlike a Personal Access Token, the value is not
-shown only once: `GET .../tokens/{tokenName}` returns the same object, including `token`,
+`token`) with the token value. The value is not shown only once: `GET .../tokens/{tokenName}` returns the same object, including `token`,
 as `{"token": {...}, "metadata"}`, so an authorized caller can read a value again by name
 (if the `GET` omits `token`, treat the value as shown once).
 The list route `GET .../tokens` returns `{"tokens": [...], "metadata"}` with the metadata

@@ -1,15 +1,14 @@
 ---
 name: domino-airflow-kubeflow
-description: Run Domino Jobs from an external orchestrator. Covers Apache Airflow (a PythonOperator task on the Public Jobs API, or python-domino's DominoOperator and DominoSparkOperator), Kubeflow Pipelines (a KFP component that starts a Job over REST and polls it), installing python-domino on workers, credentials outside Domino (Personal Access Token or service-account token, never an API key), network reachability, mapping DAG tasks to Jobs, polling status, fetching logs and results. Use when the user mentions Airflow, a DAG, DominoOperator, Kubeflow, KFP, an external scheduler or orchestrator, or wants a pipeline that lives outside Domino to trigger and wait for Domino Jobs. For pipelines inside Domino use domino-flows; for a recurring single Job use a scheduled Job (domino-jobs).
-compatibility: Domino 6.3 and Domino Cloud. The orchestrator runs outside Domino, so it needs the deployment URL and a Personal Access Token or service-account token; DOMINO_API_PROXY and the localhost:8899 access-token endpoint exist only inside Domino runs. python-domino 2.x (the Airflow operators ship with it).
+description: Run Domino Jobs from an external orchestrator. Covers Apache Airflow (a PythonOperator task on the Public Jobs API, or python-domino's DominoOperator and DominoSparkOperator), Kubeflow Pipelines (a KFP component that starts a Job over REST and polls it), installing python-domino on workers, credentials outside Domino (service account token, or a user API key as the fallback), network reachability, mapping DAG tasks to Jobs, polling status, fetching logs and results. Use when the user mentions Airflow, a DAG, DominoOperator, Kubeflow, KFP, an external scheduler or orchestrator, or wants a pipeline that lives outside Domino to trigger and wait for Domino Jobs. For pipelines inside Domino use domino-flows; for a recurring single Job use a scheduled Job (domino-jobs).
+compatibility: Domino 6.1. The orchestrator runs outside Domino, so it needs the deployment URL and a service account token or user API key; DOMINO_API_PROXY and the localhost:8899 access-token endpoint exist only inside Domino runs. python-domino 2.x (the Airflow operators ship with it).
 ---
 
 # Airflow and Kubeflow integration
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/integrations (6.3:
-same path under `/6.3/`). The orchestrator is its own service outside Domino; each pipeline step
+Product page: https://docs.domino.ai/cloud/platform-capabilities/features/integrations. The orchestrator is its own service outside Domino; each pipeline step
 starts a Domino **Job** through the Domino API and waits for it; the code that does the work
 lives in the Domino project. Domino keeps reproducibility, the orchestrator keeps the schedule.
 
@@ -26,12 +25,11 @@ lives in the Domino project. Domino keeps reproducibility, the orchestrator keep
 1. **Network path** from its workers to the Domino deployment URL (the one users open in a
    browser), exported as `DOMINO_API_HOST` on the worker. Nothing from inside a run
    (`DOMINO_API_PROXY`, `localhost:8899`) exists on an Airflow worker or a KFP pod.
-2. **A token**: a Personal Access Token for a pipeline that acts as you, or a service-account
-   token for unattended automation, created in Domino and held in the orchestrator's own secret
-   mechanism (Domino variables are not readable there). Legacy user API keys are deprecated; do
-   not copy the `DOMINO_USER_API_KEY` the product page and python-domino's example still
-   show.
-   https://docs.domino.ai/cloud/reference/api/domino-api-authentication
+2. **A credential**: a service account token (`Authorization: Bearer`) for unattended
+   automation, or, as the fallback, your user API key (`X-Domino-Api-Key`; python-domino
+   `api_key=` or `DOMINO_USER_API_KEY`) for a pipeline that acts as you. Keep it in the
+   orchestrator's own secret mechanism (Domino variables are not readable there).
+   https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/
 3. **Project id and command** per step, plus optional environment id and hardware tier id.
 
 ## Airflow: recommended pattern (Public Jobs API, `requests` only)
@@ -49,6 +47,7 @@ def run_domino_job(run_command: str) -> str:
     import os, time, requests
     base = os.environ["DOMINO_API_HOST"].rstrip("/")          # deployment URL, set on the worker
     headers = {"Authorization": "Bearer " + open(os.environ["DOMINO_TOKEN_FILE"]).readline().strip()}
+    # API key fallback: headers = {"X-Domino-Api-Key": os.environ["DOMINO_USER_API_KEY"]}
     job = requests.post(f"{base}/api/jobs/v1/jobs", headers=headers, timeout=60,
                         json={"projectId": os.environ["DOMINO_PROJECT_ID"], "runCommand": run_command}).json()["job"]
     while not job["status"]["isCompleted"]:
@@ -82,7 +81,8 @@ Read these before choosing them; details and a DAG in [AIRFLOW.md](./AIRFLOW.md)
   ([AIRFLOW.md](./AIRFLOW.md#install)). The `[airflow]` extra pins `apache-airflow==2.2.4`; do
   not use it on an existing Airflow.
 - Both operators import `airflow.utils.decorators.apply_defaults`, removed in Airflow 3.0.
-- Neither accepts `auth_token`: pass a token file as `domino_token_file` or set `DOMINO_TOKEN_FILE`.
+- Neither accepts `auth_token`: pass a service account token file as `domino_token_file` (or
+  set `DOMINO_TOKEN_FILE`), or a user API key as `api_key`.
 
 ## Kubeflow in one screen
 
@@ -103,8 +103,8 @@ components, pipeline, secret creation and logs on failure: [KUBEFLOW.md](./KUBEF
   fails at client creation, not at Job start.
 - Default `max_poll_time` is 6000 s (100 min); longer Jobs need a larger value or the task fails
   while the Job keeps running.
-- python-domino reads `DOMINO_API_HOST`, `DOMINO_TOKEN_FILE` and the deprecated
-  `DOMINO_USER_API_KEY` from the environment; pass `auth_token` instead of setting the key.
+- python-domino reads `DOMINO_API_HOST`, `DOMINO_TOKEN_FILE` and `DOMINO_USER_API_KEY` from
+  the environment; a token file wins over the API key when both are set.
 - Each step is a separate Job with its own input commit; hand data between steps through
   Datasets, Data Sources or the output commit, not the local filesystem.
 

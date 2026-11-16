@@ -4,7 +4,8 @@ python-domino 2.2.0 (`dominodatalab` on PyPI) methods and examples. Methods mark
 **legacy** call the pre-Jobs v1 Runs API and are kept only for existing scripts.
 
 Client setup (`domino = Domino(...)`) and authentication: [SKILL.md](./SKILL.md#authentication).
-Never pass `api_key=`. The client is bound to one project (`owner/project-name`);
+Outside Domino, pass a service account token as `auth_token=`, or your user API key as
+`api_key=` when no service account token is available. The client is bound to one project (`owner/project-name`);
 `domino.project_id` resolves its id. Most methods call the Domino Internal API
 (`/v4/...`, `/v1/projects/...`; non-public routes that may change in a future Domino version) on behalf of that project.
 
@@ -54,7 +55,7 @@ Legacy v1 Runs API; prefer `job_start()` for new work:
 | `project_archive(project_name)` | Raises `ProjectNotFoundException`. |
 | `fork_project(target_name)` | |
 | `collaborators_get()`, `collaborators_add(username_or_email, message="")`, `collaborators_remove(username_or_email)` | |
-| `tags_list(project_id=None)`, `tags_add(tags: list, project_id=None)`, `tags_remove(tag_name, project_id=None)`, `tag_get_id(tag_name, project_id=None)` | Legacy project tags, not the taxonomy tags in [tags-and-properties](../tags-and-properties/SKILL.md). |
+| `tags_list(project_id=None)`, `tags_add(tags: list, project_id=None)`, `tags_remove(tag_name, project_id=None)`, `tag_get_id(tag_name, project_id=None)` | Project tags. |
 
 ### Datasets
 
@@ -73,7 +74,7 @@ There is no `datasets_snapshot` or `datasets_tag` method. Snapshot and tag route
 | Method | Notes |
 |--------|-------|
 | `environments_list()`, `get_environment(environment_id)`, `get_default_environment()` | `get_environment` calls the Public API `GET /api/environments/v1/environments/{id}`. |
-| `create_environment(name, visibility, dockerfile_instructions="", environment_variables=None, base_image="", post_run_script="", post_setup_script="", pre_run_script="", pre_setup_script="", skip_cache=False, summary="", supported_clusters=None, tags=None, use_vpn=False, workspace_tools=None, add_base_dependencies=True, description="", is_restricted=False, organization_owner_id=None)` | Public API `POST /api/environments/beta/environments` (current on 6.3; deprecated on Cloud in favour of v2, which the SDK does not wrap). |
+| `create_environment(name, visibility, dockerfile_instructions="", environment_variables=None, base_image="", post_run_script="", post_setup_script="", pre_run_script="", pre_setup_script="", skip_cache=False, summary="", supported_clusters=None, tags=None, use_vpn=False, workspace_tools=None, add_base_dependencies=True, description="", is_restricted=False, organization_owner_id=None)` | Public API `POST /api/environments/beta/environments` (the create route on Domino 6.1). |
 | `create_environment_revision(environment_id, dockerfile_instructions="", ...)` | Same optional build fields as above; same beta route caveat. The body is a complete definition: an omitted `base_image` is filled from the **deployment default environment** (`get_default_environment()["latestRevisionDetails"]["dockerImage"]`), not from this environment, and omitted lists and scripts are sent empty. See [Environments](#environments) below. |
 | `restrict_environment_revision(environment_id, revision_id)`, `archive_environment(environment_id)` | |
 | `hardware_tiers_list()`, `get_hardware_tier_id_from_name(hardware_tier_name)` | Tiers usable by the client's project. |
@@ -86,7 +87,7 @@ There is no `datasets_snapshot` or `datasets_tag` method. Snapshot and tag route
 | `model_publish(file, function, environment_id, name, description, files_to_exclude=None)` | All five leading arguments required. Returns the created Model API JSON. |
 | `model_versions_get(model_id)`, `model_version_publish(model_id, file, function, environment_id, description, files_to_exclude=None)` | |
 | `model_version_export(...)`, `model_version_sagemaker_export(...)`, `model_version_export_status(model_export_id)`, `model_version_export_logs(model_export_id)` | Image export to a registry (`/v4/models`, non-public route; may change in a future Domino version). Build-then-export sequence and a CI/CD pipeline: [domino-model-delivery](../domino-model-delivery/EXPORT-API.md). |
-| `app_publish(unpublish_running_apps=True, hardware_tier_id=None, environment_id=None, external_volume_mount_ids=None, commit_id=None, branch=None, app_id=None)`, `app_unpublish(app_id=None)`, `app_get_status(app_id)`, `app_id` (property) | Legacy app start/stop; new automation uses the Public API in [domino-apps](../domino-apps/API-APPS.md). |
+| `app_publish(unpublish_running_apps=True, hardware_tier_id=None, environment_id=None, external_volume_mount_ids=None, commit_id=None, branch=None, app_id=None)`, `app_unpublish(app_id=None)`, `app_get_status(app_id)`, `app_id` (property) | Start (publish) and stop an App through `/v4/modelProducts` (non-public route; may change in a future Domino version). The Public API (`/api/apps/beta`) has no start route on Domino 6.1, so use these or the UI: [API-APPS.md](./API-APPS.md). |
 
 Budgets and billing tags (`budget_*`, `billing_tag*`, `project_billing_tag*`,
 `projects_by_billing_tag`) and `custom_metrics_client()` (model monitoring custom

@@ -1,6 +1,6 @@
 # Scheduled Jobs over the API
 
-Scheduled Jobs are created in the UI (**Jobs > Schedules > Schedule a Job**) or through the routes below. The Public API has no scheduled-Job route and python-domino has no scheduled-Job method, so the API path is the Domino Internal API that the UI itself calls: **non-public route; may change in a future Domino version**. On 6.3 confirm the bodies in your deployment's `/docs` (`openapi-internal.json`).
+Scheduled Jobs are created in the UI (**Jobs > Schedules > Schedule a Job**) or through the routes below. The Public API has no scheduled-Job route and python-domino has no scheduled-Job method, so the API path is the Domino Internal API that the UI itself calls: **non-public route; may change in a future Domino version**. Confirm the bodies in your deployment's `/docs` (`openapi-internal.json`).
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 

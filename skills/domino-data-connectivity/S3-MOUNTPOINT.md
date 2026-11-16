@@ -13,7 +13,7 @@ at `/domino/edv/<name>` without FUSE privileges in the container.
 - EDV registration (product docs): https://docs.domino.ai/cloud/admin/data-administration/external-data/external-data-volumes
 - Mountpoint semantics and limits: https://docs.aws.amazon.com/AmazonS3/latest/userguide/mountpoint.html
 
-Self-managed Domino 6.3 on EKS. On Domino Cloud, ask Domino Support; an S3 **Data Source**
+Self-managed Domino 6.1 on EKS. On Domino Cloud, ask Domino Support; an S3 **Data Source**
 (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/connect-to-amazon-s3)
 gives the same bucket through the Data API without any cluster change and is the default
 choice on either target. Azure Blob and GCS equivalents are a separate blueprint

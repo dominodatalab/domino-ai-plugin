@@ -47,8 +47,8 @@ Domino and which project this is, and `search_domino` (`domino_docs`) searches t
 2. Check the project for the files the skill names (`app.sh`, `requirements.txt`,
    `vite.config.js`, the model file) and create or fix only what the skill prescribes.
 3. Authenticate as `domino-api-intro` says: inside a Domino execution call
-   `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop, CI) send a Personal Access
-   Token or service account token as `Authorization: Bearer`. Never use legacy API keys. Calls
+   `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop, CI) send
+   a service account token as `Authorization: Bearer`, or a user API key as `X-Domino-Api-Key`. Calls
    from an app to a synchronous model endpoint use HTTP Basic with the endpoint's token as
    username and password; asynchronous endpoints take `Authorization: Bearer` (see `domino-apps`
    and `domino-model-serving`).

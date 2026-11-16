@@ -66,7 +66,7 @@ with open(f"{root}/my-dataset/metadata/schema.json", "w") as f:
 
 Take a snapshot before a transformation so the previous state stays readable at
 `snapshots/<name>/<n>` and can be tagged or copied into a new Dataset. From a Workspace or Job,
-call the API through the proxy (outside a run use a Personal Access Token instead; see
+call the API through the proxy (outside a run use a service-account token or user API key instead; see
 [API.md](./API.md)):
 
 ```bash
@@ -125,17 +125,16 @@ data = np.memmap(f"{root}/my-dataset/processed/features.dat", dtype="float32", m
 
 ## Snapshot limits and housekeeping
 
-Domino 6.3 enforces `com.cerebro.domino.dataset.quota.maxActiveSnapshotsPerDataset` (default
+Domino enforces `com.cerebro.domino.dataset.quota.maxActiveSnapshotsPerDataset` (default
 20) and `com.cerebro.domino.dataset.quota.maxDatasetsPerProject` while
 `com.cerebro.domino.dataset.quota.enabled` is `true`
-(https://docs.domino.ai/6.3/admin/configuration/central-configuration#read-write-datasets); on
-Domino Cloud, Domino Support sets the limits. At the limit an execution that would write a
+(https://docs.domino.ai/6.3/admin/configuration/central-configuration#read-write-datasets). At the limit an execution that would write a
 snapshot errors, and a manual **Take Snapshot** marks the oldest snapshot for deletion if you
 proceed; a marked snapshot stops mounting, and nothing is permanently deleted until an admin
 acts (https://docs.domino.ai/cloud/admin/data-administration/datasets#set-limits-on-dataset-usage).
 
 Housekeeping: delete snapshots you no longer need (an Owner marks, an admin purges from
-**Admin > Manage resources > Datasets**; on 6.3 the recovery window is
+**Admin > Manage resources > Datasets**; the recovery window is
 `com.cerebro.domino.dataset.graceTimeForDeletion`, default 15 minutes); exempt a Project only
 when policy allows (**Settings > Hardware & Environment > Ignore Dataset Limits**); refresh
 Datasets from external Data Sources with a scheduled Job rather than manual uploads. Routes for

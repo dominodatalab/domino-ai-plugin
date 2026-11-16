@@ -26,7 +26,7 @@ in this library; use the UI code snippet for it. The snippet is also served by
 
 ```dockerfile
 USER root
-RUN python -m pip install "pinecone>=3,<9" "dominodatalab-data>=6.7.4"
+RUN python -m pip install "pinecone>=3,<9" "dominodatalab-data==6.3.0"   # ==6.2.0 on Domino 6.1.0
 USER ubuntu
 ```
 
@@ -82,7 +82,7 @@ index.delete(delete_all=True, namespace="test")
 
 ```python
 def embed(text: str) -> list[float]:
-    ...   # your embedding model; call it through LLM Gateway 2.0 where deployed (domino-llm-gateway) or a Domino-hosted endpoint (domino-llm-access)
+    ...   # your embedding model, for example a Domino-hosted endpoint (domino-llm-access)
 
 def retrieve(question: str, top_k: int = 5) -> list[str]:
     hits = index.query(vector=embed(question), top_k=top_k, include_metadata=True)
@@ -90,8 +90,6 @@ def retrieve(question: str, top_k: int = 5) -> list[str]:
 
 context = "\n\n".join(retrieve("What is a Domino Dataset?"))
 ```
-
-Trace the pipeline with the domino-genai-tracing skill when it runs as an agent or App.
 
 ## Practices
 

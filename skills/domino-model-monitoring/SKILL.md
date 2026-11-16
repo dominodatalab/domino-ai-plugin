@@ -1,14 +1,14 @@
 ---
 name: domino-model-monitoring
 description: Monitor production models in Domino for data drift and model quality. Covers the two workflows (integrated monitoring for Domino endpoints with prediction capture, and Model Monitor for models served elsewhere), the DataCaptureClient prediction-capture library, registering training sets, prediction data and ground truth with the Monitoring Config JSON, drift tests and thresholds, scheduled checks and notifications, where captured predictions live, remediation, and the Model Monitoring REST API including custom metrics. Use when setting up monitoring for an endpoint, registering an external model, ingesting ground truth, reading drift or quality results by API, or automating retraining on drift.
-compatibility: Domino 6.3 and Domino Cloud. Model Monitoring API calls use the same bearer authentication as other Domino APIs (DOMINO_API_PROXY or the localhost:8899 access token in a run; PAT or service account outside). Integrated endpoint monitoring is not available for endpoints on remote data planes.
+compatibility: Domino 6.1. Model Monitoring API calls use the same authentication as other Domino APIs (DOMINO_API_PROXY or the localhost:8899 access token in a run; a service-account token or a user API key outside). Integrated endpoint monitoring is not available for endpoints on remote data planes.
 ---
 
 # Domino model monitoring
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
-Serving metrics (CPU, latency, status codes) are in `domino-model-endpoints`; this skill is drift and quality. Reference files: [PREDICTION-CAPTURE.md](./PREDICTION-CAPTURE.md) (endpoint instrumentation, captured data, remediation) and [MONITORING-API.md](./MONITORING-API.md) (routes, config JSON, custom metrics).
+Serving health (logs, status codes, CPU and latency) is in `domino-model-endpoints`; this skill is drift and quality. Reference files: [PREDICTION-CAPTURE.md](./PREDICTION-CAPTURE.md) (endpoint instrumentation, captured data, remediation) and [MONITORING-API.md](./MONITORING-API.md) (routes, config JSON, custom metrics).
 
 ## Two workflows
 

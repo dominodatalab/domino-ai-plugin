@@ -1,12 +1,12 @@
 ---
 name: domino-workspaces
 description: Work with Domino Workspaces - interactive sessions running Jupyter, JupyterLab, VS Code or RStudio on a hardware tier with a compute environment. Covers launching and configuring a Workspace, what persists across stop and resume, file paths and syncing for DFS and Git-based Projects, package and home-directory persistence, SSH access from a local IDE, the Workspace API routes, and troubleshooting. Use when setting up or debugging an interactive development session in Domino.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token (Bearer) or a user API key.
 ---
 
 # Domino Workspaces
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 A Workspace is a durable interactive session: a container on a hardware tier running an IDE from the selected compute environment, with a persistent volume for the Project files. IDEs (Jupyter, JupyterLab, VS Code, RStudio, custom tools) come from the environment's Pluggable Workspace Tools ([domino-environments](../domino-environments/SKILL.md)); batch work: a Job ([domino-jobs](../domino-jobs/SKILL.md)).
 
@@ -19,7 +19,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 3. **IDE**: the list depends on the environment.
 4. **Volume Size** if provisioning recommendations are enabled (Git-based Projects use the Project setting on first launch).
 5. **Next**: **Hardware Tier** (by data plane on Nexus; smallest that fits), then only the Datasets, NetApp Volumes and external volumes you need (per-asset snapshot pins).
-6. **Next**: optional Spark, Ray, Dask, MPI ([domino-distributed-computing](../domino-distributed-computing/SKILL.md)) or Slurm ([domino-hpc-slurm](../domino-hpc-slurm/SKILL.md)) cluster.
+6. **Next**: optional Spark, Ray, Dask or MPI cluster ([domino-distributed-computing](../domino-distributed-computing/SKILL.md)). Slurm clusters are not available on Domino 6.1.
 7. Additional settings: **Enable SSH access**, **Package Persistence**, **Home Directory Persistence**; **Launch**. Default limit: four Workspaces per user per Project.
 
 **Settings > Edit Settings** changes tier or environment (**Save & Restart**); by API, [API.md](./API.md).
@@ -41,14 +41,14 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 ## Package and home-directory persistence
 
 - Environment owners tick **Enable Package Persistence** on a revision; the Workspace then offers the **Package Persistence** toggle at launch and restart. `pip install` and `install.packages()` persist, and `requirements.txt` skips packages already present. Custom images need `uv` (Python) and `renv` (R).
-- **Home Directory Persistence** keeps `$HOME` (`/home/ubuntu`): IDE settings, `.ssh`, coding-assistant logins; needs `rsync` in the environment.
-- On Domino 6.3 both also need the admin configuration records `com.cerebro.domino.workbench.workspace.persistence.packages.enabled` and `...persistence.directories.enabled`.
+- **Home Directory Persistence** keeps `$HOME` (`/home/ubuntu`): IDE settings, `.ssh`, tool logins; needs `rsync` in the environment.
+- Both also need the admin configuration records `com.cerebro.domino.workbench.workspace.persistence.packages.enabled` and `...persistence.directories.enabled`.
 - Permanent dependencies belong in the environment Dockerfile; `requirements.txt` reinstalls on every start.
 
 ## SSH from a local IDE
 
 1. The environment needs `openssh-server` (the DSE has it; custom image: `USER root` / `apt-get install -y openssh-server` / `mkdir -p /var/run/sshd` / `USER ubuntu`).
-2. Launch with **Enable SSH access**. Missing checkbox: on 6.3 the admin sets `com.cerebro.domino.workbench.workspace.ssh.enabled`; on Cloud contact Domino support.
+2. Launch with **Enable SSH access**. Missing checkbox: the admin sets `com.cerebro.domino.workbench.workspace.ssh.enabled`.
 3. In the running Workspace open **Settings** > **SSH connection** and install the **Dom CLI** from the link (not the Domino CLI, [domino-cli](../domino-cli/SKILL.md)). Note the **Workspace ID** (also in the URL).
 4. Locally: `dom connect <workspace_id> --domino-api-host=https://<browser URL> -l ubuntu` (add `--port 2223` for PyCharm). Add `Include ~/.domino/ssh/config` to `~/.ssh/config`, then connect from VS Code **Remote Explorer > SSH** or PyCharm **Remote Development > SSH** (host = workspace id, user `ubuntu`).
 
@@ -60,7 +60,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspace
 
 ### Which path applies
 
-Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.4 and later (including Domino Cloud) `GET /api/workspace/v1/workspace/{workspaceId}/writable-project-mounts` returns `mainDfsMount`, `mainGitMount`, `importedGitMounts` (`404` = absent).
+Read `GET $DOMINO_API_HOST/version`. On `6.1.x` use the paths table above; `GET /api/workspace/v1/workspace/{workspaceId}/writable-project-mounts` exists only on 6.4 and later.
 
 ## Manage Workspaces
 
@@ -68,8 +68,8 @@ Read `GET $DOMINO_API_HOST/version`. On `6.3.x` use the paths table above. On 6.
 
 ## Coding assistants and extra apps
 
-- The DSE ships AI coding-assistant VS Code extensions and CLI agents; sign in once and Home Directory Persistence keeps the login. If the LLM Gateway 2.0 Extension is installed, offer to route the assistant through it, never by default ([domino-llm-gateway](../domino-llm-gateway/CODING-ASSISTANTS.md)). Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
-- Only the IDE port (8888) is proxied; jupyter-server-proxy (in the DSE) exposes other ports at `https://<browser URL>/<owner>/<project>/notebookSession/$DOMINO_RUN_ID/proxy/<port>/`. App Preview is the way to develop a Domino App.
+- The DSE does not include AI coding assistants. Users install one themselves: a VS Code extension (Home Directory Persistence keeps it and its login), or a CLI agent added to the environment Dockerfile ([domino-environments](../domino-environments/SKILL.md)).
+- Only the IDE port (8888) is proxied; jupyter-server-proxy (in the DSE) exposes other ports at `https://<browser URL>/<owner>/<project>/notebookSession/$DOMINO_RUN_ID/proxy/<port>/`. To run a Domino App, publish it ([domino-apps](../domino-apps/SKILL.md)).
 
 ## Troubleshooting
 

@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dominodatalab",
-  "version": "2026.603.10",
-  "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, GenAI tracing, Flows, Spark/Ray/Dask clusters, governance, and the Domino APIs and SDKs",
+  "version": "2026.601.11",
+  "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, Flows, Spark/Ray/Dask/MPI clusters, LLM access, and the Domino APIs and SDKs, for Domino 6.1",
   "author": {
     "name": "Domino Data Lab",
     "url": "https://www.domino.ai"
@@ -16,7 +16,6 @@
     "data-science",
     "machine-learning",
     "experiment-tracking",
-    "genai-tracing",
     "spark",
     "ray",
     "dask",
@@ -27,7 +26,7 @@
       "interface": {
         "displayName": "Domino Data Lab",
         "shortDescription": "Build and ship ML on Domino",
-        "longDescription": "Work with the Domino Data Lab platform from ChatGPT and Codex. Skills cover workspaces, jobs, compute environments, datasets, NetApp volumes, projects, apps, model endpoints and monitoring, MLflow experiment tracking, GenAI tracing, Flows, Spark/Ray/Dask, LLM access, governance, tags and properties, and the Domino Python and data SDKs. Intended for data scientists and ML engineers who already have access to a Domino deployment. The skills provide guidance and code; they don't connect to Domino on their own, so running jobs or calling APIs still requires your own Domino credentials.",
+        "longDescription": "Work with the Domino Data Lab platform from ChatGPT and Codex. Skills cover workspaces, jobs, compute environments, datasets, NetApp volumes, projects, apps, model endpoints and monitoring, MLflow experiment tracking, Flows, Spark/Ray/Dask/MPI, LLM access through the AI Gateway, and the Domino Python and data SDKs, for self-managed Domino 6.1. Intended for data scientists and ML engineers who already have access to a Domino deployment. The skills provide guidance and code; they don't connect to Domino on their own, so running jobs or calling APIs still requires your own Domino credentials.",
         "developerName": "Domino Data Lab",
         "category": "Developer Tools",
         "capabilities": [],

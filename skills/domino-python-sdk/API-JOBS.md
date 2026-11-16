@@ -30,7 +30,7 @@ Request body (`projectId` and `runCommand` are the only required fields):
 | `externalVolumeMountIds` | string[] | External data volume ids |
 | `netAppVolumeIds` | string[] | NetApp volume ids; see [netapp-volumes](../netapp-volumes/API-NETAPP-VOLUMES.md) |
 | `snapshotDatasetsOnCompletion`, `snapshotNetAppVolumesOnCompletion` | boolean | Snapshot mounted datasets / volumes when the job ends. The NetApp flag depends on deployment configuration: where the feature flag `EnableDominoNetAppSnapshotsOnExecutionCompletion` is off the job is rejected with 400 |
-| `computeCluster` | object | `clusterType` (`dask`, `mpi`, `ray`, `slurm`, `spark`), `computeEnvironmentId`, `workerCount`, `workerHardwareTier` required; optional `masterHardwareTierId`, `maxWorkerCount`, `workerStorageMB`, `computeEnvironmentRevisionSpec` |
+| `computeCluster` | object | `clusterType` (`dask`, `mpi`, `ray`, `spark`), `computeEnvironmentId`, `workerCount`, `workerHardwareTier` required; optional `masterHardwareTierId`, `maxWorkerCount`, `workerStorageMB`, `computeEnvironmentRevisionSpec` |
 | `capacityType` | string | |
 
 There is no `hardwareTierId`, `isDirectHardwareTierId` or `commandToRun` field. The
@@ -184,7 +184,7 @@ POST /api/jobs/v1/projects/{projectId}/job-defaults
 
 Domino Cloud (6.4.0 and later) only. Send the fields you intend to post to
 `POST /api/jobs/v1/jobs` (all optional) and receive `jobDefaults` with the resolved
-hardware tier, environment, commit, dataset and NetApp snapshot pins. On Domino 6.3 there
+hardware tier, environment, commit, dataset and NetApp snapshot pins. On Domino 6.1 there
 is no public equivalent; the UI resolves defaults.
 
 ## Scheduled jobs

@@ -255,7 +255,7 @@ Before you write or change Domino API, SDK, app, extension, or governance automa
    - **`API-SPECS.md`** for OpenAPI files and route discovery
 3. Follow https://docs.domino.ai/cloud/reference/api/domino-api-authentication for all HTTP auth (proxy, access token, PAT, service account). Legacy user API keys are described as deprecated, never recommended.
 4. For API paths and pages, use [API-SPECS.md](skills/domino-api-intro/API-SPECS.md) (public routes section) before guessing routes.
-5. Then use the relevant skill under `skills/` (python-sdk, apps, domino-governance, domino-extensions, and others).
+5. Then use the relevant skill under `skills/` (python-sdk, apps, and others).
 
 This applies even when another Domino skill is already active. The intro skill takes precedence for auth, host, and retry rules.
 

@@ -101,17 +101,36 @@ def test_outside_domino_missing_config_gives_clear_error_naming_the_env_file(ser
     clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
     with pytest.raises(server.DominoError) as token_err:
         server._get_auth_headers()
-    assert "DOMINO_TOKEN is not set" in str(token_err.value)
-    assert "Personal Access Token" in str(token_err.value)
+    assert "Neither DOMINO_TOKEN nor DOMINO_API_KEY is set" in str(token_err.value)
+    assert "service account token" in str(token_err.value)
 
 
-def test_legacy_api_key_is_rejected_with_migration_message(server, clean_env):
+def test_user_api_key_is_sent_when_no_token_is_set(server, clean_env):
     clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
-    clean_env.setenv("DOMINO_API_KEY", "OLDKEYVALUE-123")
-    with pytest.raises(server.DominoError) as err:
-        server._get_auth_headers()
-    assert "deprecated" in str(err.value) and "DOMINO_TOKEN" in str(err.value)
-    assert "OLDKEYVALUE-123" not in str(err.value)
+    clean_env.setenv("DOMINO_API_KEY", "KEYVALUE-123")
+    assert server._get_auth_headers() == {"X-Domino-Api-Key": "KEYVALUE-123"}
+    assert server._auth_mode() == "api_key"
+    assert "KEYVALUE-123" not in server._redact("header X-Domino-Api-Key: KEYVALUE-123")
+
+
+def test_token_wins_over_api_key(server, clean_env):
+    clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
+    clean_env.setenv("DOMINO_TOKEN", "t")
+    clean_env.setenv("DOMINO_API_KEY", "k")
+    assert server._get_auth_headers() == {"Authorization": "Bearer t"}
+
+
+def test_latest_commit_falls_back_to_the_commit_list_by_time(server, laptop, http):
+    http.add("GET", f"/api/projects/beta/projects/{PID}/commits/latest", FakeResponse(404, {"message": "Not Found"}))
+    http.add("GET", "/v1/projects/jane/proj/commits",
+             FakeResponse(200, [{"id": "old", "timestamp": 1}, {"id": "new", "timestamp": 3}, {"id": "mid", "timestamp": 2}]))
+    assert server._latest_commit_id(PID, "jane", "proj") == "new"
+
+
+def test_latest_commit_fallback_takes_the_first_commit_id_string(server, laptop, http):
+    http.add("GET", f"/api/projects/beta/projects/{PID}/commits/latest", FakeResponse(404, {"message": "Not Found"}))
+    http.add("GET", "/v1/projects/jane/proj/commits", FakeResponse(200, ["newest", "older"]))
+    assert server._latest_commit_id(PID, "jane", "proj") == "newest"
 
 
 def test_literal_placeholders_and_empty_values_are_treated_as_unset(clean_env):
@@ -346,7 +365,7 @@ def test_environment_info_outside_domino_with_token(server, clean_env, http, run
     http.add("GET", "/api/users/v1/self", FakeResponse(200, {"user": {"userName": "jane"}}))
     info = run(server.get_domino_environment_info())
     assert info["auth_mode"] == "bearer_token" and info["domino_host"] == "https://domino.example.com"
-    assert "error" not in info and "DOMINO_TOKEN" in info["warning"]
+    assert "error" not in info and "warning" not in info
     assert info["connection"] == {"ok": True, "authenticated_as": "jane"}
 
 
@@ -357,7 +376,7 @@ def test_environment_info_connection_reports_a_rejected_token_with_the_fix(serve
     connection = run(server.get_domino_environment_info())["connection"]
     assert connection["ok"] is False
     assert "401" in connection["error"] and "DOMINO_TOKEN" in connection["error"]
-    assert "Personal Access Token" in connection["error"]
+    assert "service account token" in connection["error"]
 
 
 def test_environment_info_connection_reports_an_unreachable_host(server, clean_env, http, run):
@@ -375,7 +394,8 @@ def test_environment_info_makes_no_call_without_credentials(server, clean_env, h
     clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
     info = run(server.get_domino_environment_info())
     assert "connection" not in info and http.calls == []
-    assert info["credential_sources"] == {"DOMINO_HOST": "not set", "DOMINO_TOKEN": "not set"}
+    assert info["credential_sources"] == {"DOMINO_HOST": "not set", "DOMINO_TOKEN": "not set",
+                                         "DOMINO_API_KEY": "not set"}
 
 
 def test_plugin_options_win_over_the_environment_and_leave_no_trace(clean_env, tmp_path):

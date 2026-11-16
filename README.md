@@ -22,9 +22,8 @@ The plugin gives AI coding assistants skills for the main Domino Data Lab surfac
 - **NetApp Volumes**: Enterprise-grade multi-terabyte storage with near-instant snapshots
 - **Apps**: Deploy React, Streamlit, and Dash applications
 - **Models**: Deploy, monitor, and manage model endpoints
-- **GenAI**: Trace and evaluate AI agents with the Domino SDK
-- **Distributed Computing**: Spark, Ray, Dask and Open MPI clusters, and Slurm HPC
-- **Projects, Launchers, Flows, governance, tags and properties, LLM access, and the Domino APIs and SDKs**
+- **Distributed Computing**: Spark, Ray, Dask and Open MPI clusters
+- **Projects, Launchers, Flows, LLM access, and the Domino APIs and SDKs**
 
 Skills say which Domino versions they apply to; see [Compatibility](#compatibility).
 
@@ -57,7 +56,7 @@ Everywhere else (your laptop, CI), the MCP server needs two values:
 | Setting | What to enter | Where to get it |
 |---|---|---|
 | **Domino URL** (`DOMINO_HOST`) | The address you open Domino at in your browser: `https://` and the host name, no path, for example `https://domino.example.com` | Your browser's address bar while you use Domino. Not `DOMINO_API_HOST`, which inside Domino is an in-cluster address |
-| **Token** (`DOMINO_TOKEN`) | A Personal Access Token, or a service account token for automation | In Domino: **Account** > **Account settings** > **Personal Access Token** > **Generate new Token**, choose an expiry, copy it ([docs](https://docs.domino.ai/cloud/reference/api/domino-api-authentication)). Legacy API keys don't work |
+| **Token** (`DOMINO_TOKEN`) | A service account token, sent as `Authorization: Bearer`. Without one, put `DOMINO_API_KEY=<your user API key>` in the env file instead (sent as `X-Domino-Api-Key`; the hosts' settings prompts take only the token) | An administrator creates service accounts and their tokens; your user API key is in your Domino account settings ([docs](https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/)). Domino 6.1 has no Personal Access Tokens |
 
 Each host takes them its own way:
 
@@ -91,11 +90,11 @@ user the token belongs to, or exactly what to fix:
 | Message | Fix |
 |---|---|
 | `DOMINO_HOST is not set` or `DOMINO_TOKEN is not set` | The host passed nothing; set the values as the table above shows for your host |
-| `HTTP 401` | The token is wrong, expired or revoked; generate a new one |
+| `HTTP 401` | The token or API key is wrong, expired or revoked; get a new one |
 | `... failed: ...` (no HTTP response) | Check the URL against your browser's address bar, and your network (VPN, or `HTTPS_PROXY` on a corporate network) |
 | `uses http://` or `must be a URL starting with https://` | Use the `https://` address |
 | `returned a non-JSON response` | The URL points at a login page or another site; copy it from the address bar while you're in Domino |
-| `DOMINO_API_KEY is set` | Legacy API keys are not supported; use a Personal Access Token |
+| `Neither DOMINO_TOKEN nor DOMINO_API_KEY is set` | Set a service account token as `DOMINO_TOKEN`, or your user API key as `DOMINO_API_KEY` (the env file takes both) |
 
 ## Installation: Claude Code
 
@@ -105,8 +104,8 @@ user the token belongs to, or exactly what to fix:
   but the subagents need the `skills:` preload (2.0.43) and plugin skills reachable from a
   subagent through the Skill tool (2.1.133). Tested on 2.1.300.
 - Access to a Domino Data Lab instance
-- Outside a Domino Workspace: your Domino URL and a Personal Access Token for the bundled MCP
-  server. Claude Code asks for both when you enable the plugin ([Your Domino URL and token](#your-domino-url-and-token))
+- Outside a Domino Workspace: your Domino URL and a service account token (or a user API key)
+  for the bundled MCP server. Claude Code asks for both when you enable the plugin ([Your Domino URL and token](#your-domino-url-and-token))
 - **`uv`** package manager ([install guide](https://github.com/astral-sh/uv)) — required for the bundled Domino MCP server
 
 ### Recommended: install from GitHub
@@ -321,7 +320,7 @@ not yet tested in a logged-in Cursor; please report what you find.
   Developer: Reload Window, or run `agent --plugin-dir /path/to/domino-ai-plugin`.
 
 The bundled MCP server needs `uv` on `PATH` and, outside a Domino Workspace, your Domino URL and a
-Personal Access Token. Cursor doesn't ask for them: write the env file
+service account token or user API key. Cursor doesn't ask for them: write the env file
 ([Your Domino URL and token](#your-domino-url-and-token)).
 
 If the plugin is also installed in Claude Code, Cursor may import that copy too (Settings → Agents →
@@ -341,8 +340,8 @@ otherwise; add `--ref release-YYYY.XYY.N` to pin a release. `release-2026.603.5`
 release that includes `gemini-extension.json`; earlier tags fail. Install asks a consent question
 first (`--consent` answers it, for a script; installing from a local path also asks whether to
 trust the folder, which `--consent` doesn't answer). It then asks for the two settings the bundled
-MCP server needs outside a Domino Workspace, the token first: `DOMINO_TOKEN`, a Personal Access
-Token or service account token, and the Domino URL (`DOMINO_HOST`), kept in the system keychain (or in an encrypted
+MCP server needs outside a Domino Workspace, the token first: `DOMINO_TOKEN`, a service account
+token, and the Domino URL (`DOMINO_HOST`), kept in the system keychain (or in an encrypted
 file where there is no keychain, such as a Domino Workspace). Inside a Workspace leave both empty,
 or pass `--skip-settings`: the server calls `$DOMINO_API_PROXY` and picks up the Workspace's own
 variables. Gemini CLI never hands your shell's `DOMINO_TOKEN` to an MCP server: it drops every
@@ -430,13 +429,16 @@ screenshot path in `plugin.json` is missing or outside `assets/`.
 
 ## Compatibility
 
-- **Supported targets:** Domino 6.3 (self-managed) and Domino Cloud. Skills declare this in
-  `compatibility:` frontmatter and open with `Applies to Domino 6.3 and Domino Cloud.`; where the
-  two differ, the skill reads `GET $DOMINO_API_HOST/version` and branches. (Lint does not enforce
-  the frontmatter yet, so a skill without it still targets both.)
-- **Domino 6.2 and earlier:** not supported. The content targets 6.3 and later; for an older
-  version use its own documentation at `https://docs.dominodatalab.com/en/<version>/`.
-- **`main`** is where releases are cut and it is correct for both targets: version-specific
+- **This branch (`release-6.1`) supports Domino 6.1 (self-managed) only.** Skills declare this in
+  `compatibility:` frontmatter and open with `Applies to Domino 6.1.` Seven skills whose features
+  need Domino 6.2 or later are removed here (Slurm HPC, tags and properties, Extensions, LLM
+  Gateway 2.0, GenAI tracing and trace setup, Governance API), and the rest are cut to what 6.1
+  has: service-account tokens or user API keys outside a run (no Personal Access Tokens),
+  `/api/apps/beta`, registered models v1, the AI Gateway. What changed, why, and
+  the per-file log: [RELEASE-6.1-CHANGES.md](RELEASE-6.1-CHANGES.md). Domino 6.1 docs:
+  `https://docs.dominodatalab.com/en/6.1/`.
+- **Domino 6.3 and Domino Cloud:** use `main`.
+- **`main`** is where releases are cut for 6.3 and Cloud: version-specific
   behaviour is gated inside the skills, never by branch. A GitHub marketplace install follows
   `main`, Gemini CLI follows its tagged GitHub Releases, and the Anthropic marketplace pins a
   commit (see [Updating](#updating-claude-code)). `release-X.Y` branches exist per shipped
@@ -541,14 +543,15 @@ DFS-based projects.
 
 - **Inside a Domino execution (Workspace, Job, App):** nothing to configure. The server calls
   `$DOMINO_API_PROXY`, which adds your token, and reads the project from Domino's own variables.
-- **Outside Domino (laptop, CI):** your Domino URL (`DOMINO_HOST`) and a Personal Access Token or
-  service account token (`DOMINO_TOKEN`), sent as `Authorization: Bearer`. How each host takes
+- **Outside Domino (laptop, CI):** your Domino URL (`DOMINO_HOST`) and a service account token
+  (`DOMINO_TOKEN`, sent as `Authorization: Bearer`) or a user API key (`DOMINO_API_KEY`, sent as
+  `X-Domino-Api-Key`). How each host takes
   them, the env file, and how to check the connection: [Your Domino URL and token](#your-domino-url-and-token).
 
 Requires `uv`. Tools, routes and each host's registration are documented in
 [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
 
-### Skills (34 total)
+### Skills (28 total)
 
 | Skill | Description |
 | --- | --- |
@@ -563,22 +566,16 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-rust-apps` | Build a Rust (axum) App: pinned toolchain in an environment, Clippy, nextest, cargo-deny, rust-analyzer, and a prebuilt binary that Apps start without compiling |
 | `domino-debug-proxy` | Diagnose reverse-proxy and routing issues in apps |
 | `domino-ui-bootstrap` | Bootstrap a Vite + React project on the Domino design system |
-| `domino-extensions` | Build and operate Domino UI Extensions |
 | `domino-experiment-tracking` | MLflow experiment tracking and model registry |
 | `domino-experiment-setup` | Generate MLflow experiment setup code for a project |
-| `domino-genai-tracing` | `@add_tracing` decorator and `DominoRun` |
-| `domino-trace-setup` | Add GenAI tracing helpers and wiring to an agent project |
 | `domino-model-endpoints` | Deploy and call model APIs |
 | `domino-model-serving` | Model API and registered-model lifecycle over REST |
 | `domino-model-monitoring` | Drift detection and model quality tracking |
 | `domino-model-delivery` | Batch scoring Jobs, the Model Export API for CI/CD, NVIDIA Fleet Command and Snowflake exports |
-| `domino-governance` | Policies, bundles, and evidence for model risk governance |
 | `domino-flows` | Flyte-based workflow orchestration |
 | `domino-airflow-kubeflow` | Trigger and wait for Domino Jobs from an existing Apache Airflow or Kubeflow Pipelines deployment (inside Domino, use `domino-flows`) |
 | `domino-distributed-computing` | Spark, Ray, Dask cluster management |
-| `domino-hpc-slurm` | Slurm HPC: a Slurm cluster attached to a Workspace (`sbatch`, `squeue`, `sacct`) and HPC Jobs over `/api/hpc/v1/jobs` |
-| `domino-llm-access` | Which LLM path to use: LLM Gateway 2.0 where deployed (`domino-llm-gateway`), else Domino-hosted vLLM endpoints or provider SDKs; legacy AI Gateway (6.3) |
-| `domino-llm-gateway` | Call models through LLM Gateway 2.0: aliases, in-run token, OpenAI and Anthropic SDKs, coding assistants, admin overview |
+| `domino-llm-access` | Which LLM path to use: the Domino AI Gateway or a provider SDK with the key in a Domino environment variable |
 | `domino-launchers` | Parameterized web forms for self-service |
 | `domino-modeling-assistant` | MCP server for AI-assisted model development |
 | `domino-data-connectivity` | Choosing a mechanism (Data Source first), External Data Volumes, S3 Mountpoint, AWS IRSA, Azure credentials |
@@ -586,9 +583,8 @@ Requires `uv`. Tools, routes and each host's registration are documented in
 | `domino-python-sdk` | Python SDK (python-domino) and REST API |
 | `domino-cli` | Domino CLI and the R package: sync project files, run Jobs, upload to Datasets from a laptop |
 | `domino-data-sdk` | Data SDK (domino-data) for data sources, datasets, training sets |
-| `tags-and-properties` | Taxonomy API for tags, namespaces, and typed properties |
 
-`domino-app-init`, `domino-debug-proxy`, `domino-experiment-setup`, and `domino-trace-setup`
+`domino-app-init`, `domino-debug-proxy` and `domino-experiment-setup`
 replace the former slash commands of the same names. In Claude Code they're still invocable as
 `/dominodatalab:<name>`, and every host can also pick them up automatically from context.
 
@@ -603,7 +599,7 @@ without skill preload; Codex and Gemini CLI don't use them.
 | --- | --- |
 | `domino-deploy` | `domino-apps`, `domino-app-init`, `domino-debug-proxy`, `domino-ui-bootstrap`, `domino-model-endpoints`, `domino-model-serving`, `domino-environments` for deploying apps and model endpoints |
 | `domino-debug` | `domino-apps`, `domino-jobs`, `domino-environments`, `domino-api-intro` and the skill for the failing workload, with the log locations and Public API routes for fetching evidence |
-| `domino-setup` | `domino-projects`, `domino-environments`, `domino-experiment-setup`, `domino-trace-setup`, `domino-datasets`, `domino-data-sdk`, `domino-data-connectivity`, `domino-llm-gateway`, `domino-llm-access`, `domino-model-monitoring` for new projects and configuration |
+| `domino-setup` | `domino-projects`, `domino-environments`, `domino-experiment-setup`, `domino-datasets`, `domino-data-sdk`, `domino-data-connectivity`, `domino-llm-access`, `domino-model-monitoring` for new projects and configuration |
 
 ### Output Styles (Claude Code only)
 
@@ -701,7 +697,7 @@ and AGENTS.md "Testing new and updated skills".
 | `~` path not expanding | Always use absolute paths (e.g., `/home/ubuntu/...`) in marketplace commands and settings. |
 | "Failed to parse marketplace file" | Ensure `marketplace.json` has the `owner` object and `source` is a string path (e.g., `"./plugins/domino-claude-plugin"`), not a nested object. |
 | `domino_server` tools missing (ChatGPT / Codex) | The directory package is skills-only. Install from a local checkout, or register the server yourself ("How each host registers the server" in `mcp-servers/domino_mcp_server/README.md`). |
-| `domino_server` tools fail naming `DOMINO_TOKEN` | Outside Domino the server needs `DOMINO_HOST` and `DOMINO_TOKEN` (a Personal Access Token or service account token); `DOMINO_API_KEY` is no longer accepted. See [Your Domino URL and token](#your-domino-url-and-token). |
+| `domino_server` tools fail naming `DOMINO_TOKEN` | Outside Domino the server needs `DOMINO_HOST` and either `DOMINO_TOKEN` (a service account token) or `DOMINO_API_KEY` (a user API key). See [Your Domino URL and token](#your-domino-url-and-token). |
 | CI: "out of sync with .claude-plugin/plugin.json" | Run `scripts/sync-manifests.py` and commit `plugin.json`, `.cursor-plugin/plugin.json` and `gemini-extension.json`. |
 
 ---

@@ -13,15 +13,15 @@ API and is what the examples below use).
 
 Kubeflow Pipelines runs in its own Kubernetes cluster, separate from Domino. Each pipeline step
 that needs Domino runs as a pod that must reach the Domino deployment URL over the network and
-present a Bearer token. The step's code is thin: start a Job, wait, return what the next step
+present a credential. The step's code is thin: start a Job, wait, return what the next step
 needs. The real work is the Domino Job, versioned in the Domino project.
 
 ## Credentials
 
 Create a Kubernetes Secret in the namespace where the pipeline's pods run (in multi-user KFP
-that is the user's profile namespace, not `kubeflow`) holding a Personal Access Token or a
-service-account token. The token is
-created in Domino; the Secret is the pipeline's own copy, because its pods cannot read Domino
+that is the user's profile namespace, not `kubeflow`) holding a service account token, or your
+user API key as the fallback (send it as `X-Domino-Api-Key` instead of `Authorization: Bearer`).
+The credential is created in Domino; the Secret is the pipeline's own copy, because its pods cannot read Domino
 Project or user environment variables:
 
 ```bash

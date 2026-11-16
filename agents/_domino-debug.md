@@ -41,7 +41,6 @@ other hosts open `skills/<skill-name>/SKILL.md` in the plugin directory.
 | Dataset or NetApp volume path missing or read-only | `domino-datasets`, `netapp-volumes` | `MOUNT-PATHS.md`, `TROUBLESHOOTING.md` |
 | 401, 403 or 404 from a Domino API call; wrong host; pagination | `domino-api-intro` | `ERRORS.md`, `HOSTS.md` |
 | Spark, Ray or Dask cluster won't attach | `domino-distributed-computing` | `SKILL.md` |
-| Slurm option disabled in the Workspace launcher; a Workspace with a Slurm cluster stuck in Pending (`slurm-jwt-secret` FailedMount); Slurm jobs stay pending; HPC Job output missing | `domino-hpc-slurm` | the troubleshooting section of `SKILL.md` |
 
 ## Where the evidence is
 
@@ -53,8 +52,7 @@ Domino and which project this is, and `search_domino` and `query_docs_filesystem
 the Public API spec for Domino 6.3 and Domino Cloud except where labelled internal, authenticating
 as `domino-api-intro` says:
 inside a Domino execution call `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop,
-CI), send a Personal Access Token or service account token as `Authorization: Bearer`. Never use
-legacy API keys.
+CI), send a service account token as `Authorization: Bearer`, or a user API key as `X-Domino-Api-Key`.
 
 | Workload | In the Domino UI | API |
 | --- | --- | --- |
