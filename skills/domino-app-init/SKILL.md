@@ -80,7 +80,7 @@ if __name__ == "__main__":
 ```bash
 #!/bin/bash
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$BASH_SOURCE")"
 python app.py
 ```
 
@@ -112,7 +112,7 @@ def index():
 ```bash
 #!/bin/bash
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$BASH_SOURCE")"
 uvicorn app:app --host 0.0.0.0 --port 8888
 ```
 

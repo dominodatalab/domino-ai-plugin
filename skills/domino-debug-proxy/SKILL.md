@@ -25,7 +25,7 @@ Find the configuration mistakes that break apps behind Domino's reverse proxy, r
 | 1 | Port and host | The process Domino starts listens on `0.0.0.0:8888` (`serve -l 8888`, `app.listen(8888, '0.0.0.0')`, `--server.port 8888 --server.address 0.0.0.0`, `app.run(host="0.0.0.0", port=8888)`, `uvicorn --host 0.0.0.0 --port 8888`). Domino rejects any other address or port |
 | 2 | Base path | Vite sets `base: './'`; HTML templates reference `static/...`, never `/static/...` |
 | 3 | Router | React Router uses `HashRouter` (pass). `BrowserRouter` is a warning: it needs an SPA fallback on the server (the template `server.js`, or `serve -s`) and breaks relative assets on nested routes; a build made before publishing cannot know the prefix for an absolute `base` |
-| 4 | `app.sh` | Executable (`git update-index --chmod=+x app.sh`), changes to its own directory (`cd "$(dirname "$0")"`), and never installs or builds: it serves a build made once by `scripts/build-dist.sh` whose stamp matches the code ([build once](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)); packages belong in the Compute Environment |
+| 4 | `app.sh` | Executable (`git update-index --chmod=+x app.sh`), changes to its own directory (`cd "$(dirname "$BASH_SOURCE")"`), and never installs or builds: it serves a build made once by `scripts/build-dist.sh` whose stamp matches the code ([build once](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)); packages belong in the Compute Environment |
 | 5 | Prefix | Python frameworks that need a base path read `DOMINO_RUN_HOST_PATH` (Dash `requests_pathname_prefix`, Gradio `root_path`); nothing concatenates `DOMINO_PROJECT_OWNER`, `DOMINO_PROJECT_NAME` and `DOMINO_RUN_ID` into a path; nothing reads `X-Script-Name` (Domino never sends it) |
 | 6 | Asset and API references | No root-absolute `fetch('/api/...')` or `/assets/...`; frontend API calls resolve with `new URL('api/', document.baseURI)`; the entry page adds a missing trailing slash |
 | 7 | Secrets | No `VITE_*_TOKEN` or `VITE_*_KEY` in `.env*`, workflow files or source; model endpoint calls happen in `server.js`, Flask, FastAPI or another backend. Synchronous endpoints use HTTP Basic (token as user and password), asynchronous ones Bearer |
@@ -64,7 +64,7 @@ Checking: src/main.jsx
 WARN Router: BrowserRouter with base './' (deep links 404; nested routes break assets)
 
 Checking: app.sh
-PASS Working directory: cd "$(dirname "$0")"
+PASS Working directory: cd "$(dirname "$BASH_SOURCE")"
 PASS Starts a prebuilt build (no npm ci or npm run build)
 FAIL Serve command missing -s flag
 
