@@ -31,7 +31,7 @@ curl -sS -X POST "$BASE/api/jobs/v1/jobs" -H "$AUTH" -H "Content-Type: applicati
 | `hardwareTier` | no | hardware tier **id** |
 | `commitId` | no | DFS commit to run from; not a git SHA |
 | `mainRepoGitRef` | no | `{"refType": "head" \| "commitId" \| "tags" \| "branches", "value": ...}` for Git-based projects; `value` only where the type needs one |
-| `computeCluster` | no | `{"clusterType": "spark" \| "ray" \| "dask" \| "mpi" \| "slurm", "computeEnvironmentId", "workerCount", "workerHardwareTier", "masterHardwareTierId"?, "maxWorkerCount"?, "workerStorageMB"?}`; cluster environments (Spark, Ray, Dask, MPI): [domino-distributed-computing](../domino-distributed-computing/SKILL.md) |
+| `computeCluster` | no | `{"clusterType": "spark" \| "ray" \| "dask" \| "mpi", "computeEnvironmentId", "workerCount", "workerHardwareTier", "masterHardwareTierId"?, "maxWorkerCount"?, "workerStorageMB"?}`; cluster environments (Spark, Ray, Dask, MPI): [domino-distributed-computing](../domino-distributed-computing/SKILL.md) |
 | `externalVolumeMountIds`, `netAppVolumeIds` | no | volumes to mount |
 | `snapshotDatasetsOnCompletion`, `snapshotNetAppVolumesOnCompletion` | no | snapshot mounted storage when the Job ends |
 
