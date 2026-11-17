@@ -48,6 +48,19 @@ PINNED_SHA = re.compile(r"@[0-9a-f]{40}$")
 AGENTS = ROOT / "agents"
 RULES_FILE = ROOT / "rules" / "domino.md"
 REMOVED_SKILLS_FILE = ROOT / "scripts" / "removed-skills.txt"
+OUTPUT_STYLES = ROOT / "output-styles"
+# L17: features that need Domino 6.2 or later. This branch targets Domino 6.1, so a line naming one
+# must say it is unavailable (or name a Git credential, not a Domino token). The allow pattern is
+# tried on the line and the next one, because a sentence can wrap.
+LATER_TERMS = re.compile(
+    r"\bslurm\b|genai tracing|gen-ai tracing|llm gateway 2|gateway 2\.0|governance api|/api/governance"
+    r"|registeredmodels/v2|/api/apps/v1|tags and properties|/api/extensions|personal access token",
+    re.I)
+LATER_ALLOWED = re.compile(
+    r"not available|unavailable|not supported|requires Domino 6\.[2-9]|Domino 6\.[2-9] or later"
+    r"|\bGit(Hub)?\b[^\n]{0,60}(token|credential)|(token|credential)[^\n]{0,60}\bGit(Hub)?\b"
+    r"|\bpat\b[^\n]{0,10}#[^\n]*personal access token",
+    re.I)
 DENYLIST = [
     ("L1", "provenance narrative",
      r"\b(live (test|records|run|call|behaviou?r)|test (cluster|deployment)|internal (Domino )?(test )?cluster|our (test|run|cluster|live)|no other credential existed|the audit (found|showed)|(verified|confirmed|validated|tested|smoke-tested|run|ran) live\b|(verified|confirmed|validated|tested) (on|against) (a |the |this )?(deployment|cluster|instance|DSE|Domino Cloud|Cloud|6\.\d)|from one deployment|one (Domino )?(Cloud )?cluster's reference|from the (Cloud/)?6\.4(\.0)? internal reference)",
@@ -116,9 +129,10 @@ def gemini_substituted_names() -> set[str]:
 
 
 def lint_content(errors: list[str], warnings: list[str], claude_allowed: set[str]) -> int:
-    """DENYLIST over skills/, agents/ and rules/domino.md, plus L16 (names of removed skills,
+    """DENYLIST over skills/, agents/, output-styles/ and rules/domino.md, plus L17 (6.2+ terms over
+    skills/, agents/ and output-styles/) and L16 (names of removed skills,
     backticked or as a path, under skills/, agents/ and README.md). Returns the files checked."""
-    paths = [p for d in (SKILLS, AGENTS) if d.is_dir() for p in sorted(d.rglob("*.md"))]
+    paths = [p for d in (SKILLS, AGENTS, OUTPUT_STYLES) if d.is_dir() for p in sorted(d.rglob("*.md"))]
     if RULES_FILE.is_file():
         paths.append(RULES_FILE)
     compiled = [(rid, label, re.compile(pat, flags), tier, std, scope, exempt)
@@ -137,6 +151,14 @@ def lint_content(errors: list[str], warnings: list[str], claude_allowed: set[str
                     msg = (f"{rel}:{n}: {rid} {label}: '{hit.group(0).strip()[:70]}' "
                            f"(CONTRIBUTING standard {std})")
                     (errors if tier == "error" else warnings).append(msg)
+    for path in paths:
+        rel = path.relative_to(ROOT).as_posix()
+        lines = path.read_text(encoding="utf-8").split("\n")
+        for n, line in enumerate(lines, 1):
+            hit = LATER_TERMS.search(line)
+            if hit and not LATER_ALLOWED.search(" ".join(lines[n - 1:n + 1])):
+                errors.append(f"{rel}:{n}: L17 '{hit.group(0)}' needs Domino 6.2 or later; "
+                              f"say it is not available on Domino 6.1, or remove it")
     removed = load_allowlist(REMOVED_SKILLS_FILE)
     readme = ROOT / "README.md"
     targets = [p for p in paths if p != RULES_FILE] + ([readme] if readme.is_file() else [])
