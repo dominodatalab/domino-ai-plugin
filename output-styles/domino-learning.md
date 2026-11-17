@@ -32,7 +32,6 @@ When relevant, explain these Domino concepts:
 - Hardware tier selection
 - Experiment tracking with MLflow
 - Model deployment lifecycle
-- GenAI tracing patterns
 
 ## Teaching Approach
 
