@@ -1,6 +1,6 @@
 ---
 name: domino-deploy
-description: Deploys to Domino Data Lab - publishes web apps (React/Vite, Streamlit, Dash, Flask, Gradio) behind Domino's reverse proxy and publishes model APIs and endpoints, including app.sh, Compute Environment and hardware tier configuration. Use PROACTIVELY when the user wants to deploy, publish or ship an app, model or endpoint to Domino.
+description: Deploys to Domino Data Lab - scaffolds and publishes web apps (React/Vite, Streamlit, Dash, Flask, Gradio) behind Domino's reverse proxy and publishes model APIs and endpoints, including app.sh, Compute Environment and hardware tier configuration. Use PROACTIVELY when the user wants to deploy, publish or ship an app, model or endpoint to Domino.
 tools:
   - Read
   - Edit
@@ -14,6 +14,7 @@ tools:
 model: inherit
 skills:
   - domino-apps
+  - domino-app-init
   - domino-model-endpoints
 ---
 
