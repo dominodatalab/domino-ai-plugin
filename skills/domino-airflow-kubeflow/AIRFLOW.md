@@ -62,6 +62,10 @@ as `commitId` on a DFS project or read a result file with
 rendered because `op_args` of a `@task` are templated. Polling, logs and result hand-off:
 [JOBS-API-PATTERN.md](./JOBS-API-PATTERN.md).
 
+This pattern is for an orchestrator that runs **outside** Domino. For a pipeline **inside**
+Domino use [domino-flows](../domino-flows/SKILL.md); for one recurring script use a scheduled
+Job ([domino-jobs](../domino-jobs/SKILL.md)).
+
 ## python-domino operators
 
 The product page describes both integrations through python-domino; the operators come with the

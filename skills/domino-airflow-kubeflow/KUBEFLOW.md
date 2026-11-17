@@ -119,6 +119,10 @@ Prefer this over a python-domino client inside the component: `job_start_blockin
 on `Failed` (not on `Error` or `Stopped`) and depends on the v4 Jobs API, which is internal. If
 you still want the client, see [domino-python-sdk](../domino-python-sdk/SKILL.md).
 
+This pattern is for an orchestrator that runs **outside** Domino. For a pipeline **inside**
+Domino use [domino-flows](../domino-flows/SKILL.md); for one recurring script use a scheduled
+Job ([domino-jobs](../domino-jobs/SKILL.md)).
+
 ## Operational notes
 
 - Set `timeout`s on every request and keep the poll interval at 30 s or more; a pipeline with
