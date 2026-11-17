@@ -75,6 +75,6 @@ See [domino-jobs](../domino-jobs/SKILL.md) for scheduling and the Jobs API.
 
 ## Docs
 
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/launch-a-workspace
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/use-package-persistence
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/run-multiple-apps-in-a-workspace
+- https://docs.dominodatalab.com/en/6.1/user_guide/e6e601/launch-a-workspace/
+- https://docs.dominodatalab.com/en/6.1/user_guide/e82a92/use-package-persistence-in-domino/
+- https://docs.dominodatalab.com/en/6.1/user_guide/2c01ae/run-multiple-applications-in-a-workspace/

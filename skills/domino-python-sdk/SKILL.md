@@ -26,7 +26,7 @@ pip install "dominodatalab==2.2.0"          # Python 3.10 or later
 pip install "dominodatalab[data]==2.2.0"    # adds the Domino Data API client (domino_data)
 ```
 
-Docs: https://docs.domino.ai/cloud/reference/python-sdk/python-domino
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/c5ef26/the-python-domino-library/
 
 ## Authentication
 
@@ -124,5 +124,5 @@ Per-area files:
 ## Documentation
 
 - https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/
-- https://docs.domino.ai/cloud/reference/python-sdk/python-domino
+- https://docs.dominodatalab.com/en/6.1/api_guide/c5ef26/the-python-domino-library/
 - https://github.com/dominodatalab/python-domino

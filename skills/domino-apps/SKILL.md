@@ -48,7 +48,7 @@ Injected at start: `DOMINO_RUN_HOST_PATH` (URL prefix, trailing `/`), the `DOMIN
 - **As the viewer**: not available on Domino 6.1; Domino rejects the viewer's token on most routes, often with 500. Call as the publisher and scope per-viewer data in the App by the viewer's username ([details](./FRAMEWORKS.md#viewer-identity-and-domino-api-calls)).
 - **Model endpoints**: from backend code only, with `MODEL_API_URL` and `MODEL_API_TOKEN` from Project environment variables; HTTP Basic with the token as username and password for synchronous endpoints, a bearer for asynchronous ones ([details](./FRAMEWORKS.md#calling-a-model-endpoint-from-any-framework)).
 
-Auth: https://docs.domino.ai/cloud/reference/api/domino-api-authentication ; outside a run, a service account token as `Authorization: Bearer`, or a user API key in `X-Domino-Api-Key`.
+Auth: https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/ ; outside a run, a service account token as `Authorization: Bearer`, or a user API key in `X-Domino-Api-Key`.
 
 ## REST automation
 

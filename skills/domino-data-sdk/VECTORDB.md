@@ -4,8 +4,8 @@
 Domino's Data API gateway, which injects the API key stored in the Pinecone Data Source. The
 key never reaches your code. Everything after initialisation is the standard Pinecone client.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/connect-to-pinecone
-and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/vector-databases.
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/5c64ef/connect-to-pinecone/
+and https://docs.dominodatalab.com/en/6.1/user_guide/4c6469/vector-databases/.
 Source: `domino_data/vectordb.py`.
 
 Qdrant has a Data Source connector too (`connect-to-qdrant` on the same docs path) but no helper

@@ -10,7 +10,7 @@ Applies to Domino 6.1.
 
 A Workspace is a durable interactive session: a container on a hardware tier running an IDE from the selected compute environment, with a persistent volume for the Project files. IDEs (Jupyter, JupyterLab, VS Code, RStudio, custom tools) come from the environment's Pluggable Workspace Tools ([domino-environments](../domino-environments/SKILL.md)); batch work: a Job ([domino-jobs](../domino-jobs/SKILL.md)).
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces (same paths under `/6.3/`).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/867b72/use-workspaces/.
 
 ## Launch a Workspace (UI)
 

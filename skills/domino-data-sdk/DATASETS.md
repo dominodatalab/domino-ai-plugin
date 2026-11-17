@@ -5,7 +5,7 @@ caller's permissions. It is read-only: list, fetch, download and signed URLs. To
 Dataset's mount path inside an execution, the UI, `domino upload-dataset`
 ([domino-cli](../domino-cli/SKILL.md)), or the `/api/datasetrw` routes (domino-datasets skill).
 
-Docs: https://docs.domino.ai/cloud/reference/api/data_api/datasource_usecases/access-datasets-via-proxy.
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/fc01e5/access-datasets-via-datasource-proxy/.
 Source: `domino_data/datasets.py`.
 
 ## When to use it instead of the mount

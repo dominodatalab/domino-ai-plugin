@@ -52,7 +52,7 @@ Logs: `GET .../versions/{modelApiVersionId}/buildLogs`, `exportLogs`, `instanceL
 
 ## Prediction auth
 
-Restricted **sync** endpoints require HTTP Basic with the endpoint access token as username and password. **Async** endpoints require `Authorization: Bearer <token>`. Unrestricted endpoints need neither. Tokens: the user's, or create one (`domino-model-endpoints` DEPLOY-ENDPOINT.md); never print it. Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization.
+Restricted **sync** endpoints require HTTP Basic with the endpoint access token as username and password. **Async** endpoints require `Authorization: Bearer <token>`. Unrestricted endpoints need neither. Tokens: the user's, or create one (`domino-model-endpoints` DEPLOY-ENDPOINT.md); never print it. Source: https://docs.dominodatalab.com/en/6.1/user_guide/e038f2/select-domino-endpoint-authorization-mode/.
 
 ## Access and collaborators
 
@@ -65,4 +65,4 @@ Set endpoint visibility and collaborators in the UI (**Settings** > **Access and
 - [domino-model-endpoints](../domino-model-endpoints/SKILL.md): UI, predict code, scaling, health, logs
 - [domino-model-delivery](../domino-model-delivery/SKILL.md): model export, SageMaker, batch scoring
 - Route discovery: [API-SPECS.md](../domino-api-intro/API-SPECS.md)
-- Model registry: https://docs.domino.ai/cloud/platform-capabilities/features/models/register-and-govern/model-registry
+- Model registry: https://docs.dominodatalab.com/en/6.1/user_guide/3b6ae5/manage-models-with-model-registry/

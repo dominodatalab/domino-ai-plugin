@@ -7,7 +7,7 @@ Model Monitoring uses as the training baseline. Each version is stored as Parque
 mounts into executions, so creating and loading versions only works inside a Domino execution
 in the owning Project (`DOMINO_PROJECT_ID`).
 
-Docs: https://docs.domino.ai/cloud/reference/api/data_api/trainingsets_usecases (create,
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/440de9/trainingsets-use-cases/ (create,
 retrieve, update, delete, custom authentication). Source:
 `domino_data/training_sets/client.py` and `model.py`.
 

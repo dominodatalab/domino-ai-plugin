@@ -1,7 +1,7 @@
 # Domino CLI command reference
 
-Source: https://docs.domino.ai/cloud/reference/cli/cli-reference and
-https://docs.domino.ai/cloud/reference/cli/download-files-with-the-cli.
+Source: https://docs.dominodatalab.com/en/6.1/user_guide/9355a5/domino-cli-reference/ and
+https://docs.dominodatalab.com/en/6.1/user_guide/8ec1ce/download-files-with-the-cli/.
 `domino help` prints the same list; `domino help run` prints one command.
 
 The file and run commands act on the project folder you run them in; the CLI records the link in
@@ -90,7 +90,7 @@ create-dataset-from-snapshot <project-owner>/<project-name>/<dataset-name> <snap
   snapshot is visible and populated.
 - `create-dataset-from-snapshot` takes the snapshot **number**; the new Dataset can take time to
   populate.
-- Admin quotas apply: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/manage-large-data#dataset-quotas-and-limits
+- Admin quotas apply: https://docs.dominodatalab.com/en/6.1/user_guide/9c819c/how-domino-handles-large-datasets/
 
 ```bash
 domino upload-dataset --fileUploadSetting Overwrite --targetRelativePath Experiments/Run1/Analysis jsmith/global-predictions/global-data /Users/myUser/data

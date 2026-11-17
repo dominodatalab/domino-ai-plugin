@@ -3,7 +3,7 @@
 Public API routes (tag `Datasets`) plus the `/v4` routes labelled non-public route; may change in
 a future Domino version, at their point of use; confirm each `/v4` route in your
 deployment's `/docs`.
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/create-and-manage-datasets
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/0a8d11/create-and-manage-datasets/
 (REST tab) and the API reference under https://docs.domino.ai/cloud/reference/api.
 
 ## Setup

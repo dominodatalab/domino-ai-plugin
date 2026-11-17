@@ -1,7 +1,7 @@
 # Domino Datasets API
 
 Create and manage Datasets, snapshots, tags and grants with the Public API. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets and the
+https://docs.dominodatalab.com/en/6.1/user_guide/ba5bad/work-with-domino-datasets/ and the
 [domino-datasets](../domino-datasets/SKILL.md) skill.
 
 ## Authentication
@@ -88,7 +88,7 @@ GET  /api/datasetrw/v1/snapshots/{snapshotId}
 
 `relativeFilePaths` (required) lists the paths, relative to the dataset root, to include
 in the snapshot
-(https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/version-data-with-snapshots).
+(https://docs.dominodatalab.com/en/6.1/user_guide/dbdbff/version-data-with-snapshots/).
 Use `["*"]` for every file; `["/*"]` returns 200 and
 the snapshot then goes to `failed`. File paths (`sub/b.txt`) and directory paths
 (`labels/`) both work and include only what you list. Only one snapshot copy runs at a
@@ -138,7 +138,7 @@ exists. `GET` returns `{"grantDetails": [{"targetId", "targetName", "targetRole"
 
 ## Mount paths inside executions
 
-From https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/use-datasets-and-snapshots:
+From https://docs.dominodatalab.com/en/6.1/user_guide/6942ab/use-datasets-and-snapshots/:
 
 | Project type | Dataset of this project (read-write) | Its snapshots by tag / by number (read-only) |
 |--------------|--------------------------------------|----------------------------------------------|

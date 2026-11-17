@@ -42,7 +42,7 @@ Launcher output is Job output: every file the script creates or modifies is capt
 - Everyone on the launcher's notification list receives the email; the run also appears in **Jobs** with its inputs and results.
 - Notebooks: a command that names an `.ipynb` file executes the notebook and saves it; use `jupyter nbconvert` in a wrapper script for HTML or PDF.
 
-Details and patterns: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/customize-job-results and [EXAMPLES.md](./EXAMPLES.md).
+Details and patterns: https://docs.dominodatalab.com/en/6.1/user_guide/5b84c5/customize-job-result-views/ and [EXAMPLES.md](./EXAMPLES.md).
 
 ## Run a Launcher
 

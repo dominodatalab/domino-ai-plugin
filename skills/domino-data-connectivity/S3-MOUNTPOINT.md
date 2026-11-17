@@ -10,11 +10,11 @@ at `/domino/edv/<name>` without FUSE privileges in the container.
   the manifests here (`uid`, `gid`, `allow-other`) are for the v1 driver (1.15.0, the last v1
   release). The v2 line changes the architecture and is not validated on Domino; see "Driver
   v2" below before choosing it.
-- EDV registration (product docs): https://docs.domino.ai/cloud/admin/data-administration/external-data/external-data-volumes
+- EDV registration (product docs): https://docs.dominodatalab.com/en/6.1/admin_guide/053e1f/manage-external-data-volumes/
 - Mountpoint semantics and limits: https://docs.aws.amazon.com/AmazonS3/latest/userguide/mountpoint.html
 
 Self-managed Domino 6.1 on EKS. On Domino Cloud, ask Domino Support; an S3 **Data Source**
-(https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/connect-to-amazon-s3)
+(https://docs.dominodatalab.com/en/6.1/user_guide/dd93d4/connect-to-amazon-s3/)
 gives the same bucket through the Data API without any cluster change and is the default
 choice on either target. Azure Blob and GCS equivalents are a separate blueprint
 (https://domino.ai/resources/blueprints/turn-cloud-object-storage-into-local-filesystems).

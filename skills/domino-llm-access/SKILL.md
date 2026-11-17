@@ -57,4 +57,4 @@ Never hard-code, commit, or pass keys on a command line.
 
 - Set up LLM access: https://docs.domino.ai/cloud/platform-capabilities/features/llms (6.3: replace `cloud` with `6.3`)
 - AI Gateway: https://docs.domino.ai/6.3/platform-capabilities/features/llms/ai-gateway
-- Authentication: https://docs.domino.ai/cloud/reference/api/domino-api-authentication
+- Authentication: https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/

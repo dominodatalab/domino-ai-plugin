@@ -11,7 +11,7 @@ Applies to Domino 6.1.
 Domino Volumes for NetApp ONTAP mount NetApp ONTAP filesystems directly into Domino
 Workspaces, Jobs, Apps and Launchers. They are global entities (not scoped to a project)
 that you attach to any project that needs them. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/netapp-volumes.
+https://docs.dominodatalab.com/en/6.1/user_guide/06da1b/work-with-netapp-volumes/.
 Auth: [domino-api-intro](../domino-api-intro/SKILL.md#authentication); in a run the
 volume routes answer on `DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT` with a bearer
 ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#authentication-and-base-urls)). The API base
@@ -118,7 +118,7 @@ Edit permissions: three-dot menu on the volume, **Edit permissions**. REST:
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/netapp-volumes (overview, create, add/remove, view/edit)
-- https://docs.domino.ai/cloud/reference/api/domino-volumes-api
+- https://docs.dominodatalab.com/en/6.1/user_guide/06da1b/work-with-netapp-volumes/ (overview, create, add/remove, view/edit)
+- https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/
 - https://docs.domino.ai/cloud/admin/data-administration/netapp-volumes (administrator setup)
 - Specs: [API-SPECS.md](../domino-api-intro/API-SPECS.md); per-deployment service document `/docs/openapi/data_remotefs_service-swagger.json`

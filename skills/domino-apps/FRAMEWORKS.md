@@ -4,7 +4,7 @@ Every framework must bind `0.0.0.0:8888`; an App that does not fails to start. W
 
 ## Calling a model endpoint from any framework
 
-Read the endpoint URL and a Model Access Token from Project (or user) environment variables, set in the UI or through the API ([domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)); never hardcode them. The URL is on the endpoint's overview page (the deployment's external URL, `https://<domino-domain>/models/<id>/latest/model`; `$DOMINO_API_HOST` and `$DOMINO_API_PROXY` do not route `/models/...`), so ask for it. The token is the user's, or one you create and store as a Project variable without printing it ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`); a Domino bearer token is rejected with 401. Synchronous endpoints use HTTP Basic auth with the token as both username and password; asynchronous endpoints use `Authorization: Bearer <token>` (https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization).
+Read the endpoint URL and a Model Access Token from Project (or user) environment variables, set in the UI or through the API ([domino-api-intro](../domino-api-intro/SKILL.md#environment-variables-as-the-secret-store)); never hardcode them. The URL is on the endpoint's overview page (the deployment's external URL, `https://<domino-domain>/models/<id>/latest/model`; `$DOMINO_API_HOST` and `$DOMINO_API_PROXY` do not route `/models/...`), so ask for it. The token is the user's, or one you create and store as a Project variable without printing it ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens) in `domino-model-endpoints`); a Domino bearer token is rejected with 401. Synchronous endpoints use HTTP Basic auth with the token as both username and password; asynchronous endpoints use `Authorization: Bearer <token>` (https://docs.dominodatalab.com/en/6.1/user_guide/e038f2/select-domino-endpoint-authorization-mode/).
 
 ```python
 # predict.py: shared helper for the Python examples below
@@ -281,14 +281,14 @@ result <- POST(
 output$result <- renderText(content(result, "text"))
 ```
 
-Identity headers reach Shiny only under Shiny Server Pro. R is single-process, so Shiny Apps serve a handful of concurrent users; see https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/deploy#size-and-scale-an-app .
+Identity headers reach Shiny only under Shiny Server Pro. R is single-process, so Shiny Apps serve a handful of concurrent users; see https://docs.dominodatalab.com/en/6.1/user_guide/67333d/deploy-to-production/ .
 
 ## Dependencies
 
 The App runs in the project's default Compute Environment (or the one chosen at publish time). Packages you `pip install` in a Workspace are not in it; an App published that way dies at start with `streamlit: not found` (exit 127). Before publishing, run `python -c "import <framework>"` in the Workspace (`node -v` for Vite); if it fails, do one of:
 
 1. **Put the package in the environment** (best): pick an environment that has it when publishing (`GET /api/environments/beta/environments` lists them), or build one from the Domino Standard Environment with Dockerfile lines `USER root`, `RUN pip install dash`, `USER ubuntu`. Fast starts, no egress needed.
-2. **`requirements.txt`** at the project root (Git-based projects: the code folder, `/mnt/code`). Domino installs it at the start of every execution, Apps included; slower starts and PyPI egress (https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/add-packages-to-environments/use-requirements-txt).
+2. **`requirements.txt`** at the project root (Git-based projects: the code folder, `/mnt/code`). Domino installs it at the start of every execution, Apps included; slower starts and PyPI egress (https://docs.dominodatalab.com/en/6.1/user_guide/9c4f82/use-requirements-txt-python-only/).
 3. **Install at start in `app.sh`** for a prototype: `python -m pip install --user -q streamlit && exec python -m streamlit run app.py --server.port 8888 --server.address 0.0.0.0`. Same trade-offs as `requirements.txt`; the `python -m` form avoids depending on `~/.local/bin` being on `PATH`.
 
 Versions that match the code above. A package the Domino Standard Environment ships is pinned at or below the DSE's version (`pip show <pkg>` reports it; a newer one can break ranges its preinstalled MLflow declares, such as `gunicorn<24`); a package it does not ship takes its newest release:

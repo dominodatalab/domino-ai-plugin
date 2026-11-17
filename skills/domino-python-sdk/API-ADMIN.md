@@ -158,7 +158,7 @@ non-admin updates only that user's individual credentials; an admin's `PATCH` up
 shared credentials. `DELETE` needs ownership. Audit `eventKinds`: `AccessDataSource`, `CreateDataSource`,
 `DataSourceAssociatedToProject`, `DataSourceDissociatedFromProject`,
 `DataSourceChangeOfOwnership`, `DataSourceChangeOfPermissions`, `DeleteDataSource`
-(https://docs.domino.ai/cloud/admin/operations/audit-logs/monitor-data-source-logs).
+(https://docs.dominodatalab.com/en/6.1/admin_guide/f5934f/monitor-data-source-logs/).
 
 ## Deployment targets (model deployments)
 

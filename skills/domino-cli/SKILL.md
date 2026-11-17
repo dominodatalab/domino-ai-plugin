@@ -8,7 +8,7 @@ compatibility: Domino 6.1. Download the CLI installer from the deployment you us
 
 Applies to Domino 6.1.
 
-Product pages: https://docs.domino.ai/cloud/reference/cli (index, install, reference, download
+Product pages: https://docs.dominodatalab.com/en/6.1/user_guide/30b067/domino-cli/ (index, install, reference, download
 files, force-restore, move a project, proxy) and
 https://docs.domino.ai/cloud/reference/r-package/domino-r-package.
 

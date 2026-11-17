@@ -50,4 +50,4 @@ label the call **non-public route; may change in a future Domino version** at th
 - Domino 6.1 user, admin and API guides: https://docs.dominodatalab.com/en/6.1/user_guide/1a73c8/user-guide/
 - https://docs.domino.ai/llms.txt indexes the Domino 6.3 and Cloud docs; any page is Markdown
   with `.md` appended. Those pages can describe features Domino 6.1 does not have.
-- [NetApp Volumes API](https://docs.domino.ai/cloud/reference/api/domino-volumes-api).
+- [NetApp Volumes API](https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/).

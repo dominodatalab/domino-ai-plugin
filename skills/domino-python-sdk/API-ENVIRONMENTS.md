@@ -2,7 +2,7 @@
 
 Create, revise and inspect Compute Environments. Routes marked **Cloud** exist only on
 Domino Cloud. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments.
+https://docs.dominodatalab.com/en/6.1/user_guide/e46d54/customize-environments/.
 
 ## Authentication
 
@@ -208,7 +208,7 @@ Body reference: [API-JOBS.md](./API-JOBS.md#start-a-job).
 `dockerfileInstructions` is a Dockerfile fragment appended to the base image. Domino
 images must run as the `ubuntu` user, and the docs recommend installing packages as
 `root`: add `USER root` before the install commands and `USER ubuntu` after them
-(https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/add-packages-to-environments/preload-environment-packages).
+(https://docs.dominodatalab.com/en/6.1/user_guide/813d89/preload-environment-packages/).
 
 ```dockerfile
 USER root

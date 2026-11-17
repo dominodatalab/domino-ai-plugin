@@ -124,6 +124,6 @@ that mounts it; confirm first). Snapshot: UI, or
 - [API.md](./API.md): routes, bodies, examples
 - [BEST-PRACTICES.md](./BEST-PRACTICES.md): layout, formats, snapshot limits, large reads
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets,
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/ba5bad/work-with-domino-datasets/,
 https://docs.domino.ai/cloud/admin/data-administration/datasets,
-https://docs.domino.ai/cloud/reference/cli/cli-reference.
+https://docs.dominodatalab.com/en/6.1/user_guide/9355a5/domino-cli-reference/.

@@ -3,8 +3,8 @@
 What belongs in a Dataset, how to lay it out, which formats to use, snapshotting before changes,
 and reading data larger than memory.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/manage-large-data
-and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/local-data.
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/9c819c/how-domino-handles-large-datasets/
+and https://docs.dominodatalab.com/en/6.1/user_guide/305721/work-with-local-data/.
 
 ## What goes where
 
@@ -128,7 +128,7 @@ data = np.memmap(f"{root}/my-dataset/processed/features.dat", dtype="float32", m
 Domino enforces `com.cerebro.domino.dataset.quota.maxActiveSnapshotsPerDataset` (default
 20) and `com.cerebro.domino.dataset.quota.maxDatasetsPerProject` while
 `com.cerebro.domino.dataset.quota.enabled` is `true`
-(https://docs.domino.ai/6.3/admin/configuration/central-configuration#read-write-datasets). At the limit an execution that would write a
+(https://docs.dominodatalab.com/en/6.1/admin_guide/71d6ad/configuration-records/). At the limit an execution that would write a
 snapshot errors, and a manual **Take Snapshot** marks the oldest snapshot for deletion if you
 proceed; a marked snapshot stops mounting, and nothing is permanently deleted until an admin
 acts (https://docs.domino.ai/cloud/admin/data-administration/datasets#set-limits-on-dataset-usage).

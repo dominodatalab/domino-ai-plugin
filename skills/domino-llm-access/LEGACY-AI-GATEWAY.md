@@ -66,5 +66,5 @@ requests.get(f"{base_url}/api/aigateway/v1/audit", headers=headers,
 
 - https://docs.domino.ai/6.3/platform-capabilities/features/llms/ai-gateway
 - https://docs.domino.ai/6.3/admin/platform-configuration/ai-gateway
-- https://docs.domino.ai/6.3/admin/operations/audit-logs/ai-gateway-logs
+- https://docs.dominodatalab.com/en/6.1/admin_guide/984c09/monitor-ai-gateway-large-language-model-llm-logs/
 - MLflow Deployments Server: https://mlflow.org/docs/latest/llms/deployments/index.html

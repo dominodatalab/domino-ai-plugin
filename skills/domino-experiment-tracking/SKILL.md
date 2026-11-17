@@ -74,5 +74,5 @@ From a run in the UI: **Experiments** > run > **Register model from run**. In co
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/development/track-monitor
-- https://docs.domino.ai/cloud/platform-capabilities/features/models/register-and-govern/model-registry
+- https://docs.dominodatalab.com/en/6.1/user_guide/da707d/track-and-monitor-experiments/
+- https://docs.dominodatalab.com/en/6.1/user_guide/3b6ae5/manage-models-with-model-registry/

@@ -1,8 +1,8 @@
 # Data Sources with DataSourceClient
 
-Docs: https://docs.domino.ai/cloud/reference/api/data_api/datasource_usecases (query, object
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/d49ab1/data-source-use-cases/ (query, object
 store, write to file, configuration override, custom authentication) and
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/use-data-sources.
+https://docs.dominodatalab.com/en/6.1/user_guide/fa5f3a/use-data-sources/.
 Source: `domino_data/data_sources.py` and `domino_data/configuration_gen.py` in
 https://github.com/dominodatalab/domino-data.
 

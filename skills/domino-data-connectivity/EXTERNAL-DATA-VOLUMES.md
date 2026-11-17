@@ -5,9 +5,9 @@ creates a labelled PersistentVolumeClaim, a Domino admin registers it, and users
 Projects. Domino does not propagate the user's identity to the underlying filesystem; access is
 whatever the PVC and the storage grant.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/external-volumes
-(users), https://docs.domino.ai/cloud/admin/data-administration/external-data/external-data-volumes
-(admins), https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/sharing-and-security/share-edv
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/f12554/external-data-volumes-edvs/
+(users), https://docs.dominodatalab.com/en/6.1/admin_guide/053e1f/manage-external-data-volumes/
+(admins), https://docs.dominodatalab.com/en/6.1/user_guide/7ec608/share-edvs-securely/
 (access control). Replace `/cloud/` with `/6.3/` for the self-managed pages.
 
 **Domino Cloud**: EDVs require a remote Data Plane. **Domino 6.1**: available on the local Data
@@ -157,4 +157,4 @@ Mount path in executions stays `/domino/edv/<mountPath>` whichever way the EDV w
 | EDV missing on Domino Cloud | EDVs need a remote Data Plane; see https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data-plane |
 
 General data-access diagnosis (network routes, Data Plane locality):
-https://docs.domino.ai/cloud/admin/data-administration/troubleshoot-data
+https://docs.dominodatalab.com/en/6.1/admin_guide/e7055b/troubleshoot-data-issues/

@@ -1,6 +1,6 @@
 # Batch scoring with Domino Jobs
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/batch-scoring.
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/68629b/configure-batch-scoring-job/.
 A batch scoring Job is an ordinary Domino Job whose command
 is a scoring script. Everything about Jobs in general (hardware tiers, environments, logs, script
 patterns, Quartz cron syntax) is in [domino-jobs](../domino-jobs/SKILL.md) and its
@@ -145,7 +145,7 @@ The `{path}` segment is the project-relative path, URL-encoded. Logs:
 `GET $BASE/api/jobs/beta/jobs/{jobId}/logs?logType=stdOut` (`stdOut`, `stdErr`, `prepareOutput`,
 `complete`). In the UI, the **Results** tab of the Job lists the same files, and the completion
 email carries the last lines of stdout plus up to ten result files; custom report emails:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/customize-job-results
+https://docs.dominodatalab.com/en/6.1/user_guide/5b84c5/customize-job-result-views/
 
 ## Troubleshooting
 
@@ -171,5 +171,5 @@ Request and response payloads are capped at 10 KB, so pass data by reference (a 
 name) and read and write it through a Data Source with the domino-data SDK (an endpoint needs a
 service-account token, see `domino-data-sdk`) rather than raw cloud credentials; Domino keeps a picked-up request alive for 30
 minutes. Python client with retries and polling:
-https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/async-example-client
+https://docs.dominodatalab.com/en/6.1/user_guide/64515c/example-python-client-asynchronous-domino-endpoint/
 Deploying the endpoint: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).

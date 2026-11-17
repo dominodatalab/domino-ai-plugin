@@ -59,7 +59,7 @@ Prefer the paginated routes over one-shot dumps:
   (`limit` <= 1000). Details: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#audit-trail).
 - Data source audit: `GET /api/datasource/v1/audit` with `startTime`/`endTime`
   (ISO 8601), `dataSourceNames` and `eventKinds` filters. Documented at
-  https://docs.domino.ai/cloud/admin/operations/audit-logs/monitor-data-source-logs.
+  https://docs.dominodatalab.com/en/6.1/admin_guide/f5934f/monitor-data-source-logs/.
 
 ## Wrong-surface symptoms
 

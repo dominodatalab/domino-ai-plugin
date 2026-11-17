@@ -6,7 +6,7 @@ They are documented on the product pages cited below and in each deployment's
 
 ## NVIDIA Fleet Command (edge)
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/export-nvidia.
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/5cef47/export-models-to-nvidia-fleet-command/.
 Domino pushes the endpoint container image and a Helm chart to private
 repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The route is
 labelled beta.
@@ -44,7 +44,7 @@ Constraints:
 
 ## Snowflake (Snowpark UDF)
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/snowflake-queries.
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/a1b168/snowflake-queries/.
 Domino uploads the model artifact, the file holding the predict function and its
 dependent modules to a Snowflake stage and registers the function as a Snowpark Python UDF, so
 scoring runs where the data lives. The documented path is the UI publish flow.
@@ -103,7 +103,7 @@ from **Endpoints > External > Create external endpoint** (model, environment, ta
 min/max instances with CPU-based autoscaling at 80%, streaming, visibility) or with
 `POST /api/modelServing/v1/modelDeployments`; lifecycle via `.../{modelDeploymentId}/start|stop`
 and `.../versions`. Only supported when the Domino control plane runs on AWS EKS. Product page:
-https://docs.domino.ai/cloud/platform-capabilities/features/models/deploy-sagemaker. REST
+https://docs.dominodatalab.com/en/6.1/user_guide/02ec6d/deploy-models-to-sagemaker/. REST
 details: [domino-python-sdk API-MODELS.md](../domino-python-sdk/API-MODELS.md).
 
 **Legacy image export (non-public route; may change in a future Domino version).** `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker`

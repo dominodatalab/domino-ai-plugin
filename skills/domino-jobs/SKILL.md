@@ -84,4 +84,4 @@ Files changed under the Project files are results. Write `dominostats.json` at t
 ## Reference files and docs
 
 - [SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md): commands, env vars, outputs, logs, cron, troubleshooting. [SCHEDULED-JOBS.md](./SCHEDULED-JOBS.md): schedules over the API.
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/create-and-run-jobs, `.../schedule-a-job`, `.../monitor-jobs`, `.../job-states` (same paths under `/6.3/`).
+- https://docs.dominodatalab.com/en/6.1/user_guide/af97b7/create-and-run-jobs/, https://docs.dominodatalab.com/en/6.1/user_guide/5dce1f/schedule-jobs/, https://docs.dominodatalab.com/en/6.1/user_guide/e1c37a/monitor-jobs/

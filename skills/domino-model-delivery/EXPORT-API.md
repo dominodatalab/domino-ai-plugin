@@ -1,6 +1,6 @@
 # Model Export API: build an endpoint image and push it to your registry
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/integrate-ci-cd-workflows.
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/ba503b/integrated-deployment-to-ci-cd-workflows/.
 The API turns a project plus an inference function into the same
 container image a Domino endpoint runs (environment, project files, Flask or Plumber harness,
 auth and load-balancing layer) and pushes it to a registry you own. The other targets (NVIDIA

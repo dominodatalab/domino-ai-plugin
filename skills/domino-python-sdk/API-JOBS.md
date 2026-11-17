@@ -1,7 +1,7 @@
 # Domino Jobs API
 
 Start, list, inspect and poll Jobs with the Public API. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs.
+https://docs.dominodatalab.com/en/6.1/user_guide/e1c37a/monitor-jobs/.
 
 ## Authentication
 
@@ -192,7 +192,7 @@ is no public equivalent; the UI resolves defaults.
 The Public API has no scheduled-jobs route and python-domino has no scheduled-job method.
 The UI's route, `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version), takes `command`, not `runCommand`.
 Routes, bodies and the pause recipe: [SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md);
-UI steps: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job.
+UI steps: https://docs.dominodatalab.com/en/6.1/user_guide/5dce1f/schedule-jobs/.
 
 ## python-domino
 

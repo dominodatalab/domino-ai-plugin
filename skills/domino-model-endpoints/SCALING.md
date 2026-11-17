@@ -1,6 +1,6 @@
 # Scaling and routing Domino endpoints
 
-Sources: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/scale and https://docs.domino.ai/cloud/admin/platform-configuration/manage-model-deployments.
+Sources: https://docs.dominodatalab.com/en/6.1/user_guide/8c79ad/domino-endpoint-scaling-and-routing/ and https://docs.domino.ai/cloud/admin/platform-configuration/manage-model-deployments.
 
 Domino endpoints scale by a **fixed number of instances** and a **hardware tier per instance**. There is no autoscaling policy, target-utilization setting or scale-to-zero for endpoints; size for peak load, and restart the endpoint after changing scale settings (from the UI, or stop and start the version with the internal routes in [domino-model-serving LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#update-replicas-tier-environment); non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)).
 
@@ -40,14 +40,14 @@ The request timeout (default 60 s; 504 when exceeded) and the health-check perio
 
 ## Asynchronous endpoints
 
-Async endpoints trade latency for long-running work: payloads are limited to 10 KB (pass data by reference), a picked-up request lives 30 minutes, and the function must be idempotent. Capacity planning for async endpoints is an admin topic: https://docs.domino.ai/cloud/admin/architecture-and-deployment/sizing-the-infrastructure/size-async-domino-endpoint.
+Async endpoints trade latency for long-running work: payloads are limited to 10 KB (pass data by reference), a picked-up request lives 30 minutes, and the function must be idempotent. Capacity planning for async endpoints is an admin topic: https://docs.dominodatalab.com/en/6.1/admin_guide/bfd8e5/asynchronous-domino-endpoints-capacity-planning/.
 
 ## Cost
 
 - Start with the smallest endpoint tier that fits the model in memory, watch CPU and memory (administrators: Grafana, see [MONITORING.md](./MONITORING.md)), then move up a tier or add instances.
 - Spot node pools cut cost; if a spot instance is interrupted the endpoint degrades or stops until capacity returns, and the remedy is switching to a non-spot tier.
 - Lower the instance count for low-traffic endpoints (one instance is allowed; two is the high-availability default).
-- If you need elastic autoscaling, export the model to Amazon SageMaker: https://docs.domino.ai/cloud/platform-capabilities/features/models/deploy-sagemaker. Deployment targets, the legacy image export and the other export targets: [domino-model-delivery](../domino-model-delivery/EXPORT-TARGETS.md#amazon-sagemaker).
+- If you need elastic autoscaling, export the model to Amazon SageMaker: https://docs.dominodatalab.com/en/6.1/user_guide/02ec6d/deploy-models-to-sagemaker/. Deployment targets, the legacy image export and the other export targets: [domino-model-delivery](../domino-model-delivery/EXPORT-TARGETS.md#amazon-sagemaker).
 
 ## GPU inference
 

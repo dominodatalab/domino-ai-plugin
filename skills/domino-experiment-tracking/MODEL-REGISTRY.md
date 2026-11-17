@@ -70,7 +70,7 @@ Or edit it under **Models** > model > **Overview**. From a version you can walk 
 
 ## Access, discoverability and Domino routes
 
-- Who can view, edit or deploy follows the **project** roles: https://docs.domino.ai/cloud/admin/identity-and-access/manage-users/roles#model-registry-actions.
+- Who can view, edit or deploy follows the **project** roles: https://docs.dominodatalab.com/en/6.1/admin_guide/2611b7/work-with-roles/.
 - **Global Models** lists models marked discoverable (anyone can read a limited model card and request access); **Collaborating Models** lists what you can use. Toggle discoverability on the model card (System Admin or project owner) or by API.
 
 | Task | Route |
@@ -100,5 +100,5 @@ Set `MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD=true` before `log_model` on AWS and GC
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/models/register-and-govern/model-registry
+- https://docs.dominodatalab.com/en/6.1/user_guide/3b6ae5/manage-models-with-model-registry/
 - MLflow registry, aliases and tags: https://mlflow.org/docs/latest/ml/model-registry/

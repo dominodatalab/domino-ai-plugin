@@ -10,7 +10,7 @@ Applies to Domino 6.1.
 
 Domino provisions an on-demand Spark, Ray, Dask or Open MPI cluster when a Workspace or Job starts and destroys it when the execution stops. It belongs to that execution alone and its nodes run a separate **cluster environment**. Slurm clusters are not available on Domino 6.1.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/compute-clusters-hpc (same paths under `/6.3/`).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/8b4418/on-demand-distributed-computing/.
 
 ## Choose a framework
 

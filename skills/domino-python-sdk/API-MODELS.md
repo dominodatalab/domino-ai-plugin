@@ -202,7 +202,7 @@ Use the invocation URL shown on the Model API's page (the deployment's external 
 `/models/{modelApiId}/latest/model`; not the in-run `$DOMINO_API_HOST`), with the
 endpoint's access token: the user's, or one you create and store
 ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens)). Per
-https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization:
+https://docs.dominodatalab.com/en/6.1/user_guide/e038f2/select-domino-endpoint-authorization-mode/:
 
 - Restricted **synchronous** endpoint: HTTP Basic, username and password both the token.
 - Restricted **asynchronous** endpoint: `Authorization: Bearer <token>`.

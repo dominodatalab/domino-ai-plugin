@@ -23,7 +23,7 @@ Prefer deploying as a Domino endpoint: integrated monitoring captures prediction
 
 1. **Instrument the predict function** with `DataCaptureClient` from `domino_data_capture` (in Domino Standard Environments; otherwise `pip install domino-data-capture` in the environment Dockerfile). Call `capturePrediction(feature_values, predict_values, event_id=..., timestamp=...)` on every request. Full example in [PREDICTION-CAPTURE.md](./PREDICTION-CAPTURE.md).
 2. **Publish the endpoint.** Captured rows land hourly as Parquet in the project Dataset `prediction_data`; nothing is analysed yet.
-3. **Register training data** for drift. The model must have been trained from a Domino TrainingSet in the same project (https://docs.domino.ai/cloud/reference/api/data_api/trainingsets_usecases/create_trainingset). On the endpoint open **Grafana Monitoring** > **Configure Monitoring** > **Data**, pick the Training Set and version, choose **Classification** (categorical target) or **Regression** (numerical target), save.
+3. **Register training data** for drift. The model must have been trained from a Domino TrainingSet in the same project (https://docs.dominodatalab.com/en/6.1/api_guide/9c4dec/create-trainingsets/). On the endpoint open **Grafana Monitoring** > **Configure Monitoring** > **Data**, pick the Training Set and version, choose **Classification** (categorical target) or **Regression** (numerical target), save.
 4. **Validate**: **Configure Monitoring** > **Target Ranges** shows a populated tests-and-thresholds table once captured predictions have been processed.
 5. **Ground truth** (model quality): predictions need a row identifier (the `event_id` you capture); register a ground-truth file carrying the same identifiers with a config JSON (`variableType: ground_truth`, `forPredictionOutput`) under **Model Monitor** > model > **Model Quality** > **Register Ground Truth**, or by API. **Ingest History** shows `Done` when loaded.
 6. **Schedule and notify**: **Configure Monitoring** > **Schedule** (name, frequency, "new data since last check" or "data since last N days") and **Alert Recipients** (comma- or semicolon-separated emails) for breach emails.
@@ -31,7 +31,7 @@ Prefer deploying as a Domino endpoint: integrated monitoring captures prediction
 ## Set up Model Monitor for an external model
 
 1. Environment: `domino-data-capture` and `dominodatalab[data]` (Python); R needs `DominoDataCapture`.
-2. Connect the data source holding your files: https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/4-set-up-model-monitor/2-connect-a-data-source.
+2. Connect the data source holding your files: https://docs.dominodatalab.com/en/6.1/user_guide/8c7833/connect-a-data-source/.
 3. **Model Monitor** > **Register Model** > **Upload Model Config File**: JSON with `variables` (`feature` columns, one `prediction`, optional `timestamp` and `row_identifier`), `datasetDetails` (the training file) and `modelMetadata` (`name`, `modelType` classification or regression, `version`).
 4. **Data Drift** > **Register Prediction** with a config whose `datasetDetails` point at the prediction file. With a `timestamp` variable Domino re-ingests new rows daily at 00:00 UTC; without it each batch needs a new registration (re-registering the same file ingests rows twice).
 5. **Model Quality** > **Register Ground Truth**, then **Schedule** and notifications as above.
@@ -65,4 +65,4 @@ Hourly Parquet files in the `prediction_data` Dataset: `/mnt/data/prediction_dat
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/index (workflows, setup, config JSON, APIs, remediation, troubleshooting)
+- https://docs.dominodatalab.com/en/6.1/user_guide/715969/monitor-models/ (workflows, setup, config JSON, APIs, remediation, troubleshooting)

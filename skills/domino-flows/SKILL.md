@@ -90,4 +90,4 @@ Flows have no scheduler: create a scheduled Job whose command is the `pyflyte ru
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/flows/index (get started, define, artifacts, launch, monitor, reproducibility, advanced)
+- https://docs.dominodatalab.com/en/6.1/user_guide/78acf5/orchestrate-with-flows/ (get started, define, artifacts, launch, monitor, reproducibility, advanced)

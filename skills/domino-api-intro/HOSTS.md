@@ -46,7 +46,7 @@ started as). Which identity a call carries:
 
 ## NetApp Volumes (`/remotefs/v1`)
 
-Reference: https://docs.domino.ai/cloud/reference/api/domino-volumes-api. Confirm the base
+Reference: https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/. Confirm the base
 path (`/remotefs/v1` or `/domino-netapp-volumes/v1`) in your deployment's `/docs`.
 
 | Operation | Inside a run | Outside Domino |
@@ -67,7 +67,7 @@ with the endpoint's access token, not a platform token:
   `Authorization: Bearer <access token>`.
 - Unrestricted endpoints: no token.
 
-Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization.
+Source: https://docs.dominodatalab.com/en/6.1/user_guide/e038f2/select-domino-endpoint-authorization-mode/.
 Workflow: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
 
 ## 404 on the in-run base

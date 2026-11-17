@@ -68,7 +68,7 @@ curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/j
 }'
 ```
 
-Keep the returned `id` for every later call. `variableType` values: `feature`, `prediction`, `row_identifier`, `timestamp`, `ground_truth`, `sample_weight`, `prediction_probability`; `valueType`: `categorical`, `numerical`, `string`, `datetime`; `fileFormat`: `csv`, `parquet` or `snowflake` (for a Snowflake data source `path` is the table name). Features must be numerical or categorical and present in every dataset; one `prediction`, one `timestamp` (ISO 8601) and one `row_identifier` at most. Binning options (`binsNum`, `binsEdges`, `binsCategories`) are documented at https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/8-json/1-supported-binning.
+Keep the returned `id` for every later call. `variableType` values: `feature`, `prediction`, `row_identifier`, `timestamp`, `ground_truth`, `sample_weight`, `prediction_probability`; `valueType`: `categorical`, `numerical`, `string`, `datetime`; `fileFormat`: `csv`, `parquet` or `snowflake` (for a Snowflake data source `path` is the table name). Features must be numerical or categorical and present in every dataset; one `prediction`, one `timestamp` (ISO 8601) and one `row_identifier` at most. Binning options (`binsNum`, `binsEdges`, `binsCategories`) are documented at https://docs.dominodatalab.com/en/6.1/user_guide/21503d/supported-binning-methods/.
 
 Register a new batch of predictions or labels:
 
@@ -107,7 +107,7 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
     "description": "Business accuracy below 0.9"}'
 ```
 
-`condition` is one of `lessThan`, `lessThanEqual`, `greaterThan`, `greaterThanEqual`, `between` (with `lowerLimit` and `upperLimit`). Each metric value may also carry `tags`. The same operations exist in `python-domino` as `Domino("owner/project").custom_metrics_client()` with `log_metric`, `log_metrics`, `read_metrics` and `trigger_alert`: https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/5-use-monitoring/2-custom-metrics.
+`condition` is one of `lessThan`, `lessThanEqual`, `greaterThan`, `greaterThanEqual`, `between` (with `lowerLimit` and `upperLimit`). Each metric value may also carry `tags`. The same operations exist in `python-domino` as `Domino("owner/project").custom_metrics_client()` with `log_metric`, `log_metrics`, `read_metrics` and `trigger_alert`: https://docs.dominodatalab.com/en/6.1/user_guide/4ceec8/custom-model-monitoring-metrics/.
 
 ## Automating retraining on drift
 

@@ -1,6 +1,6 @@
 # Domino Flows examples
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows and `.../define-flow-artifacts`. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/e09156/define-flows/ and https://docs.dominodatalab.com/en/6.1/user_guide/6a57f5/define-flow-artifacts/. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
 
 ## Example 1: data pipeline (load, clean, features)
 

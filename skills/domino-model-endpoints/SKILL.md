@@ -90,5 +90,5 @@ Each publish creates a version. **Basic** routing (default) points `/models/<mod
 
 ## Documentation
 
-- https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/index
+- https://docs.dominodatalab.com/en/6.1/user_guide/8dbc91/deploy-domino-endpoints/
 - Route discovery: [API-SPECS.md](../domino-api-intro/API-SPECS.md)

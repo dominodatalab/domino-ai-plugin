@@ -66,6 +66,6 @@ The DSE does not include AI coding assistants. Install the assistant's extension
 
 ## Docs
 
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/launch-a-workspace/launch-a-vs-code-workspace
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/launch-a-workspace/streamline-local-development-ssh
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/work-with-pluggable-workspaces/configure-native-workspaces
+- https://docs.dominodatalab.com/en/6.1/user_guide/fbb1db/open-a-vs-code-workspace/
+- https://docs.dominodatalab.com/en/6.1/user_guide/9976a5/streamline-local-development-with-ssh/
+- https://docs.dominodatalab.com/en/6.1/user_guide/4e7f25/configure-native-workspaces/

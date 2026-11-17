@@ -1,9 +1,9 @@
 # Install the Domino CLI, sign in, proxies, recovery
 
-Sources: https://docs.domino.ai/cloud/reference/cli/install-the-cli,
-https://docs.domino.ai/cloud/reference/cli/use-the-cli-behind-a-proxy,
-https://docs.domino.ai/cloud/reference/cli/force-restore-a-local-project,
-https://docs.domino.ai/cloud/reference/cli/move-project-between-deployments.
+Sources: https://docs.dominodatalab.com/en/6.1/user_guide/e21e55/install-the-domino-command-line-interface-cli/,
+https://docs.dominodatalab.com/en/6.1/user_guide/0da1e9/use-the-domino-cli-behind-a-proxy/,
+https://docs.dominodatalab.com/en/6.1/user_guide/3ab378/force-restore-a-local-project/,
+https://docs.dominodatalab.com/en/6.1/user_guide/dbae6b/move-a-project-between-deployments/.
 
 ## Graphical install (laptop)
 

@@ -10,7 +10,7 @@ Applies to Domino 6.1.
 
 An Environment is a Docker image plus Domino metadata (tools, scripts, variables, supported clusters). Each build creates a numbered **revision**; executions use the environment's **Active** revision unless they pin another. Containers run as the `ubuntu` user; files Domino tracks live under `/mnt`.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments (same paths under `/6.3/`).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/e46d54/customize-environments/.
 
 ## Domino-provided environments
 
@@ -22,7 +22,7 @@ Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-e
 | Domino GPU Environment (DGE) | `domino-gpu-environment` | CUDA and GPU libraries for GPU tiers |
 | Cluster environments | `domino-{spark,ray,dask,mpi}-environment` (execution), `{spark,ray,dask,mpi}-cluster-environment` (nodes) | [domino-distributed-computing](../domino-distributed-computing/SKILL.md); a DSE cannot be a cluster node |
 
-Exact tags and partner images: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/8-compute-environment-catalog.
+Exact tags and partner images: https://docs.dominodatalab.com/en/6.1/user_guide/799193/compute-environment-catalog/.
 
 ## Create an environment (UI)
 

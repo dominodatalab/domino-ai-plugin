@@ -1,6 +1,6 @@
 # Publishing and calling Domino endpoints
 
-Product behaviour: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/index.
+Product behaviour: https://docs.dominodatalab.com/en/6.1/user_guide/8dbc91/deploy-domino-endpoints/.
 
 ## The prediction function
 
@@ -268,7 +268,7 @@ else:
     raise TimeoutError(prediction_id)
 ```
 
-Status values: the spec documents `Pending`, `Processing`, `Succeeded` and `Failed`; the docs' example client compares lowercase `queued`, `succeeded` and `failed`. Compare case-insensitively and treat anything else as an error. Async endpoints are not available on remote data planes. Full client with retries: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/async-example-client. Scoring a whole file, table or Dataset with no request/response contract at all is a batch scoring Job, not an endpoint: [domino-model-delivery](../domino-model-delivery/BATCH-SCORING.md).
+Status values: the spec documents `Pending`, `Processing`, `Succeeded` and `Failed`; the docs' example client compares lowercase `queued`, `succeeded` and `failed`. Compare case-insensitively and treat anything else as an error. Async endpoints are not available on remote data planes. Full client with retries: https://docs.dominodatalab.com/en/6.1/user_guide/64515c/example-python-client-asynchronous-domino-endpoint/. Scoring a whole file, table or Dataset with no request/response contract at all is a batch scoring Job, not an endpoint: [domino-model-delivery](../domino-model-delivery/BATCH-SCORING.md).
 
 ## Versions
 

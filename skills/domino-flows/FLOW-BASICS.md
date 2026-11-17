@@ -1,6 +1,6 @@
 # Domino Flows: definitions, configuration, launching, monitoring
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows, `.../launch-flows`, `.../monitor-flows`, `.../reproducibility-flows`, `.../advanced-flows`.
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/e09156/define-flows/, https://docs.dominodatalab.com/en/6.1/user_guide/113c96/launch-flows/, https://docs.dominodatalab.com/en/6.1/user_guide/dfe1ee/monitor-flows/, https://docs.dominodatalab.com/en/6.1/user_guide/338152/flows-reproducibility/, https://docs.dominodatalab.com/en/6.1/user_guide/c9731d/advanced-flows/.
 
 ## Two ways to declare a task
 

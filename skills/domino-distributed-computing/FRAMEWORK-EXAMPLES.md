@@ -161,7 +161,7 @@ results = tuner.fit()
 print(results.get_best_result().config)
 ```
 
-`tune.report` is exported by recent Ray releases (Ray 2.55 has it); on older cluster images such as the Ray 2.36 tags use `from ray import train` and `train.report({...})` instead. Log trials to MLflow with `mlflow.get_tracking_uri()` (preconfigured in Domino) to compare them in Experiments; see https://docs.domino.ai/cloud/platform-capabilities/features/development/ray-tune and [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md).
+`tune.report` is exported by recent Ray releases (Ray 2.55 has it); on older cluster images such as the Ray 2.36 tags use `from ray import train` and `train.report({...})` instead. Log trials to MLflow with `mlflow.get_tracking_uri()` (preconfigured in Domino) to compare them in Experiments; see https://docs.dominodatalab.com/en/6.1/user_guide/874b46/tune-hyperparameters-with-ray-tune/ and [domino-experiment-tracking](../domino-experiment-tracking/SKILL.md).
 
 ## Dask
 
@@ -197,5 +197,5 @@ print(search.best_params_)
 
 - Pick a GPU hardware tier for the workers (and the Ray GPU cluster image). Check allocation with `nvidia-smi` on the execution; `ray.cluster_resources()["GPU"]` on Ray.
 - Ray: `@ray.remote(num_gpus=1)` tasks or `ScalingConfig(num_workers=N, use_gpu=True)` in Ray Train.
-- Spark: GPU-accelerated workers are possible with the RAPIDS Accelerator for Apache Spark; the plugin jars and configuration must be added to the cluster environment (https://docs.domino.ai/cloud/platform-capabilities/features/development/distributed-training).
+- Spark: GPU-accelerated workers are possible with the RAPIDS Accelerator for Apache Spark; the plugin jars and configuration must be added to the cluster environment (https://docs.dominodatalab.com/en/6.1/user_guide/dd6c5d/scale-distributed-workloads/).
 - MPI: Domino sets slots from the worker tier's CPU/GPU requests; `mpirun python train.py` with Horovod or `torch.distributed` launched per rank.

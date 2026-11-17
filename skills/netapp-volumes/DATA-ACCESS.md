@@ -3,8 +3,8 @@
 Where NetApp Volumes and their snapshots appear inside a Workspace, Job or App, how
 snapshots mount, read/write examples, and file-handling practices. The
 REST API is in [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md). Sources:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/netapp-volumes/add-remove-netapp-volumes
-and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/version-data-with-snapshots.
+https://docs.dominodatalab.com/en/6.1/user_guide/306570/add-or-remove-netapp-volumes-on-projects/
+and https://docs.dominodatalab.com/en/6.1/user_guide/dbdbff/version-data-with-snapshots/.
 
 ## NetApp Volumes vs Domino Datasets
 

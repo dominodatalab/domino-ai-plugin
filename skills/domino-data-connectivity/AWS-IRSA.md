@@ -11,7 +11,7 @@ attributable to the user in CloudTrail, or the code needs an AWS service no conn
 
 | Option | Identity | Workload types | Where documented |
 |---|---|---|---|
-| AWS credential propagation (SAML) | The user's own IAM roles, chosen by the identity provider | Workspaces and Jobs started by the user | https://docs.domino.ai/6.3/admin/identity-and-access/authentication/sso/aws-credential-propagation |
+| AWS credential propagation (SAML) | The user's own IAM roles, chosen by the identity provider | Workspaces and Jobs started by the user | https://docs.dominodatalab.com/en/6.1/admin_guide/eb6a88/configure-aws-credential-propagation/ |
 | IAM-authenticated Data Sources | The user's SAML-propagated AWS role, read from `AWS_SHARED_CREDENTIALS_FILE` (requires credential propagation; 6.1 admins add `AWSIAMRole` to `com.cerebro.domino.datasource.<Type>Config.enabledAuthTypes`, Cloud asks Domino Support) | Workspaces and Jobs (not scheduled Jobs or endpoints) | https://docs.domino.ai/6.3/admin/data-administration/external-data#iam-authentication-for-aws-data-sources |
 | IRSA through Domsed (blueprint) | A Kubernetes service account mapped per Domino user, trusted by IAM roles in any account | Workspace, Batch (Job), Scheduled; selectable by label | https://domino.ai/resources/blueprints/aws-irsa, code in https://github.com/dominodatalab/domino-blueprints (IRSA-README.md, advanced-credential-propagation/irsa) |
 | EKS Pod Identity (blueprint) | A static service account mapped per Domino service account | Same as IRSA; EKS only | https://domino.ai/resources/blueprints/advanced-credential-propagation-aws-eks, code in advanced-credential-propagation/eks-pod-identity |

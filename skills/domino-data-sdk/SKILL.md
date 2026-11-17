@@ -10,7 +10,7 @@ Applies to Domino 6.1.
 
 `dominodatalab-data` is the Python half of the Domino Data API. It talks to the Data Source
 proxy that Domino injects into every execution, so the Data Source credentials stay with the
-Data Source, managed by Domino, and never appear in code. Docs: https://docs.domino.ai/cloud/reference/api/data_api. Source:
+Data Source, managed by Domino, and never appear in code. Docs: https://docs.dominodatalab.com/en/6.1/api_guide/140b48/domino-data-api/. Source:
 https://github.com/dominodatalab/domino-data. Pin `dominodatalab-data==6.3.0` on Domino 6.1.1 and
 later and `dominodatalab-data==6.2.0` on Domino 6.1.0. These are Python package versions, not
 Domino versions; both need Python 3.9 or later.
@@ -109,7 +109,7 @@ per call path; [DATA-SOURCES.md](./DATA-SOURCES.md) lists it. Hosts come from
   deployment URL, the two proxy host variables as the admin gives them, and pass `token=` a
   service-account token (or `api_key=` a user API key).
 
-Docs: https://docs.domino.ai/cloud/reference/api/data_api/authentication.
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/490a1c/authentication/.
 
 ## Errors
 

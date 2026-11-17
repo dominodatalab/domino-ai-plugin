@@ -1,6 +1,6 @@
 # NetApp Volumes REST API
 
-The API page: https://docs.domino.ai/cloud/reference/api/domino-volumes-api. Mount paths and
+The API page: https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/. Mount paths and
 in-run file access: [DATA-ACCESS.md](./DATA-ACCESS.md).
 
 ## Base path
