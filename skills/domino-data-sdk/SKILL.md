@@ -41,6 +41,9 @@ or `from domino.data_sources import DataSourceClient` (python-domino re-exports 
 | `domino_data.training_sets.client` | TrainingSets: versioned DataFrames with key, target and monitoring columns | [TRAINING-SETS.md](./TRAINING-SETS.md) |
 | `domino_data.vectordb` | Parameters that route the `pinecone` client through a Domino Data Source | [VECTORDB.md](./VECTORDB.md) |
 
+`DataSourceClient` fetches a Data Source by name and cannot list them; to list, call
+`GET /api/datasource/v1/datasources` ([API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#data-sources)).
+
 Feature Store is not covered. NetApp Volumes have no client in this library; use their mount
 path or REST API (netapp-volumes skill).
 
