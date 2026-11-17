@@ -1,8 +1,7 @@
 # Domino Models API
 
 Model APIs (hosted prediction endpoints), Model Deployments, the Registered Models
-registry, and how to invoke an endpoint. Routes marked **Cloud** exist only on Domino
-Cloud. Lifecycle guidance and the registry routes:
+registry, and how to invoke an endpoint. Lifecycle guidance and the registry routes:
 [API-MODEL-SERVING.md](./API-MODEL-SERVING.md) and
 [domino-model-serving](../domino-model-serving/SKILL.md); deployment workflow and
 monitoring: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
@@ -109,16 +108,8 @@ Public API has no stop route; stop it first with
 non-public route; may change in a future Domino version) or from the UI, then `DELETE`. After
 deletion `GET` returns 404 and the list no longer includes the record.
 
-**Cloud only:** `PUT /api/modelServing/beta/modelApis/{modelApiId}/access` saves
-`visibility` (`Public`/`Discoverable`/`Private`) and the **complete** collaborator list
-(`collaborators[]` with `id`, `isOrganization`, `role` `Owner`/`Editor`/`Operator`/`Viewer`)
-in one request: anyone omitted loses the assigned role, including the caller, and the
-last Owner cannot be omitted, so load the current list from
-`GET .../collaborators` and send it back with your change. `POST .../collaborators`
-adds one principal (fails if the id is already assigned; only Owners can add);
-`PUT .../collaborators/{collaboratorId}` changes a role; `GET/PUT .../visibility`
-reads or sets visibility alone (the v1 record's `access.isPublic` is a separate legacy
-flag); `GET .../consumer/access` reports the caller's access.
+The Domino 6.1 Public API has no route for endpoint visibility or collaborators; set them in
+the UI (**Settings** > **Access and Sharing**).
 
 ### Versions and logs
 

@@ -208,7 +208,7 @@ OIDC federation, so it is EKS-only and keyed on Domino service accounts rather t
 
 1. Install the **EKS Pod Identity Agent** add-on on the cluster and give the node role
    `eks-auth:AssumeRoleForPodIdentity` (AWS prerequisites, called out in the blueprint).
-2. Create Domino service accounts (https://docs.domino.ai/6.3/admin/identity-and-access/manage-users/service-accounts)
+2. Create Domino service accounts (https://docs.dominodatalab.com/en/6.1/admin_guide/6921e5/manage-domino-service-accounts/)
    and one static Kubernetes service account each in `domino-compute`.
 3. Create Pod Identity associations from each Kubernetes service account to its IAM role; the
    role trusts `pods.eks.amazonaws.com` for `sts:AssumeRole` and `sts:TagSession`.

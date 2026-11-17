@@ -55,8 +55,7 @@ backoff. See [API-JOBS.md](../domino-python-sdk/API-JOBS.md) and [domino-jobs](.
 Prefer the paginated routes over one-shot dumps:
 
 - Platform audit: `GET /api/audittrail/v1/auditevents` with `limit`/`offset` and
-  `startTimestamp`/`endTimestamp` (epoch milliseconds), or `POST /api/audittrail/v1/search`
-  (`limit` <= 1000). Details: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#audit-trail).
+  `startTimestamp`/`endTimestamp` (epoch milliseconds). Details: [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md#audit-trail).
 - Data source audit: `GET /api/datasource/v1/audit` with `startTime`/`endTime`
   (ISO 8601), `dataSourceNames` and `eventKinds` filters. Documented at
   https://docs.dominodatalab.com/en/6.1/admin_guide/f5934f/monitor-data-source-logs/.

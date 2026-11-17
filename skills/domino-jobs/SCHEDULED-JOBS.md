@@ -108,5 +108,5 @@ Creating, editing and deleting schedules needs the Create / Edit / Delete Schedu
 
 ## Docs
 
-- https://docs.dominodatalab.com/en/6.1/user_guide/5dce1f/schedule-jobs/ (UI wizard; same path under `/6.3/`)
+- https://docs.dominodatalab.com/en/6.1/user_guide/5dce1f/schedule-jobs/ (UI wizard)
 - https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html

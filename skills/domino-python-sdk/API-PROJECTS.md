@@ -161,7 +161,6 @@ DELETE /api/projects/v1/projects/{projectId}/shared-datasets/{datasetId}   -> {"
 
 ```
 GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content
-POST /api/projects/beta/projects/{projectId}/commits/resolveGitRef
 ```
 
 The Domino 6.1 Public API has no latest-commit route. Get the DFS head commit id with

@@ -25,15 +25,12 @@ projects = response.json()["projects"]
 |--------|-------|-------|
 | GET | `/api/users/v1/self` | Current user: `{"user": {...}, "metadata": {...}}` |
 | GET | `/api/users/v1/users` | `offset`, `limit` |
-| GET | `/api/users/v1/user/{userId}` | |
-| GET, POST | `/api/users/v1/user/{userId}/roles` | POST body `{"roles": [...]}` **replaces** the user's roles (unlisted roles are revoked); no PUT |
 | GET | `/api/users/beta/credentials/{userId}` | Git credentials |
-| PUT | `/api/users/v1/user/{userId}/tokenCredentials/{credentialId}` | |
-| GET, POST | `/api/serviceAccounts/v1/serviceAccounts` and `/{serviceAccountIdpId}/tokens` | Service accounts |
+| POST | `/v4/serviceAccounts`; GET, POST `/v4/serviceAccounts/{serviceAccountIdpId}/tokens` | Service accounts (non-public route; may change in a future Domino version): [API-ADMIN.md](./API-ADMIN.md#service-accounts) |
 | GET, POST | `/api/organizations/v1/organizations`; `/all`; PUT, DELETE `/{organizationId}/user` | |
 | GET, POST, PUT | `/api/hardwaretiers/v1/hardwaretiers`; GET, DELETE `/{hardwareTierId}` | |
 | GET, POST | `/api/datasource/v1/datasources`; GET, PATCH, DELETE `/{dataSourceId}`; GET `/api/datasource/v1/audit` | |
-| GET | `/api/audittrail/v1/auditevents`, `/fieldValues`; POST `/search` | Platform audit trail |
+| GET | `/api/audittrail/v1/auditevents` | Platform audit trail |
 | GET | `/api/cost/v1/allocation`, `/allocation/summary`, `/asset`, `/cloudCost`; `/api/cost/v2/...`; billing tags | Cost |
 | GET, POST, PATCH, DELETE | `/api/admin/v1/deploymentTargets...` | Model deployment targets |
 
@@ -52,7 +49,6 @@ projects = response.json()["projects"]
 | GET, POST, PATCH, DELETE | `/api/projects/v1/projects/{projectId}/goals[/{goalId}]` |
 | GET, POST, DELETE | `/api/projects/v1/projects/{projectId}/shared-datasets[/{datasetId}]` |
 | GET | `/api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content` (also under `/beta/`) |
-| POST | `/api/projects/beta/projects/{projectId}/commits/resolveGitRef` |
 | GET, PUT | `/api/projects/beta/projects/{projectId}/results-settings` |
 | POST | `/api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` |
 

@@ -25,7 +25,6 @@ Most list routes in the Public API spec take `offset` and `limit` query paramete
 | NetApp `/remotefs/v1` lists | `{"items": [...], "totalCount": N}`; confirm the shape in your deployment's `/docs` |
 | Model serving, apps | `{"items": [...], "metadata": {...}}` with `offset` / `limit` (apps: `limit` defaults to no limit) |
 | Registered models `/api/registeredmodels/v1` | `{"items": [...], "metadata": {"nextPageToken"}}`; page with `pageToken` / `maxResults` (default 25), not offset |
-| Audit trail `POST /api/audittrail/v1/search` | `limit` 1 to 1000 (default 50), `offset` >= 0 |
 
 Rules for agents:
 

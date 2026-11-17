@@ -115,13 +115,11 @@ logs = requests.get(
 print(logs.text)
 ```
 
-## Thumbnail, views, vanity URLs, filters, access
+## Views, vanity URLs, access
 
 ```
-GET, POST, DELETE /api/apps/beta/apps/{appId}/thumbnail;  GET .../thumbnail/metadata
 GET /api/apps/beta/apps/{appId}/views?startTimestamp=&endTimestamp=&granularity=     (epoch ms; granularity default 86400000)
 GET /api/apps/beta/apps/vanityUrls/{vanityUrl}
-GET /api/apps/beta/apps/projectFilterOptions;  GET /api/apps/beta/apps/publisherFilterOptions
 POST /api/apps/beta/apps/{appId}/access/requests
 ```
 

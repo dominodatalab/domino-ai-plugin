@@ -33,7 +33,7 @@ The Apps API on Domino 6.1 is `/api/apps/beta`. It has no draft, publish or star
 | Stop a running instance | `DELETE /api/apps/beta/apps/{appId}/versions/{versionId}/instances/{instanceId}` |
 | Logs | `GET .../instances/{instanceId}/logs`, `GET .../instances/{instanceId}/realTimeLogs` |
 | Views | `GET /api/apps/beta/apps/{appId}/views` |
-| Other | thumbnail (`/apps/{appId}/thumbnail`), access requests (`/apps/{appId}/access/requests`), vanity URL lookup (`/apps/vanityUrls/{vanityUrl}`) |
+| Other | access requests (`/apps/{appId}/access/requests`), vanity URL lookup (`/apps/vanityUrls/{vanityUrl}`) |
 
 - `name` is a substring match, so compare `items[].name` exactly. List responses are `{"items": [...], "metadata": {...}}`.
 - `visibility` values: `AUTHENTICATED` ("Anyone in Domino"), `GRANT_BASED` ("Restricted": listed users plus project collaborators), `GRANT_BASED_STRICT`, `PUBLIC` (anonymous viewers; also needs the admin setting on the app-configuration-settings page).

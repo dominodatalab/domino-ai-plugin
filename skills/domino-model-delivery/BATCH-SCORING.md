@@ -108,7 +108,8 @@ users should pick the input file or date in a web form
 | Field | Note |
 |---|---|
 | File Name | `score.py --as-of ...`; arguments go in the same box |
-| Data Plane & Hardware | tier, plus the Datasets and NetApp Volumes the Job mounts |
+| Hardware tier | the tier the Job runs on |
+| Data | the Datasets the Job mounts |
 | Environment | revision defaults to the latest; the UI recommends the project owner's active revision |
 | Schedule | Quartz CronTrigger, six fields, seconds first: `0 0 2 * * ?` is 02:00 daily |
 | Run sequentially | on, if run N+1 must not start before run N finishes |

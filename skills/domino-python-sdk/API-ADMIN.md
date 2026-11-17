@@ -1,21 +1,19 @@
 # Domino Admin API
 
 Users, organizations, service accounts, hardware tiers, data sources, cost and the
-platform audit trail. Routes marked **Cloud** exist only on Domino
-Cloud. Admin-only routes return `403` for other callers.
+platform audit trail. Admin-only routes return `403` for other callers.
 
 ## Authentication
 
 Use the shared setup block (`base_url`, `headers`) from
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication). Service-account
-administration: https://docs.domino.ai/cloud/admin/identity-and-access/manage-users/service-accounts.
+administration: https://docs.dominodatalab.com/en/6.1/admin_guide/6921e5/manage-domino-service-accounts/.
 
 ## Users
 
 ```
 GET /api/users/v1/self
 GET /api/users/v1/users?offset=0&limit=50
-GET /api/users/v1/user/{userId}
 ```
 
 `self` returns `{"user": {"id", "idpId", "userName", "fullName", "firstName", "lastName", "email", "avatarUrl", "roles"}, "metadata": {...}}`.
@@ -30,37 +28,19 @@ print(me["userName"], me["id"])
 
 ### Roles
 
-```
-GET  /api/users/v1/user/{userId}/roles                    -> {"roles": [...], "metadata"}
-POST /api/users/v1/user/{userId}/roles      body: {"roles": ["..."]}   replaces the user's roles
-```
-
-Needs the `SetUserSystemRoles` permission. There is no `PUT`, and `POST` is not additive:
-it sets the complete list of roles and revokes any not listed. To add a role, send the
-existing list plus the new one:
-
-```python
-roles = requests.get(f"{base_url}/api/users/v1/user/{user_id}/roles", headers=headers).json()["roles"]
-if "Practitioner" not in roles:
-    requests.post(f"{base_url}/api/users/v1/user/{user_id}/roles", headers=headers,
-                  json={"roles": roles + ["Practitioner"]})
-```
-
-Posting `{"roles": ["Practitioner"]}` alone would strip every other role, including admin
-roles. Role names are deployment-defined; read them from the user's current list or the
-admin UI.
+The Domino 6.1 Public API has no role routes. Administrators assign roles in the Admin panel. A service account inherits the roles of the administrator who
+created it.
 
 ### Git credentials
 
 ```
 GET /api/users/beta/credentials/{userId}
-PUT /api/users/v1/user/{userId}/tokenCredentials/{credentialId}      GitHub and GitHub Enterprise personal access tokens only
 ```
 
 ### Deactivation
 
-Service accounts: `POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/deactivate`.
-Human users have no Public API deactivate route. Administrators do it in the admin UI or
+Users have no Public API deactivate route. For a service account, invalidate its tokens
+([Service accounts](#service-accounts)). Administrators do it in the admin UI or
 with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
 body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
 `isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only. Confirm it in your
@@ -82,38 +62,34 @@ List responses use `{"orgs": [...], "metadata": {...}}`.
 
 ## Service accounts
 
+On Domino 6.1 service accounts are managed with the Domino Internal API (non-public route; may
+change in a future Domino version). Administrators only; expect `403` for anyone else.
+Reference: https://docs.dominodatalab.com/en/6.1/admin_guide/6921e5/manage-domino-service-accounts/
+
 ```
-GET, POST /api/serviceAccounts/v1/serviceAccounts                       POST body: {"username": "...", "email": "..."}
-POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/activate | /deactivate | /resetpassword
-GET, POST /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/tokens      POST body: {"name": "..."}
-GET, DELETE /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/tokens/{tokenName};  POST .../invalidate
-GET /api/serviceAccounts/v1/serviceAccounts/{serviceAccountIdpId}/gitcredentials;  POST .../passwordgitcredentials | /sshgitcredentials | /tokengitcredentials
+POST   /v4/serviceAccounts                                             body: {"username": "...", "email": "..."}
+POST   /v4/serviceAccounts/{serviceAccountIdpId}/tokens                body: {"name": "..."}
+GET    /v4/serviceAccounts/{serviceAccountIdpId}/tokens
+POST   /v4/serviceAccounts/{serviceAccountIdpId}/tokens/{tokenName}/invalidate
+DELETE /v4/serviceAccounts/{serviceAccountIdpId}/tokens/{tokenName}
 ```
 
-Create returns `{"serviceAccount": {"id", "idpId", "username", "email"}, "metadata": {...}}`.
-Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns a
-`ServiceAccountToken` (`name`, `serviceAccountIdpId`, `isValid`, `createdAt`, `expiresAt`,
-`token`) with the token value. The value is not shown only once: `GET .../tokens/{tokenName}` returns the same object, including `token`,
-as `{"token": {...}, "metadata"}`, so an authorized caller can read a value again by name
-(if the `GET` omits `token`, treat the value as shown once).
-The list route `GET .../tokens` returns `{"tokens": [...], "metadata"}` with the metadata
-fields only, never `token`. Service-account management is restricted to Administrators;
-expect `403` for anyone else. Tokens inherit the service account's roles at creation and
-expire after four months by default. Give the value to its consumer once rather than re-reading
-it: a Project or user environment variable for Domino executions, or the CI system's own
-secret for a runner outside Domino, where Domino variables are not readable. Invalidate or
-delete a token that leaked.
+Create returns `{"id", "userName", "email", "idpId"}`; the email must be valid and unique.
+Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns `name`,
+`serviceAccountIdpId`, `isValid`, `createdAt`, `expiresAt` and `token` (the value). The list
+returns the same fields without `token`, so store the value when it is created. Tokens
+inherit the service account's roles at creation and expire after four months by default; after
+a role change, create a new token. Give the value to its consumer once: a Project or user
+environment variable for Domino executions, or the CI system's own secret for a runner
+outside Domino, where Domino variables are not readable. Invalidate or delete a token that
+leaked.
 
 ```python
-sa = requests.post(f"{base_url}/api/serviceAccounts/v1/serviceAccounts", headers=headers,
-                   json={"username": "github-actions", "email": "mlops@example.com"}).json()["serviceAccount"]
-token = requests.post(f"{base_url}/api/serviceAccounts/v1/serviceAccounts/{sa['idpId']}/tokens",
+sa = requests.post(f"{base_url}/v4/serviceAccounts", headers=headers,
+                   json={"username": "github-actions", "email": "mlops@example.com"}).json()
+token = requests.post(f"{base_url}/v4/serviceAccounts/{sa['idpId']}/tokens",
                       headers=headers, json={"name": "ci-token"}).json()
 secret = token["token"]   # hand to the consumer once: a Project or user environment variable in Domino, or the CI system's own secret outside
-
-# Later, an administrator can read it again by name:
-secret = requests.get(f"{base_url}/api/serviceAccounts/v1/serviceAccounts/{sa['idpId']}/tokens/ci-token",
-                      headers=headers).json()["token"]["token"]
 ```
 
 ## Hardware tiers
@@ -204,8 +180,6 @@ Feature docs: https://docs.domino.ai/cloud/platform-capabilities/features/govern
 
 ```
 GET  /api/audittrail/v1/auditevents
-POST /api/audittrail/v1/search
-GET  /api/audittrail/v1/fieldValues?field=<required>&search=
 ```
 
 `auditevents` query parameters (all optional): `startTimestamp`, `endTimestamp`
@@ -229,9 +203,6 @@ for e in events["events"]:
 ```
 
 Response: `{"events": [{"timestamp", "actor": {"id", "name"}, "action": {"eventName", "using", "traceId", "electronicallySigned"}, "targets": [{"entity": {"entityType", "id", "name"}, "fieldChanges"}], "affecting", "in", "metadata"}], "estimatedMatches", "total"}`.
-
-`search` takes a JSON filter: `{"filter": {"type": "group", "operator": "AND" | "OR", "rules": [...]}, "limit": 50, "offset": 0}` with `limit` 1 to 1000.
-`fieldValues` lists distinct values for one field (`field` required) for building filters.
 
 ## Internal routes you may still meet
 

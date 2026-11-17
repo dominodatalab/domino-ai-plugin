@@ -22,7 +22,7 @@ All Public API families below are served on the same base URL: `$DOMINO_API_PROX
 | Model export out of Domino (registry, NVIDIA Fleet Command, Snowflake), SageMaker external endpoints (deployment targets), batch scoring Jobs | `/v4/models/...` (non-public route; may change in a future Domino version, see [route types](./SKILL.md#route-types)), `/api/admin/v1/deploymentTargets`, `/api/modelServing/v1/modelDeployments`, the Jobs routes | [domino-model-delivery](../domino-model-delivery/SKILL.md) |
 | Workspaces | `/api/projects/v1/.../workspaces/{id}/sessions` | [domino-workspaces](../domino-workspaces/SKILL.md) |
 | Environments | `/api/environments/beta`, `/v1` | [domino-environments](../domino-environments/SKILL.md), [API-ENVIRONMENTS](../domino-python-sdk/API-ENVIRONMENTS.md) |
-| Users, orgs, service accounts, hardware tiers, cost, audit trail | `/api/users/v1`, `/api/organizations/v1`, `/api/serviceAccounts/v1`, `/api/hardwaretiers/v1`, `/api/cost/v1`, `/api/audittrail/v1` | [API-ADMIN](../domino-python-sdk/API-ADMIN.md) |
+| Users, orgs, service accounts, hardware tiers, cost, audit trail | `/api/users/v1`, `/api/organizations/v1`, `/v4/serviceAccounts` (non-public), `/api/hardwaretiers/v1`, `/api/cost/v1`, `/api/audittrail/v1` | [API-ADMIN](../domino-python-sdk/API-ADMIN.md) |
 
 ## Outside the REST API
 
