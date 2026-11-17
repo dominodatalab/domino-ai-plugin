@@ -551,6 +551,11 @@ DFS-based projects.
 Requires `uv`. Tools, routes and each host's registration are documented in
 [mcp-servers/domino_mcp_server/README.md](mcp-servers/domino_mcp_server/README.md).
 
+The plugin also registers the Domino docs server (`domino_docs`, `https://docs.domino.ai/mcp`).
+It covers Domino 6.3 and Domino Cloud only, so a result can describe features Domino 6.1 lacks.
+The always-on rules and the links in the skills point at the Domino 6.1 docs
+(`https://docs.dominodatalab.com/en/6.1/`); prefer those for 6.1 behaviour.
+
 ### Skills (28 total)
 
 | Skill | Description |
@@ -687,6 +692,22 @@ Domino Workspaces and grades what happened in Domino. See [evals/e2e/README.md](
 and AGENTS.md "Testing new and updated skills".
 
 ---
+
+## Domino 6.1 Workspace notes
+
+- **No Node or npm** in the standard Domino 6.1 Workspace image. `domino-ui-bootstrap` needs Node
+  20.19+ or 22.12+ with npm; install it into the home directory or use a Compute Environment that
+  has it.
+- **`python3 -m venv` can fail at `ensurepip`** there. Use `uv venv` instead.
+- **Root-owned clone:** git refuses a clone owned by another user ("dubious ownership"). Run
+  `git config --global --add safe.directory <path of the clone>` or pass
+  `git -c safe.directory=<path>` per command.
+- **Read-only clone:** the bundled MCP server needs `uv` to create a `.venv` inside the plugin
+  directory, so a plugin directory the user cannot write to stops it from starting.
+- **Pin a release** when the skills are installed through a custom Compute Environment:
+  `claude plugin marketplace add dominodatalab/domino-ai-plugin --ref <tag>` (tags are
+  `release-<version>`), or check out the `release-X.Y` branch of your Domino line (`release-6.1`).
+  A pinned install changes only when you change the ref.
 
 ## Troubleshooting
 

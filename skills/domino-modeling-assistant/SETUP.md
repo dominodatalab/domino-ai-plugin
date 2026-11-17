@@ -127,6 +127,13 @@ Jobs started by the assistant run in the project's default environment; the Domi
    - **Other hosts:** open the host's MCP server list and confirm `domino_server` is connected.
 4. If the server isn't listed at all, your plugin distribution may be skills-only; register it manually as described below.
 
+### Domino 6.1 Workspace image
+
+The standard Domino 6.1 Workspace image has no Node or npm, `python3 -m venv` can fail at
+`ensurepip` (use `uv venv`), and git needs `safe.directory` for a clone owned by another user.
+`uv` must be able to write `.venv` inside the plugin directory. The docs server (`domino_docs`)
+covers Domino 6.3 and Cloud; for 6.1 use https://docs.dominodatalab.com/en/6.1/.
+
 ### Register the server manually
 
 Clone the plugin repository, then point your assistant at `mcp-servers/domino_mcp_server` as a stdio server. Inside a Domino Workspace no environment variables are needed. Outside Domino pass `DOMINO_HOST` and `DOMINO_TOKEN`, or rely on the env file from Step 1. For Codex:
