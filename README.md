@@ -114,9 +114,11 @@ The repository is its own marketplace (`.claude-plugin/marketplace.json`, named
 `domino-marketplace`), so Claude Code can install and update the plugin straight from GitHub:
 
 ```bash
-claude plugin marketplace add dominodatalab/domino-ai-plugin
+claude plugin marketplace add dominodatalab/domino-ai-plugin#release-6.1
 claude plugin install dominodatalab@domino-marketplace
 ```
+
+The `#release-6.1` suffix keeps the install on the Domino 6.1 branch; without it the marketplace follows `main`, which targets Domino 6.3 and Cloud.
 
 Claude Code installs a copy and replaces it when a release changes the plugin's `version`.
 Auto-update is off by default for marketplaces other than Anthropic's: turn it on under
@@ -154,7 +156,7 @@ This approach registers the plugin through Claude Code's native marketplace syst
 **Step 1: Clone the repository and create a marketplace wrapper**
 
 ```bash
-git clone https://github.com/dominodatalab/domino-ai-plugin.git
+git clone -b release-6.1 https://github.com/dominodatalab/domino-ai-plugin.git
 
 mkdir -p ~/.claude/marketplaces/domino/.claude-plugin
 mkdir -p ~/.claude/marketplaces/domino/plugins
@@ -205,7 +207,7 @@ Launch Claude Code and run:
 ### Option 2: Direct Plugin Directory (Development / Quick Start)
 
 ```bash
-git clone https://github.com/dominodatalab/domino-ai-plugin.git
+git clone -b release-6.1 https://github.com/dominodatalab/domino-ai-plugin.git
 claude --plugin-dir ./domino-ai-plugin
 ```
 
@@ -246,11 +248,11 @@ When team members trust the repository folder, Claude Code will prompt them to i
 
 - **Local marketplace install (Options 1 and 3):** Claude Code reads the clone in place, so
   checking out a newer commit is the update; start a new session afterwards. `git pull` fails on
-  a detached checkout, so fetch and check out `main` instead:
+  a detached checkout, so fetch and check out `release-6.1` instead:
 
   ```bash
-  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin main
-  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B main origin/main
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin fetch origin release-6.1
+  git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin checkout -B release-6.1 origin/release-6.1
   ```
 
   If `git -C ~/.claude/marketplaces/domino/plugins/domino-claude-plugin remote get-url origin`
@@ -265,8 +267,8 @@ When team members trust the repository folder, Claude Code will prompt them to i
   ```bash
   P=~/.claude/marketplaces/domino/plugins/domino-claude-plugin   # or the path of your clone
   git -C $P remote set-url origin https://github.com/dominodatalab/domino-ai-plugin.git
-  git -C $P fetch origin main
-  git -C $P checkout -B main origin/main
+  git -C $P fetch origin release-6.1
+  git -C $P checkout -B release-6.1 origin/release-6.1
   grep '"version"' $P/.claude-plugin/plugin.json                 # the version now loaded
   ```
 
@@ -287,12 +289,12 @@ The repository is also a Codex marketplace (`.agents/plugins/marketplace.json`, 
 with no build step:
 
 ```bash
-codex plugin marketplace add dominodatalab/domino-ai-plugin
+codex plugin marketplace add dominodatalab/domino-ai-plugin@release-6.1
 codex plugin add dominodatalab@domino-marketplace
 ```
 
 Codex refreshes Git marketplaces when it starts, and `codex plugin marketplace upgrade
-domino-marketplace` refreshes it now. Add `--ref <tag>` to `marketplace add` to stay on one release.
+domino-marketplace` refreshes it now. The `@release-6.1` suffix keeps it on the Domino 6.1 branch; `--ref <tag>` pins one release.
 This path includes the bundled MCP server (stdio, needs `uv`). Restart the ChatGPT desktop app to
 see the plugin there.
 
@@ -312,11 +314,8 @@ Cursor reads `.cursor-plugin/plugin.json`: the skills, the always-on rule `rules
 subagents in `agents/`, and both MCP servers (`.cursor-plugin/mcp.json`). Cursor support is new and
 not yet tested in a logged-in Cursor; please report what you find.
 
-- **Cursor desktop:** Customize → From GitHub Repository → `https://github.com/dominodatalab/domino-ai-plugin`,
-  then install `dominodatalab` at user or project scope.
-- **Cursor CLI (`agent`):** `agent plugin marketplace add https://github.com/dominodatalab/domino-ai-plugin`,
-  then `/plugin` in a session. Update with `agent plugin marketplace update domino-marketplace`.
-- **Local checkout:** clone (don't symlink) into `~/.cursor/plugins/local/dominodatalab` and run
+- **Cursor desktop and CLI (`agent`):** importing from GitHub follows the default branch (`main`, Domino 6.3 and Cloud), so on Domino 6.1 use the local checkout below.
+- **Local checkout:** `git clone -b release-6.1 https://github.com/dominodatalab/domino-ai-plugin`; clone (don't symlink) into `~/.cursor/plugins/local/dominodatalab` and run
   Developer: Reload Window, or run `agent --plugin-dir /path/to/domino-ai-plugin`.
 
 The bundled MCP server needs `uv` on `PATH` and, outside a Domino Workspace, your Domino URL and a
@@ -332,11 +331,12 @@ The repository root is a Gemini CLI extension (`gemini-extension.json`): the ski
 guidance `rules/domino.md` as the extension's context file, and both MCP servers.
 
 ```bash
-gemini extensions install https://github.com/dominodatalab/domino-ai-plugin
+gemini extensions install https://github.com/dominodatalab/domino-ai-plugin --ref release-6.1
 ```
 
-Gemini CLI installs the repository's latest GitHub Release when one exists and the default branch
-otherwise; add `--ref release-YYYY.XYY.N` to pin a release. `release-2026.603.5` is the first
+Without `--ref`, Gemini CLI installs the repository's latest GitHub Release when one exists and the
+default branch otherwise, which is the Domino 6.3 and Cloud line; `--ref release-6.1` keeps it on
+Domino 6.1, and `--ref release-YYYY.XYY.N` pins one release. `release-2026.603.5` is the first
 release that includes `gemini-extension.json`; earlier tags fail. Install asks a consent question
 first (`--consent` answers it, for a script; installing from a local path also asks whether to
 trust the folder, which `--consent` doesn't answer). It then asks for the two settings the bundled
@@ -371,7 +371,7 @@ A git URL is rejected (`install target must be a directory`), so clone first; `m
 public release:
 
 ```bash
-git clone https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
+git clone -b release-6.1 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin
 agy plugin validate ~/domino-ai-plugin   # optional: 28 skills, 3 agents, 2 MCP servers
 agy plugin install ~/domino-ai-plugin
 ```
@@ -451,7 +451,7 @@ screenshot path in `plugin.json` is missing or outside `assets/`.
 The version is **`YYYY.XYY.N`**, for example `2026.603.3`, and all four manifests
 (`.claude-plugin/plugin.json`, `plugin.json`, `.cursor-plugin/plugin.json`,
 `gemini-extension.json`) carry the same string. It's the release year, the oldest Domino line the content supports written as X×100+Y
-(`603` = Domino 6.3 and later, including Cloud), and a release counter. The format is valid
+(`603` = Domino 6.3 and later, including Cloud; this branch's `601` = Domino 6.1), and a release counter. The format is valid
 semver, which the OpenAI portal requires. Each release is tagged `release-YYYY.XYY.N`. A release
 candidate for internal testing is `YYYY.XYY.N-rc.M` on an `rc/<YYYY.XYY.N>` branch, tagged
 `release-YYYY.XYY.N-rc.M` as a GitHub pre-release (see
@@ -512,7 +512,7 @@ page lists them). The tag works in place of the branch.
 - **Antigravity**: `agy` installs a copy of a local checkout, so clone the branch and install it:
   `git clone -b rc/2026.603.6 https://github.com/dominodatalab/domino-ai-plugin ~/domino-ai-plugin-rc && agy plugin install ~/domino-ai-plugin-rc`.
   Newer candidate: `git -C ~/domino-ai-plugin-rc pull && agy plugin install ~/domino-ai-plugin-rc`.
-  Back: `agy plugin uninstall dominodatalab`, then `agy plugin install` from a `main` checkout.
+  Back: `agy plugin uninstall dominodatalab`, then `agy plugin install` from a `release-6.1` checkout.
 - **Domino Workspaces**: the image's updater follows `release-X.Y` by name and never an `rc/`
   branch, so check the candidate out by hand in the image's clone, which Claude Code reads in
   place (see [Updating](#updating-claude-code)). The clone's `origin` may still point at the old
@@ -529,7 +529,7 @@ page lists them). The tag works in place of the branch.
   `grep '"version"' ~/.claude/marketplaces/domino/plugins/domino-claude-plugin/.claude-plugin/plugin.json`.
   Newer candidate: the same `fetch` and `checkout -B` again. Back: check out the release branch
   the image expects (`release-X.Y` for your Domino version, or `main`), for example
-  `... checkout -B main origin/main`; if unsure, start a new Workspace.
+  `... checkout -B release-6.1 origin/release-6.1`; if unsure, start a new Workspace.
 
 ---
 
@@ -640,10 +640,12 @@ domino-ai-plugin/
 │   ├── build-openai.sh          # Builds the OpenAI portal ZIP into dist/
 │   ├── sync-manifests.py        # Syncs plugin.json, .cursor-plugin/plugin.json, gemini-extension.json from the Claude manifest
 │   ├── lint-skills.py           # Skill rules every host relies on
+│   ├── test-lint-later-terms.py # Fixtures for lint rule L17 (6.2+ terms)
 │   ├── claude-mentions.allow    # Skill files allowed to mention Claude, with reasons
 │   ├── check-version.sh         # Release-scheme check (CI)
 │   └── verify-update-flow.sh    # checks Claude Code reads a local marketplace clone in place
 ├── CONTRIBUTING.md
+├── RELEASE-6.1-CHANGES.md        # What this 6.1 branch changed from main, and why
 ├── LICENSE
 └── README.md
 ```
@@ -669,6 +671,10 @@ domino-ai-plugin/
   (CONTRIBUTING standards 12 and 13) fail on provenance narrative, test logs, change history,
   process jargon, shouting labels, when-to-use headings, self-describing preambles and names of
   removed skills, and warn on timings, stage labels and spec attestations.
+- Skill, agent, output-style and rule text doesn't name a feature that needs Domino 6.2 or later
+  (Slurm, GenAI tracing, LLM Gateway 2.0, Governance API, tags and properties, Extensions, registered
+  models v2, `/api/apps/v1`, Domino Personal Access Tokens) unless the line says it is not available
+  on 6.1 (rule L17; fixtures in `scripts/test-lint-later-terms.py`).
 
 Run it locally with `uv run --with pyyaml python scripts/lint-skills.py`.
 
