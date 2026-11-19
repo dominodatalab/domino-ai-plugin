@@ -1,28 +1,28 @@
 ---
 name: domino-environments
 description: Create and customize Domino Compute Environments - the Docker images that Workspaces, Jobs, Apps and endpoints run in. Covers Domino Standard, Core, Minimal, GPU and cluster environments, creating environments, Dockerfile instructions, pre/post scripts, environment variables, Pluggable Workspace Tools, revisions and build propagation, requirements.txt versus preloaded packages, the environments REST API, and build troubleshooting. Use when installing dependencies, adding IDEs or tools, or fixing environment build failures.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token (Bearer) or a user API key.
 ---
 
 # Domino Compute Environments
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 An Environment is a Docker image plus Domino metadata (tools, scripts, variables, supported clusters). Each build creates a numbered **revision**; executions use the environment's **Active** revision unless they pin another. Containers run as the `ubuntu` user; files Domino tracks live under `/mnt`.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments (same paths under `/6.3/`).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/e46d54/customize-environments/.
 
 ## Domino-provided environments
 
 | Environment | Image (`quay.io/domino/...`, tag changes per release) | Use |
 |---|---|---|
-| Domino Standard Environment (DSE) | `domino-standard-environment` (`-no-assistants` variant) | Python, R, Jupyter, JupyterLab, VS Code, RStudio, coding assistants |
+| Domino Standard Environment (DSE) | `domino-standard-environment` | Python, R, Jupyter, JupyterLab, VS Code, RStudio |
 | Domino Core Environment (DCE) | `domino-core-environment` | minimal base for custom builds; Jupyter and JupyterLab only |
 | Domino Minimal Environment (DME) | `domino-minimal-environment` | lighter DSE |
 | Domino GPU Environment (DGE) | `domino-gpu-environment` | CUDA and GPU libraries for GPU tiers |
 | Cluster environments | `domino-{spark,ray,dask,mpi}-environment` (execution), `{spark,ray,dask,mpi}-cluster-environment` (nodes) | [domino-distributed-computing](../domino-distributed-computing/SKILL.md); a DSE cannot be a cluster node |
 
-Exact tags and partner images: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/manage-compute-environments/8-compute-environment-catalog.
+Exact tags and partner images: https://docs.dominodatalab.com/en/6.1/user_guide/799193/compute-environment-catalog/.
 
 ## Create an environment (UI)
 
@@ -77,11 +77,11 @@ Keep images small; dependency-file packages cost startup time.
 
 ## REST API
 
-Both specs: `GET /api/environments/beta/environments` (list), `GET /api/environments/v1/environments/{environmentId}`, `POST /api/environments/beta/environments`, `POST .../beta/environments/{environmentId}/revisions`, `PATCH .../revisions/{revisionId}` (restricted flag), `DELETE /api/environments/v1/environments/{environmentId}` (archive). Bodies: [API.md](./API.md). Authentication: [domino-api-intro](../domino-api-intro/SKILL.md).
+On 6.1: `GET /api/environments/beta/environments` (list), `GET /api/environments/v1/environments/{environmentId}`, `POST /api/environments/beta/environments`, `POST .../beta/environments/{environmentId}/revisions`, `PATCH .../revisions/{revisionId}` (restricted flag), `DELETE /api/environments/v1/environments/{environmentId}` (archive). Bodies: [API.md](./API.md). Authentication: [domino-api-intro](../domino-api-intro/SKILL.md).
 
 ### Which path applies
 
-Read `GET $DOMINO_API_HOST/version`. On `6.3.x` only the routes above exist. On 6.4 and later (including Domino Cloud) `POST /api/environments/v2/environments`, `POST .../v2/environments/{environmentId}/revisions` (preferred there) and `PUT .../v1/environments/{environmentId}/name` / `/description` also exist (`404` = absent).
+Read `GET $DOMINO_API_HOST/version`. On `6.1.x` only the routes above exist. `POST /api/environments/v2/environments`, `POST .../v2/environments/{environmentId}/revisions` and `PUT .../v1/environments/{environmentId}/name` / `/description` exist only on 6.4 and later (`404` = absent).
 
 ## Troubleshooting builds
 

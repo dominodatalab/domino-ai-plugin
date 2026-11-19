@@ -11,7 +11,8 @@
       ],
       "env": {
         "DOMINO_HOST": "${env:DOMINO_HOST}",
-        "DOMINO_TOKEN": "${env:DOMINO_TOKEN}"
+        "DOMINO_TOKEN": "${env:DOMINO_TOKEN}",
+        "DOMINO_API_KEY": "${env:DOMINO_API_KEY}"
       }
     },
     "domino_docs": {

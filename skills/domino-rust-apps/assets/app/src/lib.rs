@@ -82,7 +82,8 @@ impl AppState {
     }
 }
 
-/// `?as=publisher` switches a Domino API route from the viewer's identity to the publisher's.
+/// Domino API routes call as the publisher; `?as=viewer` uses the viewer's token instead, which
+/// Domino 6.1 rejects.
 #[derive(Deserialize)]
 struct CallAs {
     #[serde(default, rename = "as")]
@@ -147,7 +148,7 @@ async fn index(headers: HeaderMap) -> Response {
     }
 }
 
-/// Liveness plus the running build's label, so a deploy or rollback can be confirmed from outside.
+/// Liveness plus the running build's label, so a publish can be confirmed from outside.
 async fn healthz(State(state): State<AppState>) -> Json<Value> {
     Json(json!({ "status": "ok", "build": state.build.as_deref() }))
 }
@@ -161,7 +162,7 @@ async fn whoami(headers: HeaderMap) -> Json<WhoAmI> {
     })
 }
 
-/// The Domino user record, as the viewer (default) or the publisher (`?as=publisher`).
+/// The publisher's Domino user record (`?as=viewer`: the viewer's).
 async fn me(
     State(state): State<AppState>,
     Query(call): Query<CallAs>,
@@ -174,7 +175,7 @@ async fn me(
         .map(Json)
 }
 
-/// Projects visible to the viewer (default) or the publisher; the two lists differ.
+/// Projects visible to the publisher (`?as=viewer`: to the viewer).
 async fn projects(
     State(state): State<AppState>,
     Query(call): Query<CallAs>,
@@ -346,7 +347,11 @@ mod tests {
     async fn viewer_call_without_token_is_401() {
         let app = app_with_domino(Some(mock_domino().await), None);
         let response = app
-            .oneshot(Request::get("/api/me").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::get("/api/me?as=viewer")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -360,7 +365,7 @@ mod tests {
     #[tokio::test]
     async fn viewer_call_with_an_empty_token_is_401() {
         let app = app_with_domino(Some(mock_domino().await), None);
-        let request = Request::get("/api/me")
+        let request = Request::get("/api/me?as=viewer")
             .header(header::AUTHORIZATION, "Bearer ")
             .body(Body::empty())
             .unwrap();
@@ -369,12 +374,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rejected_viewer_call_names_extended_identity_propagation() {
+    async fn rejected_viewer_call_suggests_the_publisher() {
         let failing = Router::new().fallback(|| async { StatusCode::INTERNAL_SERVER_ERROR });
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         tokio::spawn(async move { axum::serve(listener, failing).await.unwrap() });
-        let request = Request::get("/api/me")
+        let request = Request::get("/api/me?as=viewer")
             .header(header::AUTHORIZATION, "Bearer viewer-jwt")
             .body(Body::empty())
             .unwrap();
@@ -383,17 +388,13 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-        assert!(
-            body_text(response)
-                .await
-                .contains("extended identity propagation")
-        );
+        assert!(body_text(response).await.contains("as the publisher"));
     }
 
     #[tokio::test]
     async fn viewer_call_forwards_the_viewer_token() {
         let app = app_with_domino(Some(mock_domino().await), None);
-        let request = Request::get("/api/me")
+        let request = Request::get("/api/me?as=viewer")
             .header(header::AUTHORIZATION, "Bearer viewer-jwt")
             .body(Body::empty())
             .unwrap();
@@ -404,9 +405,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn publisher_call_goes_through_the_proxy_without_the_viewer_token() {
+    async fn calls_default_to_the_publisher_through_the_proxy_without_the_viewer_token() {
         let app = app_with_domino(None, Some(mock_domino().await));
-        let request = Request::get("/api/projects?as=publisher")
+        let request = Request::get("/api/projects")
             .header(header::AUTHORIZATION, "Bearer viewer-jwt")
             .body(Body::empty())
             .unwrap();
@@ -467,7 +468,7 @@ mod tests {
 
     #[tokio::test]
     async fn whoami_reads_the_forwarded_token() {
-        // Apps with extended identity propagation receive the token without `domino-username`.
+        // The token's claim names the viewer when a token arrives.
         let request = Request::get("/api/whoami")
             .header(header::AUTHORIZATION, token_for("jane.doe"))
             .body(Body::empty())

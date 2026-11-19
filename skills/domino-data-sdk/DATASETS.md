@@ -5,7 +5,7 @@ caller's permissions. It is read-only: list, fetch, download and signed URLs. To
 Dataset's mount path inside an execution, the UI, `domino upload-dataset`
 ([domino-cli](../domino-cli/SKILL.md)), or the `/api/datasetrw` routes (domino-datasets skill).
 
-Docs: https://docs.domino.ai/cloud/reference/api/data_api/datasource_usecases/access-datasets-via-proxy.
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/fc01e5/access-datasets-via-datasource-proxy/.
 Source: `domino_data/datasets.py`.
 
 ## When to use it instead of the mount
@@ -93,17 +93,6 @@ Concatenate CSVs under a prefix:
 parts = [pd.read_csv(io.BytesIO(dataset.get(f.name)))
          for f in dataset.list_files(prefix="data/", page_size=1000) if f.name.endswith(".csv")]
 df = pd.concat(parts, ignore_index=True)
-```
-
-App reading on behalf of the signed-in user (Domino passes the user's bearer token on each
-request to the App):
-
-```python
-auth = request.headers.get("Authorization", "")
-token = auth[7:].strip() if auth.startswith("Bearer ") else ""
-if not token:
-    abort(401)            # never DatasetClient(token=None): that falls back to the publisher's identity
-dataset = DatasetClient(token=token).get_dataset("dataset-training-data-6503324fa1eb367359734bfd")
 ```
 
 ## Errors

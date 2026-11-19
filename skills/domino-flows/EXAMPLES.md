@@ -1,6 +1,6 @@
 # Domino Flows examples
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows and `.../define-flow-artifacts`. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/e09156/define-flows/ and https://docs.dominodatalab.com/en/6.1/user_guide/6a57f5/define-flow-artifacts/. Paths assume a Git-based project (`/mnt/code`, `/mnt/data/<dataset>`); in a DFS project use `/mnt` and `/domino/datasets/local/<dataset>`. Hardware tier and environment ids are placeholders; look yours up as described in [FLOW-BASICS.md](./FLOW-BASICS.md).
 
 ## Example 1: data pipeline (load, clean, features)
 
@@ -279,7 +279,6 @@ PINNED = dict(
     HardwareTierId="large-k8s",
     VolumeSizeGiB=20,
     DatasetSnapshots=[DatasetSnapshot(Id="6615af2820a4b1c2d3e4f5a6", Version=3)],
-    NetAppVolumeSnapshots=[],                                     # required even when unused
     ExternalVolumeMountIds=[],                                    # required even when unused
 )
 
@@ -339,7 +338,7 @@ Each scheduled run registers the current definition (a new version only if the c
 pyflyte run --remote --name exp-7 flows/training_pipeline.py training_pipeline --features_path /mnt/data/features/latest.csv
 ```
 
-Then in the Flows UI open run `exp-7`, click the **Train** node and **Rerun Node** with a different input, or **Re-run** the whole flow with a task override (different hardware tier or environment) without touching the code. When a transient failure (spot pre-emption, timeout) kills a node, **Recover** continues from the failed node and reuses the finished outputs; from a Workspace terminal or a Job the same recovery is one call:
+Then in the Flows UI open run `exp-7`, click the **Train** node and **Rerun Node** with a different input, or **Re-run** the whole flow with new inputs without touching the code. When a transient failure (spot pre-emption, timeout) kills a node, **Recover** continues from the failed node and reuses the finished outputs; from a Workspace terminal or a Job the same recovery is one call:
 
 ```bash
 curl -s -X POST "$FLYTE_PLATFORM_URL_HTTP/api/v1/executions/recover" -H 'Content-Type: application/json' \

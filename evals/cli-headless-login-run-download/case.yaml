@@ -1,6 +1,6 @@
 schema_version: '1.1'
 name: cli-headless-login-run-download
-description: 'Domino CLI: device-code login without a browser, get a DFS project, run with --wait, download-results with --filter.'
+description: 'Domino CLI: /authorizeCli code login without a local browser, get a DFS project, run with --wait, download-results with --filter.'
 tags: [trigger, domino-cli, cli]
 execution:
   max_turns: 10
@@ -11,10 +11,15 @@ execution:
     job with the argument 20 and wait for it, then download only the files under results/ from that run.
     Put the code in your reply, not in files.
 graders:
-- name: device-login
+- name: code-login
   type: regex
   target: last_message
-  pattern: domino login --device
+  pattern: /authorizeCli
+- name: no-device-flag
+  type: regex
+  target: last_message
+  match: not_contains
+  pattern: domino login\s+--device
 - name: download-results
   type: regex
   target: last_message

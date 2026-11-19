@@ -414,6 +414,13 @@ skills from `scripts/removed-skills.txt` fail CI; "today", observed timings, sta
 "smoke test" and spec attestations print a warning for a human to judge). Each message names
 the rule, the file and line, and the standard.
 
+On this 6.1 branch, rule L17 also fails any line under `skills/`, `agents/`, `output-styles/` or
+`rules/` that names a feature needing Domino 6.2 or later (Slurm, GenAI tracing, LLM Gateway 2.0,
+Governance API, tags and properties, Extensions routes, registered models v2, `/api/apps/v1`,
+Domino Personal Access Tokens) unless the line, or the next one, says it is not available on 6.1
+or that the token is a Git credential. `scripts/test-lint-later-terms.py` holds the fixtures
+(a bare `"slurm"` in an enum must fail).
+
 ### 14. Test new and updated skills at three levels
 
 A skill can pass every static check and still lead an agent astray in a real Workspace, so testing

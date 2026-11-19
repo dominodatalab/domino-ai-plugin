@@ -1,9 +1,8 @@
 # Dataset REST API
 
 Public API routes (tag `Datasets`) plus the `/v4` routes labelled non-public route; may change in
-a future Domino version, at their point of use; on Domino 6.3 confirm each `/v4` route in your
-deployment's `/docs`.
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/create-and-manage-datasets
+a future Domino version, at their point of use.
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/0a8d11/create-and-manage-datasets/
 (REST tab) and the API reference under https://docs.domino.ai/cloud/reference/api.
 
 ## Setup
@@ -16,13 +15,13 @@ import os
 import requests
 
 # base and headers: the Python setup block in domino-api-intro/SKILL.md#authentication
-base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run; outside Domino: DOMINO_API_HOST plus a Bearer token
+base, headers = os.environ["DOMINO_API_PROXY"], {}   # in a run; outside Domino: DOMINO_API_HOST plus a service-account Bearer token or X-Domino-Api-Key
 r = requests.get(f"{base}/api/datasetrw/v2/datasets", headers=headers, params={"limit": 50})
 r.raise_for_status()
 ```
 
 Every 2xx response wraps the payload with `metadata` (`requestId`, `notices`; lists carry
-`offset` and `limit`, the snapshot list also `totalCount` on Domino Cloud). The spec describes
+`offset` and `limit`, the snapshot list sometimes also `totalCount`). The spec describes
 errors as `{"code", "message"}` for 401 and 403 and `{"error"}` for 400, 404 and 500; a 400 or
 404 can also arrive as `{"requestId": ..., "errors": ["..."]}`, so read either shape.
 
@@ -46,7 +45,6 @@ errors as `{"code", "message"}` for 401 and 403 and `{"error"}` for 400, 404 and
 | `GET /api/projects/v1/projects/{projectId}/shared-datasets` | Datasets shared into a Project: `{"dataset": {"projectId", "sharedDatasetIds": [...]}}`; 200 with an empty `sharedDatasetIds` list when nothing is shared. Treat a 404 `sharedDatasetRwEntry ... not found` as the same empty case | none |
 | `POST /api/projects/v1/projects/{projectId}/shared-datasets` | Mount a shared Dataset | `{"datasetId": "..."}`; needs `ManageDatasetsRw` and `UseFileStorage` on the Project |
 | `DELETE /api/projects/v1/projects/{projectId}/shared-datasets/{datasetId}` | Unmount; returns `{"success": true}` | none |
-| `GET /v4/datasetrw/snapshot/{snapshotId}/files/recursive?path=` | **non-public route; may change in a future Domino version.** File names under a path in a snapshot; rows `[{name: {label, ...}, size, lastModified}]` | `path` required; empty for the root (`/` and `.` return 400) |
 | `GET /v4/datasetrw/snapshot/{snapshotId}/file/raw?path=a.txt` | **non-public route; may change in a future Domino version.** Raw file content | `path` required; `download` optional |
 
 `GET /api/datasetrw/v1/datasets` also exists but is marked deprecated; use v2. The spec lists the
@@ -91,18 +89,18 @@ requests.post(f"{base}/api/datasetrw/v1/datasets/{dataset_id}/tags", headers=hea
 Read a snapshot you took in this execution. It is not mounted here (mounts are fixed at
 execution start), so go through the internal file routes, which answer through the proxy and
 from outside with a bearer (non-public route; may change in a future Domino version). `path` is
-relative to the snapshot root with no leading slash, and an empty `path` lists the root:
+relative to the snapshot root with no leading slash. Domino 6.1 has no route that lists a
+snapshot's files; list them with `DatasetClient` and `DatasetConfig(snapshot_id=...)`
+([domino-data-sdk](../domino-data-sdk/DATASETS.md#read-a-snapshot-or-a-subfolder)), or read
+paths you already know:
 
 ```bash
 SID=<snapshot id from the POST or the snapshots list>
-curl -sS "$DOMINO_API_PROXY/v4/datasetrw/snapshot/$SID/files/recursive?path=" | python3 -m json.tool | head
 curl -sS "$DOMINO_API_PROXY/v4/datasetrw/snapshot/$SID/file/raw?path=processed/features.parquet" \
   -o /tmp/features.parquet
 ```
 
 ```python
-listing = requests.get(f"{base}/v4/datasetrw/snapshot/{snapshot_id}/files/recursive",
-                       headers=headers, params={"path": ""}).json()
 raw = requests.get(f"{base}/v4/datasetrw/snapshot/{snapshot_id}/file/raw",
                    headers=headers, params={"path": "processed/features.parquet"})
 raw.raise_for_status()
@@ -146,7 +144,7 @@ per-snapshot delete or limit route; the non-public routes in the next section co
 ## Snapshot deletion and limits (non-public routes)
 
 Every call here is **non-public route; may change in a future Domino version**; a non-admin Dataset
-Owner can make them (on 6.3, confirm each in your deployment's `/docs`).
+Owner can make them.
 
 | Call (non-public route; may change in a future Domino version) | Behaviour |
 |---|---|

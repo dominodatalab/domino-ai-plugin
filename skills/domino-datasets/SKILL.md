@@ -1,12 +1,12 @@
 ---
 name: domino-datasets
 description: Create, upload to, mount and read a Domino Dataset; take, list, read or restore (copy to a new Dataset) a snapshot; tag snapshots; share a Dataset with another Project or user. Covers mount paths (/domino/datasets/local/<name> in DFS Projects, /mnt/data/<name> in Git-based Projects), the UI and domino CLI steps, and the /api/datasetrw REST routes with request bodies, including how to read a snapshot you just took from the same run. Use whenever a task mentions a Dataset, a snapshot, a dataset mount path, versioned or shared data in Domino, or reading, counting or writing files under /domino/datasets or /mnt/data.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token (or a user API key).
 ---
 
 # Domino Datasets
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 A Dataset is Domino-managed, versioned filesystem storage. Executions mount it as an ordinary
 directory: live data is read-write for Dataset Owners and Editors, read-only for Readers, and
@@ -78,9 +78,9 @@ that form returns 404.
   `POST /api/datasetrw/v1/datasets/{datasetId}/snapshots` with `{"relativeFilePaths": ["*"]}`.
   `status` starts `pending` and becomes `active`; poll `GET /api/datasetrw/v1/snapshots/{id}`.
 - **Read**: later executions mount it at `.../snapshots/<name>/<n>` or `/<tag>`. From the run
-  that took it, use the route above (`path` is relative, no leading slash; list with
-  `.../files/recursive?path=`, empty for the root), `DatasetClient` with
-  `DatasetConfig(snapshot_id=...)`, or a new Job. Examples: [API.md](./API.md). Pinning a
+  that took it, use the route above (`path` is relative, no leading slash; Domino 6.1 has no
+  route that lists a snapshot's files), `DatasetClient` with
+  `DatasetConfig(snapshot_id=...)` (which also lists them), or a new Job. Examples: [API.md](./API.md). Pinning a
   snapshot at launch mounts it read-only at the live path.
 - **Iterate**: **Copy to New Dataset**, `POST .../datasets` with `snapshotId`, or
   `domino create-dataset-from-snapshot`.
@@ -88,8 +88,8 @@ that form returns 404.
   **Snapshots** page or with `POST .../datasets/{datasetId}/tags`
   `{"snapshotId": "...", "tagName": "production"}` and `DELETE .../tags/{tagName}`. Re-using a
   name returns 400, so to move a tag remove it, then add it.
-- **Limits**: default 20 active snapshots per Dataset (6.3 record
-  `com.cerebro.domino.dataset.quota.maxActiveSnapshotsPerDataset`; Domino Support on Cloud). At
+- **Limits**: default 20 active snapshots per Dataset (central
+  configuration record `com.cerebro.domino.dataset.quota.maxActiveSnapshotsPerDataset`). At
   the limit an execution that would write a snapshot errors; a manual **Take Snapshot** warns
   and, if you proceed, marks the oldest for deletion (it stops mounting; an admin purges it).
   Delete, raise the limit, or exempt the Project: [BEST-PRACTICES.md](./BEST-PRACTICES.md).
@@ -124,6 +124,6 @@ that mounts it; confirm first). Snapshot: UI, or
 - [API.md](./API.md): routes, bodies, examples
 - [BEST-PRACTICES.md](./BEST-PRACTICES.md): layout, formats, snapshot limits, large reads
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets,
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/ba5bad/work-with-domino-datasets/,
 https://docs.domino.ai/cloud/admin/data-administration/datasets,
-https://docs.domino.ai/cloud/reference/cli/cli-reference (`/6.3/` for self-managed).
+https://docs.dominodatalab.com/en/6.1/user_guide/9355a5/domino-cli-reference/.

@@ -1,16 +1,16 @@
 ---
 name: domino-rust-apps
-description: Build a Rust web app (axum) in Domino and ship it as a Domino App that starts from a prebuilt binary. Covers installing a pinned Rust toolchain into a Compute Environment with rustup, Cargo project defaults (edition 2024, rust-toolchain.toml, Cargo.lock, Clippy pedantic, rustfmt, cargo-nextest, cargo-deny), rust-analyzer for the IDE and coding agents, check hooks, calling Domino as the viewer with extended identity propagation, dev and release build profiles, keeping target/ out of Git and Domino storage, and an app.sh that runs the binary in App Preview and deployments without compiling. Use when the user wants a Rust app, API, dashboard or Proa site on Domino, a performance-sensitive or correctness-critical App, or asks to set up Rust, cargo, Clippy, nextest or rust-analyzer in a Domino Workspace or environment.
-compatibility: Domino 6.3 and Domino Cloud. Building needs a Compute Environment with the Rust toolchain and access to crates.io or a mirror; the App runs the prebuilt binary and needs no toolchain.
+description: Build a Rust web app (axum) in Domino and ship it as a Domino App that starts from a prebuilt binary. Covers installing a pinned Rust toolchain into a Compute Environment with rustup, Cargo project defaults (edition 2024, rust-toolchain.toml, Cargo.lock, Clippy pedantic, rustfmt, cargo-nextest, cargo-deny), rust-analyzer for the IDE and coding agents, check hooks, reading the viewer's name and calling Domino as the publisher, dev and release build profiles, keeping target/ out of Git and Domino storage, and an app.sh that runs the binary without compiling. Use when the user wants a Rust app, API, dashboard or Proa site on Domino, a performance-sensitive or correctness-critical App, or asks to set up Rust, cargo, Clippy, nextest or rust-analyzer in a Domino Workspace or environment.
+compatibility: Domino 6.1. Building needs a Compute Environment with the Rust toolchain and access to crates.io or a mirror; the App runs the prebuilt binary and needs no toolchain.
 ---
 
 # Rust Apps on Domino
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
-Choose Rust for Apps where latency, throughput or correctness matter more than iteration speed: the compiler and Clippy reject whole classes of bugs before anything runs. A Rust App is **built once** in a Workspace or Job and `app.sh` only runs the binary, so App Preview and every deployment start in seconds.
+Choose Rust for Apps where latency, throughput or correctness matter more than iteration speed: the compiler and Clippy reject whole classes of bugs before anything runs. A Rust App is **built once** in a Workspace or Job and `app.sh` only runs the binary, so every start takes seconds.
 
-Like every App it must be idempotent: it restarts at any time and can run as several replicas at once, so startup writes nothing (migrate and seed in a Job), each write is an upsert or carries an idempotency key under a unique constraint, so a retry stores it once, and state lives in a database or Dataset ([details](../domino-apps/FRAMEWORKS.md#make-the-app-idempotent)).
+Like every App it must be idempotent: it restarts at any time, so startup writes nothing (migrate and seed in a Job), each write is an upsert or carries an idempotency key under a unique constraint, so a retry stores it once, and state lives in a database or Dataset ([details](../domino-apps/FRAMEWORKS.md#make-the-app-idempotent)).
 
 Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences are under "DFS Projects".
 
@@ -19,18 +19,18 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 1. **Toolchain.** In the Workspace run `rustc --version` and `cargo nextest --version`. If Rust is missing or its version differs from `channel` in `rust-toolchain.toml`, add it to the Project's Compute Environment ([ENVIRONMENT.md](./ENVIRONMENT.md)), rebuild, and restart the Workspace on the new revision. If crates.io is reached through Artifactory or Nexus Repository, configure Cargo there too ([ENVIRONMENT.md](./ENVIRONMENT.md#package-registry-mirrors)).
 2. **Scaffold.** Copy this skill's `assets/app/` directory into the project root as is, dotfiles included. Rename the package (`name` in `Cargo.toml` and the `use` line in `src/main.rs`). Run `cargo generate-lockfile`, then commit everything, `Cargo.lock` included. Turn on the Git hook once per clone: `git config core.hooksPath .githooks`.
 3. **Develop.** Port 8888 belongs to the Workspace IDE, so run the server beside it with `PORT=8501 cargo run` and exercise it with `curl localhost:8501/healthz`. Run `bash scripts/check.sh` before every commit. Every URL the browser sees must be relative ([APP.md](./APP.md)).
-4. **Build the binary.** Commit the code, then run `bash scripts/build-dist.sh`. It runs `cargo build --locked --profile dist` and writes a dated build (`2026.10.15`, then `.2`) with its source stamp to `/mnt/artifacts/dist/<name>/`, keeping the previous build ([rollback, Version Notes](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)). Save with **File Changes > Sync All Changes**, which pushes the code to Git and the build to Domino storage.
-5. **Preview and publish** with `app.sh` as the App file ([domino-apps](../domino-apps/SKILL.md) covers Preview, publish and deploy). `app.sh` runs the newest build whose stamp matches the committed sources; if none does it exits with a message rather than compiling. Fix that by repeating step 4, not by editing `app.sh`.
+4. **Build the binary.** Commit the code, then run `bash scripts/build-dist.sh`. It runs `cargo build --locked --profile dist` and writes a dated build (`2026.10.15`, then `.2`) with its source stamp to `/mnt/artifacts/dist/<name>/`, keeping the previous build ([build labels](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds)). Save with **File Changes > Sync All Changes**, which pushes the code to Git and the build to Domino storage.
+5. **Publish** in one step with `app.sh` as the App file: **Deployments > Apps > Publish Domino App** ([domino-apps](../domino-apps/SKILL.md)). `app.sh` runs the newest build whose stamp matches the committed sources; if none does it exits with a message rather than compiling. Fix that by repeating step 4, not by editing `app.sh`.
 
 ## Rules
 
-- **Never compile in `app.sh`.** Every Preview start, live sync, restart and replica runs it; a build there takes minutes and needs crates.io.
+- **Never compile in `app.sh`.** Every start and restart runs it; a build there takes minutes and needs crates.io.
 - **Build where the App runs.** The binary links the environment's glibc and targets one CPU architecture. Hardware tiers can run on different node types (amd64 or arm64, different CPU generations), so build on the App's environment and tier, or in a Job on that tier; `app.sh` refuses a binary built for another architecture.
 - **Commit `Cargo.lock` and build with `--locked`**, so the binary uses the dependency versions you tested.
 - **Never commit `target/`**: one Workspace build holds hundreds of MB to GBs. `.gitignore` excludes it.
 - **Secrets** come from Project environment variables read by the server (`DATABASE_URL`, `MODEL_API_URL`, `MODEL_API_TOKEN` in the template), never from files in the repository.
 - **Anticipate custom root CAs and a TLS-inspecting proxy.** Outbound code trusts the OS certificate store, honours `HTTPS_PROXY`/`NO_PROXY` and keeps in-cluster calls off the proxy ([APP.md](./APP.md#outbound-tls-and-http-proxies)).
-- **Act as the viewer for the viewer's data.** `src/domino.rs` calls the Domino API with the viewer's forwarded token, or as the publisher through `DOMINO_API_PROXY`; viewer calls need extended identity propagation on the App and the viewer's consent ([APP.md](./APP.md#identity-acting-as-the-viewer-or-the-publisher)).
+- **Call Domino as the publisher.** Acting for viewers is not available on Domino 6.1, so Domino rejects the viewer's token. The template's Domino API routes call as the publisher through `DOMINO_API_PROXY` by default; scope per-viewer data by the viewer's username ([APP.md](./APP.md#identity-and-domino-api-calls)).
 
 ## Project defaults (from `assets/app/`)
 

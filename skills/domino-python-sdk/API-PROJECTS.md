@@ -20,7 +20,7 @@ filter client-side, or resolve one project by name with the Domino Internal API
 `GET /v4/gateway/projects/findProjectByOwnerAndName?ownerName=<owner>&projectName=<name>`
 (returns the project with `id`, `name`, `owner`, `visibility`, `hardwareTierId`,
 `environmentName`, `requestingUserRole`, ...; 404 when there is none). It is what
-python-domino's `project_id` property calls; non-public route; may change in a future Domino version; on Domino 6.3 confirm it in your deployment's `/docs`. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
+python-domino's `project_id` property calls; non-public route; may change in a future Domino version. Response: `{"projects": [...], "metadata": {"offset", "limit", "totalCount", "notices", "requestId"}}`.
 Each project has `id`, `name`, `description`, `visibility`, `ownerId`, `ownerUsername`,
 `collaborators`, `isRestricted`, optional `billingTag` and `mainRepository`. The
 `visibility` enum is lowercase (`public`, `searchable`, `private`); Domino accepts either
@@ -161,13 +161,14 @@ DELETE /api/projects/v1/projects/{projectId}/shared-datasets/{datasetId}   -> {"
 
 ```
 GET /api/projects/v1/projects/{projectId}/files/{commitId}/{path}/content
-GET /api/projects/beta/projects/{projectId}/commits/latest
-POST /api/projects/beta/projects/{projectId}/commits/resolveGitRef
 ```
 
+The Domino 6.1 Public API has no latest-commit route. Get the DFS head commit id with
+python-domino `commits_list()[0]`, which calls `GET /v1/projects/{owner}/{project}/commits`
+(non-public route; may change in a future Domino version; newest first):
+
 ```python
-commit_id = requests.get(f"{base_url}/api/projects/beta/projects/{project_id}/commits/latest",
-                         headers=headers).json()["commitId"]     # current DFS head
+commit_id = domino.commits_list()[0]                            # current DFS head
 content = requests.get(
     f"{base_url}/api/projects/v1/projects/{project_id}/files/{commit_id}/train.py/content",
     headers=headers).text
@@ -190,8 +191,7 @@ on Git-based projects.
 The Public API has no route for project settings (default hardware tier, environment).
 On Domino Cloud, `POST /api/jobs/v1/projects/{projectId}/job-defaults` resolves the
 defaults a job would use ([API-JOBS.md](./API-JOBS.md#job-defaults-domino-cloud-only)).
-The Domino Internal API reads and writes them (non-public route; may change in a future Domino version; on Domino 6.3 confirm both
-routes in your deployment's `/docs` first):
+The Domino Internal API reads and writes them (non-public route; may change in a future Domino version):
 
 ```
 GET /v4/projects/{projectId}/settings   -> {"defaultEnvironmentId", "defaultEnvironmentRevisionSpec", "defaultHardwareTierId", "sparkClusterMode", "defaultVolumeSizeGiB", "maxVolumeSizeGiB", "minVolumeSizeGiB", "recommendedVolumeSizeGiB"}

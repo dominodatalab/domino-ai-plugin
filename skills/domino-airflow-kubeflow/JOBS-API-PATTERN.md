@@ -7,7 +7,8 @@ Every external orchestrator step is the same three Public API calls. Field seman
 
 ```bash
 BASE="$DOMINO_API_HOST"                        # export DOMINO_API_HOST=<the deployment URL users open in a browser>
-AUTH="Authorization: Bearer $DOMINO_TOKEN"     # Personal Access Token or service-account token
+AUTH="Authorization: Bearer $DOMINO_TOKEN"     # service account token
+# fallback: AUTH="X-Domino-Api-Key: $DOMINO_USER_API_KEY"   # your user API key
 ```
 
 ## 1. Start
@@ -30,9 +31,9 @@ curl -sS -X POST "$BASE/api/jobs/v1/jobs" -H "$AUTH" -H "Content-Type: applicati
 | `hardwareTier` | no | hardware tier **id** |
 | `commitId` | no | DFS commit to run from; not a git SHA |
 | `mainRepoGitRef` | no | `{"refType": "head" \| "commitId" \| "tags" \| "branches", "value": ...}` for Git-based projects; `value` only where the type needs one |
-| `computeCluster` | no | `{"clusterType": "spark" \| "ray" \| "dask" \| "mpi" \| "slurm", "computeEnvironmentId", "workerCount", "workerHardwareTier", "masterHardwareTierId"?, "maxWorkerCount"?, "workerStorageMB"?}`; cluster environments (Spark, Ray, Dask, MPI): [domino-distributed-computing](../domino-distributed-computing/SKILL.md) |
+| `computeCluster` | no | `{"clusterType": "spark" \| "ray" \| "dask" \| "mpi", "computeEnvironmentId", "workerCount", "workerHardwareTier", "masterHardwareTierId"?, "maxWorkerCount"?, "workerStorageMB"?}`; cluster environments (Spark, Ray, Dask, MPI): [domino-distributed-computing](../domino-distributed-computing/SKILL.md) |
 | `externalVolumeMountIds`, `netAppVolumeIds` | no | volumes to mount |
-| `snapshotDatasetsOnCompletion`, `snapshotNetAppVolumesOnCompletion` | no | snapshot mounted storage when the Job ends |
+| `snapshotDatasetsOnCompletion` | no | snapshot mounted Datasets when the Job ends |
 
 Response: `{"job": {"id": ..., "status": {...}, ...}}`. Keep `job.id`.
 
@@ -85,8 +86,8 @@ curl -sS -o metrics.json "$BASE/api/projects/v1/projects/$PROJECT_ID/files/$COMM
 
 ## Failure handling
 
-- HTTP 401/403 on start: token expired or wrong deployment; `GET $BASE/api/pat/v1/tokens` lists
-  your PATs if you need to confirm one is still valid.
+- HTTP 401/403 on start: token expired, API key regenerated, or wrong deployment;
+  `GET $BASE/api/users/v1/self` with the same credential shows whether Domino accepts it.
 - HTTP 404 on `/api/jobs/beta/jobs/{jobId}`: wrong id, or the Job was archived.
 - `executionStatus` not `Succeeded`: pull `stdErr` and `prepareOutput`, attach them to the
   orchestrator task log, and fail the task; do not retry blindly, since a retry starts a new Job.

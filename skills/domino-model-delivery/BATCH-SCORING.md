@@ -1,7 +1,7 @@
 # Batch scoring with Domino Jobs
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/batch-scoring
-(the 6.3 page has the same content). A batch scoring Job is an ordinary Domino Job whose command
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/68629b/configure-batch-scoring-job/.
+A batch scoring Job is an ordinary Domino Job whose command
 is a scoring script. Everything about Jobs in general (hardware tiers, environments, logs, script
 patterns, Quartz cron syntax) is in [domino-jobs](../domino-jobs/SKILL.md) and its
 SCRIPT-PATTERNS.md; this file covers only what is specific to scoring.
@@ -70,8 +70,8 @@ Model Registry notes:
   Domino Standard Environments; do not override the URI. A custom environment needs `mlflow`.
 - `mlflow.pyfunc.load_model` returns a `predict(DataFrame)` wrapper for every MLflow flavor; use
   the flavor loader (`mlflow.sklearn.load_model(...)`) when you need the native object.
-- Aliases are an MLflow registry feature available on Domino Cloud; on Domino 6.3 pin a version
-  number, or confirm alias support first as described in
+- Aliases depend on the MLflow version the deployment runs; pin a version number, or confirm
+  alias support first as described in
   [MODEL-REGISTRY.md](../domino-experiment-tracking/MODEL-REGISTRY.md), which also covers
   registering a model, versions, tags and the Domino registry routes.
 
@@ -79,10 +79,10 @@ Model Registry notes:
 
 UI: **Jobs > Run**, file `score.py` with arguments, hardware tier, environment, optional cluster.
 
-API (Public, both specs):
+API (Public API):
 
 ```bash
-# In a run: BASE=$DOMINO_API_PROXY and no AUTH header. Outside: export DOMINO_API_HOST=<deployment URL>, BASE=$DOMINO_API_HOST, AUTH="Authorization: Bearer <PAT>".
+# In a run: BASE=$DOMINO_API_PROXY and no AUTH header. Outside: export DOMINO_API_HOST=<deployment URL>, BASE=$DOMINO_API_HOST, AUTH="Authorization: Bearer <service-account token>" (or AUTH="X-Domino-Api-Key: <user API key>").
 curl -sS -X POST "$BASE/api/jobs/v1/jobs" -H "$AUTH" -H "Content-Type: application/json" -d '{
   "projectId": "'"$DOMINO_PROJECT_ID"'",
   "runCommand": "python score.py --model models:/churn-rf@champion --input /mnt/data/scoring/today.csv --output results/scored.csv",
@@ -108,7 +108,8 @@ users should pick the input file or date in a web form
 | Field | Note |
 |---|---|
 | File Name | `score.py --as-of ...`; arguments go in the same box |
-| Data Plane & Hardware | tier, plus the Datasets and NetApp Volumes the Job mounts (pin a snapshot per asset if the input must be reproducible) |
+| Hardware tier | the tier the Job runs on |
+| Data | the Datasets the Job mounts |
 | Environment | revision defaults to the latest; the UI recommends the project owner's active revision |
 | Schedule | Quartz CronTrigger, six fields, seconds first: `0 0 2 * * ?` is 02:00 daily |
 | Run sequentially | on, if run N+1 must not start before run N finishes |
@@ -124,7 +125,7 @@ starts this Job over the same `POST /api/jobs/v1/jobs`, waits for it and collect
 
 ## 4. Monitor and collect results
 
-Poll (Public, both specs; beta endpoint):
+Poll (Public API; beta endpoint):
 
 ```bash
 curl -sS "$BASE/api/jobs/beta/jobs/$JOB_ID" -H "$AUTH" | python3 -c '
@@ -135,7 +136,7 @@ print(j["status"]["isCompleted"], j["status"]["executionStatus"], j.get("commitD
 Terminal when `status.isCompleted` is true; success when `status.executionStatus` is
 `Succeeded`. `commitDetails.outputCommitId` is the project commit holding the results.
 
-Fetch a result file (Public, both specs):
+Fetch a result file (Public API):
 
 ```bash
 curl -sS -o scored.csv "$BASE/api/projects/v1/projects/$DOMINO_PROJECT_ID/files/$OUTPUT_COMMIT_ID/results%2Fscored.csv/content" -H "$AUTH"
@@ -145,7 +146,7 @@ The `{path}` segment is the project-relative path, URL-encoded. Logs:
 `GET $BASE/api/jobs/beta/jobs/{jobId}/logs?logType=stdOut` (`stdOut`, `stdErr`, `prepareOutput`,
 `complete`). In the UI, the **Results** tab of the Job lists the same files, and the completion
 email carries the last lines of stdout plus up to ten result files; custom report emails:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/customize-job-results
+https://docs.dominodatalab.com/en/6.1/user_guide/5b84c5/customize-job-result-views/
 
 ## Troubleshooting
 
@@ -160,8 +161,7 @@ https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/customize-
 ## Alternative: asynchronous endpoint
 
 For predictions that take minutes but still need an HTTP request/response contract, deploy the
-model as an **asynchronous Domino endpoint** and call it with the model access token (Public API,
-both specs):
+model as an **asynchronous Domino endpoint** and call it with the model access token (Public API):
 
 ```text
 POST /api/modelApis/async/v1/{asyncModelId}                       body {"parameters": {...}} -> {"asyncPredictionId"}
@@ -172,5 +172,5 @@ Request and response payloads are capped at 10 KB, so pass data by reference (a 
 name) and read and write it through a Data Source with the domino-data SDK (an endpoint needs a
 service-account token, see `domino-data-sdk`) rather than raw cloud credentials; Domino keeps a picked-up request alive for 30
 minutes. Python client with retries and polling:
-https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/async-example-client
+https://docs.dominodatalab.com/en/6.1/user_guide/64515c/example-python-client-asynchronous-domino-endpoint/
 Deploying the endpoint: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).

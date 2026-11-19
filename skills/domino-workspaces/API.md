@@ -1,6 +1,6 @@
 # Workspaces over the API
 
-The Public API has one Workspace route, `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (resume a stopped Workspace; both specs). Everything else below is the Domino Internal API that the UI calls: **non-public route; may change in a future Domino version**. On 6.3 confirm the bodies in your deployment's `/docs` (`openapi-internal.json`). python-domino has no Workspace methods.
+The Public API has one Workspace route, `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (resume a stopped Workspace; both specs). Everything else below is the Domino Internal API that the UI calls: **non-public route; may change in a future Domino version**. python-domino has no Workspace methods.
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
@@ -40,9 +40,8 @@ body = {
     "externalVolumeMounts": [],                        # required, may be empty
     "ssh": {"enabled": False},
     "persistence": {"persistPackages": False, "persistHomeDirectory": False},
-    # optional: "capacityType": "on-demand" | "spot", "overrideVolumeSizeGiB": 20, "netAppVolumeIds": [],
-    #           "datasetMountSelection": [{"datasetId": "<id>", "snapshotVersion": 3}],
-    #           "overrideMainGitRepoRef": {"type": "branch", "value": "main"},
+    # optional: "overrideVolumeSizeGiB": 20, "netAppVolumeIds": [],
+    #           "overrideMainGitRepoRef": {"type": "branches", "value": "main"},
     #           "computeClusterConfig": {...}            # see "Attach a cluster"
 }
 ws = requests.post(f"{base}/v4/workspace/project/{project_id}/workspace", json=body)   # non-public route; may change in a future Domino version
@@ -76,17 +75,17 @@ Add `computeClusterConfig` to the create or update body; the cluster environment
 
 ```python
 body["computeClusterConfig"] = {
-    "clusterType": "Ray",                                  # Spark | Ray | Dask | MPI | Slurm
+    "clusterType": "Ray",                                  # Spark | Ray | Dask | MPI
     "computeEnvironmentId": "<cluster environment id>",
     "computeEnvironmentRevisionSpec": "ActiveRevision",
     "workerCount": 1,                                      # "maxWorkerCount": 4 enables autoscaling
     "workerHardwareTierId": {"value": "small-k8s"},
-    "masterHardwareTierId": {"value": "small-k8s"},       # omit for MPI and Slurm
+    "masterHardwareTierId": {"value": "small-k8s"},       # omit for MPI
     # "workerStorage": {"value": 10, "unit": "GiB"},
 }
 ```
 
-The response's `configTemplate.computeClusterResponseProps` echoes the cluster; `GET .../{clusterType}/defaultComputeClusterSettings` returns the defaults the UI would use. For `Slurm` the cluster environment is the Slurm worker environment, `maxWorkerCount` is the partition ceiling and the Workspace itself runs the Slurm client environment on a tier of the Slurm-enabled data plane. The route accepts a tier on a plane without Slurm and the session then never starts, so check `status.supportsSlurm` first ([domino-hpc-slurm API.md](../domino-hpc-slurm/API.md#attach-a-slurm-cluster-to-a-workspace)).
+The response's `configTemplate.computeClusterResponseProps` echoes the cluster; `GET .../{clusterType}/defaultComputeClusterSettings` returns the defaults the UI would use.
 
 ## Not in any API
 

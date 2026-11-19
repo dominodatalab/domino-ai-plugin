@@ -1,6 +1,6 @@
 # Domino Flows: definitions, configuration, launching, monitoring
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/features/flows/define-flows, `.../launch-flows`, `.../monitor-flows`, `.../reproducibility-flows`, `.../advanced-flows` (the 6.3 pages are identical).
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/e09156/define-flows/, https://docs.dominodatalab.com/en/6.1/user_guide/113c96/launch-flows/, https://docs.dominodatalab.com/en/6.1/user_guide/dfe1ee/monitor-flows/, https://docs.dominodatalab.com/en/6.1/user_guide/338152/flows-reproducibility/, https://docs.dominodatalab.com/en/6.1/user_guide/c9731d/advanced-flows/.
 
 ## Two ways to declare a task
 
@@ -78,7 +78,7 @@ torch.save(model.state_dict(), "/workflow/outputs/model")
 
 R: `read.csv(file.path("/workflow", "inputs", "processed_data"))` and `write.csv(df, file.path("/workflow", "outputs", "processed_data"))`.
 
-Ints and floats arrive as text (`int(Path(...).read_text())`); `bool` as `True` or `False`. Data under `/mnt` works as in a Workspace: an `Input` or `Output` with a `path` under `/mnt/data/...` or `/mnt/netapp-volumes/...` is populated there for reading and propagated downstream for writing. If a stage imports a package from the project, set `PYTHONPATH` in the command (`bash -c 'PYTHONPATH=/mnt/code python /mnt/code/stages/train.py'`), as for any Job.
+Ints and floats arrive as text (`int(Path(...).read_text())`); `bool` as `True` or `False`. Task inputs and outputs live only under `/workflow/inputs` and `/workflow/outputs`. If a stage imports a package from the project, set `PYTHONPATH` in the command (`bash -c 'PYTHONPATH=/mnt/code python /mnt/code/stages/train.py'`), as for any Job.
 
 ## DominoJobConfig
 
@@ -88,24 +88,20 @@ Ints and floats arrive as text (`int(Path(...).read_text())`); `bool` as `True` 
 | `Title` | str | Job title; ignored for the cache version |
 | `CommitId` | str | DFS project: code commit; Git-based: artifacts commit |
 | `MainRepoGitRef` | `GitRef(Type="branches"\|"commitId"\|..., Value=...)` | Git-based projects: branch, tag or commit of the main repository |
-| `ResolvedMainRepoGitRef` | str | Resolved commit to use while tracking a floating reference |
-| `UseLatestGitRef` | bool (False) | True: floating refs re-resolve on relaunch; False: the first resolution is reused |
-| `ImportedGitRepoOverrides` | list of `ImportedGitRepoOverride(Name=, Ref=GitRef(...))` | Pin imported repositories per task (Git-based projects) |
 | `HardwareTierId` | str | Tier **id**, not name (for example `small-k8s`); ignored for the cache version |
 | `EnvironmentId` | str | Environment **id**, not name or revision |
 | `EnvironmentRevisionSpec` | `EnvironmentRevisionSpecification(EnvironmentRevisionType.SomeRevision, "<revisionId>")` | Pin a revision; the second argument is the revision **id** (a 24-character id), not the revision number shown in the UI |
 | `ComputeClusterProperties` | `ClusterProperties(ClusterType=ComputeClusterType.Dask, ComputeEnvironmentId=, WorkerHardwareTierId=, WorkerCount=, MaxWorkerCount=, WorkerStorageGiB=, MasterHardwareTierId=, ComputeEnvironmentRevisionSpec=, ExtraConfigs=)` | On-demand cluster for the task |
 | `VolumeSizeGiB` | float | Disk; ignored for the cache version |
 | `DatasetSnapshots` | list of `DatasetSnapshot(Id=, Version=)` | Snapshot version 1 or later only |
-| `NetAppVolumeSnapshots` | list of `NetAppVolumeSnapshot(Id=, Version=)` | Snapshot version 1 or later only |
 | `ExternalVolumeMountIds` | list of str | External data volumes |
 | `cache_ignore_vars` | tuple of str | Config arguments to leave out of the cache version |
 
-`GitRef(Type=, Value=)`, `ImportedGitRepoOverride`, `EnvironmentRevisionSpecification`, `EnvironmentRevisionType`, `DatasetSnapshot(Id=, Version=)`, `NetAppVolumeSnapshot(Id=, Version=)` and `ClusterProperties` are all importable from `flytekitplugins.domino.task`.
+`GitRef(Type=, Value=)`, `EnvironmentRevisionSpecification`, `EnvironmentRevisionType`, `DatasetSnapshot(Id=, Version=)` and `ClusterProperties` are all importable from `flytekitplugins.domino.task`.
 
 ### Complete config or `use_latest`
 
-`use_latest` on `DominoJobTask` and `use_project_defaults_for_omitted` on the helper both default to **False**. With False, the constructor raises `DominoFlyteException: The following fields are not defined: [...]` unless every one of these is set: `CommitId`, `HardwareTierId`, `EnvironmentId`, `EnvironmentRevisionSpec`, `VolumeSizeGiB`, `DatasetSnapshots`, `NetAppVolumeSnapshots`, `ExternalVolumeMountIds` (empty lists count as set) and, in a Git-based project, a `MainRepoGitRef` that is commit-pinned (or has `ResolvedMainRepoGitRef`, or `UseLatestGitRef=True`); a floating branch ref with `use_latest=False` raises. A `ComputeClusterProperties`, if given, needs `ComputeEnvironmentRevisionSpec` and `MasterHardwareTierId` (MPI excepted). With True, the omitted fields are read from the project defaults at launch. To see what the defaults resolve to, build the config in a Workspace and call `DominoJobConfig(Command="python train.py").resolve_job_properties()`; it prints the resolved values, which you can then paste in as pinned settings.
+`use_latest` on `DominoJobTask` and `use_project_defaults_for_omitted` on the helper both default to **False**. With False, the constructor raises `DominoFlyteException: The following fields are not defined: [...]` unless every one of these is set: `CommitId`, `HardwareTierId`, `EnvironmentId`, `EnvironmentRevisionSpec`, `VolumeSizeGiB`, `DatasetSnapshots`, `ExternalVolumeMountIds` (empty lists count as set) and, in a Git-based project, a `MainRepoGitRef` that is commit-pinned; a floating branch ref with `use_latest=False` raises. A `ComputeClusterProperties`, if given, needs `ComputeEnvironmentRevisionSpec` and `MasterHardwareTierId` (MPI excepted). With True, the omitted fields are read from the project defaults at launch. To see what the defaults resolve to, build the config in a Workspace and call `DominoJobConfig(Command="python train.py").resolve_job_properties()`; it prints the resolved values, which you can then paste in as pinned settings.
 
 ## DominoJobTask
 
@@ -113,16 +109,16 @@ Ints and floats arrive as text (`int(Path(...).read_text())`); `bool` as `True` 
 
 ## run_domino_job_task
 
-`flyte_task_name`, `command` (positional), then keyword-only: `job_title`, `use_project_defaults_for_omitted` (default False; see above), `dfs_repo_commit_id`, `main_git_repo_ref`, `resolved_main_git_repo_ref`, `use_latest_git_ref`, `imported_git_repo_overrides`, `environment_name` or `environment_id` (+ `environment_revision_id`), `hardware_tier_name` or `hardware_tier_id`, `inputs=[Input(...)]`, `output_specs=[Output(...)]`, `volume_size_gib`, `dataset_snapshots`, `netapp_volume_snapshots`, `external_data_volume_ids`, `compute_cluster_properties`, `cache`, `cache_version`, `cache_ignore_input_vars`, `retries`, `timeout`. Prefer ids over names: renaming an environment or tier would otherwise change what the flow resolves to.
+`flyte_task_name`, `command` (positional), then keyword-only: `job_title`, `use_project_defaults_for_omitted` (default False; see above), `dfs_repo_commit_id`, `main_git_repo_ref`, `environment_name` or `environment_id` (+ `environment_revision_id`), `hardware_tier_name` or `hardware_tier_id`, `inputs=[Input(...)]`, `output_specs=[Output(...)]`, `volume_size_gib`, `dataset_snapshots`, `external_data_volume_ids`, `compute_cluster_properties`, `cache`, `cache_version`, `cache_ignore_input_vars`, `retries`, `timeout`. Prefer ids over names: renaming an environment or tier would otherwise change what the flow resolves to.
 
-`Input(name, type, value, path=None)` (`value` is required: a literal, a workflow parameter or another task's output promise) and `Output(name, type, path=None)`; a `path` under `/mnt/data/...` or `/mnt/netapp-volumes/...` maps the file to the data location instead of `/workflow`.
+`Input(name, type, value)` (`value` is required: a literal, a workflow parameter or another task's output promise) and `Output(name, type)`.
 
 ## Finding ids
 
 Ids are deployment-specific; look them up rather than copying them from another cluster.
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: PAT or service-account token
+TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: service-account token (or a user API key in X-Domino-Api-Key)
 curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/hardwaretiers/v1/hardwaretiers?limit=100"   # id, name, resources
 curl -s -H "Authorization: Bearer $TOKEN" "$DOMINO_API_HOST/api/environments/beta/environments?limit=100"   # id, name
 ```
@@ -140,9 +136,9 @@ Run from a Workspace terminal or as a Job command on an environment built from t
 
 ## Re-run, recover, stop and archive
 
-UI (**Flows** > flow > version > run): **Re-run** starts a new run with a new name, a cache-overwrite choice, the same or new inputs, and per-task overrides of environment, hardware tier or Git reference; **Recover** resumes a run after a transient failure (timeout, capacity, spot pre-emption, server error), reusing finished outputs; **Rerun Node** re-executes one node with new inputs. All three use the run's registered definition; code changes go through the CLI.
+UI (**Flows** > flow > version > run): **Re-run** starts a new run with a new name, a cache-overwrite choice, and the same or new inputs; **Recover** resumes a run after a transient failure (timeout, capacity, spot pre-emption, server error), reusing finished outputs; **Rerun Node** re-executes one node with new inputs. All three use the run's registered definition; code changes go through the CLI.
 
-The same actions are Flyte API calls, documented at https://docs.domino.ai/cloud/reference/api/flyte/flyte-native-api (the routes below) and https://docs.domino.ai/cloud/reference/api/flyte/flyte-extensions-api (artifact routes). Run them from inside a Workspace or Job: `$FLYTE_PLATFORM_URL_HTTP` (`http://127.0.0.1:7180`) takes the REST routes with no auth header, and `$FLYTE_PLATFORM_URL` is the gRPC address `pyflyte` uses. From outside Domino, `<deployment URL>/flows/api/v1/...` accepts only the browser login and rejects Domino API tokens, so script these actions as a Job or from a Workspace terminal. The Flyte `project` is the Domino project id (`$DOMINO_PROJECT_ID`, also exported as `$FLYTE_DEFAULT_PROJECT`), the `domain` is `development`, and `name` is the run name shown in the UI.
+The same actions are standard Flyte Admin REST calls (https://docs.domino.ai/cloud/reference/api/flyte/flyte-native-api describes a later Domino version; if a route below returns 404, use the Flows UI for that action). Run them from inside a Workspace or Job: `$FLYTE_PLATFORM_URL_HTTP` (`http://127.0.0.1:7180`) takes the REST routes with no auth header, and `$FLYTE_PLATFORM_URL` is the gRPC address `pyflyte` uses. From outside Domino, `<deployment URL>/flows/api/v1/...` accepts only the browser login and rejects Domino API tokens, so script these actions as a Job or from a Workspace terminal. The Flyte `project` is the Domino project id (`$DOMINO_PROJECT_ID`, also exported as `$FLYTE_DEFAULT_PROJECT`), the `domain` is `development`, and `name` is the run name shown in the UI.
 
 | Action | Call (base `$FLYTE_PLATFORM_URL_HTTP`) |
 |--------|----------------------------------------|
@@ -169,7 +165,7 @@ Omit `name` on re-launch or recover and Flyte generates one. Each create call re
 Every launch serializes the flow structure, each task's job config (commit, environment revision, tier, snapshots) and the inputs; identical definitions reuse the version. For deterministic reruns:
 
 1. Replace `use_latest=True` with a complete config (the field list in "Complete config or `use_latest`" above); Example 3 in [EXAMPLES.md](./EXAMPLES.md) shows the full set.
-2. Read external data from a pinned Dataset or NetApp Volume snapshot (`DatasetSnapshots`, `NetAppVolumeSnapshots`); for anything else (a Data Source table, a bucket), snapshot it in a first task that copies it to an output.
+2. Read external data from a pinned Dataset snapshot (`DatasetSnapshots`); for anything else (a Data Source table, a bucket), snapshot it in a first task that copies it to an output.
 3. Write results only as outputs, never to a shared mutable location.
 
 ## Caching, subflows, approvals
@@ -180,7 +176,7 @@ Every launch serializes the flow structure, each task's job config (commit, envi
 
 ## Documented pitfalls
 
-- Version 0 of a Dataset or NetApp Volume cannot be mounted; take a snapshot first.
+- Version 0 of a Dataset cannot be mounted; take a snapshot first.
 - Outputs not written to `/workflow/outputs/<name>` fail the task.
 - A changed flow definition relaunched from the UI runs the old version; launch from the CLI.
 - Stopping a flow's Job in the Jobs UI stops the whole flow.

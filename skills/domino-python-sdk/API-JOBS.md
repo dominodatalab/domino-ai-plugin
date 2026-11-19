@@ -1,7 +1,7 @@
 # Domino Jobs API
 
 Start, list, inspect and poll Jobs with the Public API. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs.
+https://docs.dominodatalab.com/en/6.1/user_guide/e1c37a/monitor-jobs/.
 
 ## Authentication
 
@@ -29,11 +29,12 @@ Request body (`projectId` and `runCommand` are the only required fields):
 | `mainRepoGitRef` | object | `{"refType": "head" | "branches" | "tags" | "commitId", "value": "..."}` (`refType` required; `value` for all but `head`). The project-repository `defaultRef` uses a different set. `branches` runs on the branch; `branch` is accepted with 200 and the job then fails with `Unknown reference type` |
 | `externalVolumeMountIds` | string[] | External data volume ids |
 | `netAppVolumeIds` | string[] | NetApp volume ids; see [netapp-volumes](../netapp-volumes/API-NETAPP-VOLUMES.md) |
-| `snapshotDatasetsOnCompletion`, `snapshotNetAppVolumesOnCompletion` | boolean | Snapshot mounted datasets / volumes when the job ends. The NetApp flag depends on deployment configuration: where the feature flag `EnableDominoNetAppSnapshotsOnExecutionCompletion` is off the job is rejected with 400 |
-| `computeCluster` | object | `clusterType` (`dask`, `mpi`, `ray`, `slurm`, `spark`), `computeEnvironmentId`, `workerCount`, `workerHardwareTier` required; optional `masterHardwareTierId`, `maxWorkerCount`, `workerStorageMB`, `computeEnvironmentRevisionSpec` |
-| `capacityType` | string | |
+| `snapshotDatasetsOnCompletion` | boolean | Snapshot mounted datasets when the job ends. Domino 6.1 has no flag to snapshot NetApp volumes at job end; call `POST /remotefs/v1/snapshots` from the job's last step ([netapp-volumes](../netapp-volumes/API-NETAPP-VOLUMES.md#snapshots)) |
+| `computeCluster` | object | `clusterType` (`dask`, `mpi`, `ray`, `spark`), `computeEnvironmentId`, `workerCount`, `workerHardwareTier` required; optional `masterHardwareTierId`, `maxWorkerCount`, `workerStorageMB`, `computeEnvironmentRevisionSpec` |
 
-There is no `hardwareTierId`, `isDirectHardwareTierId` or `commandToRun` field. The
+There is no `hardwareTierId`, `isDirectHardwareTierId`, `commandToRun`, `capacityType` or
+`snapshotNetAppVolumesOnCompletion` field on Domino 6.1 (spot capacity and NetApp snapshots at
+job end need a later version). The
 server does not reject unknown fields or unknown tier ids:
 `"hardwareTierId": "medium-k8s"` and `"hardwareTier": "no-such-tier-k8s"` both return
 200 and the job runs on the project default tier. The Public job object does not report
@@ -184,7 +185,7 @@ POST /api/jobs/v1/projects/{projectId}/job-defaults
 
 Domino Cloud (6.4.0 and later) only. Send the fields you intend to post to
 `POST /api/jobs/v1/jobs` (all optional) and receive `jobDefaults` with the resolved
-hardware tier, environment, commit, dataset and NetApp snapshot pins. On Domino 6.3 there
+hardware tier, environment, commit, dataset and NetApp snapshot pins. On Domino 6.1 there
 is no public equivalent; the UI resolves defaults.
 
 ## Scheduled jobs
@@ -192,7 +193,7 @@ is no public equivalent; the UI resolves defaults.
 The Public API has no scheduled-jobs route and python-domino has no scheduled-job method.
 The UI's route, `POST /v4/projects/{projectId}/scheduledjobs` (non-public route; may change in a future Domino version), takes `command`, not `runCommand`.
 Routes, bodies and the pause recipe: [SCHEDULED-JOBS.md](../domino-jobs/SCHEDULED-JOBS.md);
-UI steps: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/schedule-a-job.
+UI steps: https://docs.dominodatalab.com/en/6.1/user_guide/5dce1f/schedule-jobs/.
 
 ## python-domino
 

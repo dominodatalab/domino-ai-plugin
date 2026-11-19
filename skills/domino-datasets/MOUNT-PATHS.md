@@ -3,9 +3,9 @@
 Where Domino mounts Datasets and snapshots in DFS and Git-based Projects, how to detect which
 layout applies, what is read-write, and how pinned snapshots and tags change the tree.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/use-datasets-and-snapshots
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/6942ab/use-datasets-and-snapshots/
 (section "Understand Dataset paths") and
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/version-data-with-snapshots.
+https://docs.dominodatalab.com/en/6.1/user_guide/dbdbff/version-data-with-snapshots/.
 
 ## Detect the layout
 

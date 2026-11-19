@@ -1,12 +1,10 @@
 # Operational monitoring of Domino endpoints
 
-Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/monitor-model-endpoints. This file covers serving health (CPU, memory, traffic, status codes, logs). Drift and model-quality monitoring is the `domino-model-monitoring` skill.
+Source: https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/monitor-model-endpoints. This file covers serving health (health checks, timeouts, status codes, logs). Drift and model-quality monitoring is the `domino-model-monitoring` skill.
 
 ## Where the metrics are
 
-1. **Endpoints** > select the endpoint > **Versions** > select a version.
-2. The version page shows CPU usage, memory consumption, traffic volume and the status-code distribution, per version, so you can compare versions after a release.
-3. Administrators also see a **Grafana** link that opens the **Model Endpoints** dashboard with the model ID and version pre-selected (or **Admin** > **Reports** > **Grafana** > **Dashboards** > **Model Endpoints**). Latency percentiles (P50/P90/P95/P99), upstream vs total time, authentication failures and alert rules live only there; the dashboard reference is https://docs.domino.ai/cloud/admin/operations/grafana-workload-monitoring/model-endpoint-monitoring. Non-admins ask an administrator for latency data or alerts.
+Domino 6.1 has no CPU, memory, traffic or status-code charts on the endpoint version page. Resource and latency metrics are in the platform's Grafana, which administrators reach under **Admin** > **Reports** > **Grafana**; non-admins ask an administrator for that data or for alerts. What every user can read: the version status, the **Logs** column and the **Tester** tab (below).
 
 ## What to watch
 
@@ -49,7 +47,7 @@ Open the **Logs** column for any version:
 Over the API: `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` (optional `buildId`, `sinceTimeNano`), `.../exportLogs`, `.../instanceLogs` (optional `podName`, `containerName`, `sinceTimeNano`, `tail`, `maxResults`). Each instance-log entry is `{timestamp, timeNano, log, streamType, tags[{key, value}]}`, and the pod has two containers: the model container (tag `kubernetes.container_name` starting with `model-`) and the `istio-proxy` sidecar.
 
 ```bash
-TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: PAT or service-account token
+TOKEN=$(curl -s http://localhost:8899/access-token)   # outside a run: a service-account token, or send X-Domino-Api-Key instead
 curl -s -H "Authorization: Bearer $TOKEN" \
   "$DOMINO_API_HOST/api/modelServing/v1/modelApis/$MODEL_ID/versions/$VERSION_ID/instanceLogs?maxResults=3000"
 ```
@@ -61,7 +59,7 @@ Fetch **without** `tail` and with a large `maxResults`, then keep the model-cont
 1. Confirm the version is **Running** and stays there (Versions tab; start it from the Actions menu if stopped). A status that alternates between `Running` and `Starting`, or a 503 from the prediction URL, means the container crash-loops: read the instance logs for `Traceback` and `no app loaded`. The usual cause is a file the function loads that was not in the Project commit; sync or commit it and publish a new version ("Health check after publishing" in [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md)).
 2. Reproduce with the **Tester** tab; a 400 usually means the request shape does not match the function signature (see "Request JSON" in [DEPLOY-ENDPOINT.md](./DEPLOY-ENDPOINT.md)).
 3. Read the instance logs around the failure time for the traceback.
-4. Compare CPU and memory with the previous version; a regression after a release points at the new code or a larger model.
+4. Ask an administrator for CPU and memory of this version against the previous one (Grafana); a regression after a release points at the new code or a larger model.
 5. For slow requests: check whether the model loads inside the function (it should be module-level), the input size, and whether the tier is CPU-bound. Raising the request timeout is a stopgap, not a fix.
 6. For memory growth: look for per-request caches or appended lists; `tracemalloc` snapshots printed periodically show current and peak usage in the instance logs.
 

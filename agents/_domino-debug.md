@@ -41,7 +41,6 @@ other hosts open `skills/<skill-name>/SKILL.md` in the plugin directory.
 | Dataset or NetApp volume path missing or read-only | `domino-datasets`, `netapp-volumes` | `MOUNT-PATHS.md`, `TROUBLESHOOTING.md` |
 | 401, 403 or 404 from a Domino API call; wrong host; pagination | `domino-api-intro` | `ERRORS.md`, `HOSTS.md` |
 | Spark, Ray or Dask cluster won't attach | `domino-distributed-computing` | `SKILL.md` |
-| Slurm option disabled in the Workspace launcher; a Workspace with a Slurm cluster stuck in Pending (`slurm-jwt-secret` FailedMount); Slurm jobs stay pending; HPC Job output missing | `domino-hpc-slurm` | the troubleshooting section of `SKILL.md` |
 
 ## Where the evidence is
 
@@ -53,15 +52,14 @@ Domino and which project this is, and `search_domino` and `query_docs_filesystem
 the Public API spec for Domino 6.3 and Domino Cloud except where labelled internal, authenticating
 as `domino-api-intro` says:
 inside a Domino execution call `$DOMINO_API_PROXY/<path>` with no auth header; outside (laptop,
-CI), send a Personal Access Token or service account token as `Authorization: Bearer`. Never use
-legacy API keys.
+CI), send a service account token as `Authorization: Bearer`, or a user API key as `X-Domino-Api-Key`.
 
 | Workload | In the Domino UI | API |
 | --- | --- | --- |
-| Job | Jobs, select the Job, **Logs** tab: Setup Output, User Output, Deployment Logs, Support Bundle ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/monitor-jobs)) | `GET /api/jobs/beta/jobs/{jobId}` for status, `GET /api/jobs/beta/jobs/{jobId}/logs` for logs |
+| Job | Jobs, select the Job, **Logs** tab: Setup Output, User Output, Deployment Logs, Support Bundle ([docs](https://docs.dominodatalab.com/en/6.1/user_guide/e1c37a/monitor-jobs/)) | `GET /api/jobs/beta/jobs/{jobId}` for status, `GET /api/jobs/beta/jobs/{jobId}/logs` for logs |
 | App | The App's details page, logs per version and per instance ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/operate)) | `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`, then `.../instances/{instanceId}/logs` |
 | Model API | The Model API version's build and instance logs | `GET /api/modelServing/v1/modelApis/{modelApiId}/versions/{modelApiVersionId}/buildLogs` and `.../instanceLogs` |
-| Workspace | Workspaces, select the Workspace, **Logs** ([docs](https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/view-workspace-details)) | No Public API route; non-public route, may change in a future Domino version: `GET /v4/workspace/project/{projectId}/workspace/{workspaceId}/sessions` for the session id, then `GET /v4/workspace/{projectId}/{sessionId}/logs` (or `.../realTimeLogs`) |
+| Workspace | Workspaces, select the Workspace, **Logs** ([docs](https://docs.dominodatalab.com/en/6.1/user_guide/164503/view-workspace-details/)) | No Public API route; non-public route, may change in a future Domino version: `GET /v4/workspace/project/{projectId}/workspace/{workspaceId}/sessions` for the session id, then `GET /v4/workspace/{projectId}/{sessionId}/logs` (or `.../realTimeLogs`) |
 | Environment build | Environments, the environment's **Revisions** tab, the revision's build log | No Public or Internal API route; web UI routes (non-public route; may change in a future Domino version; [route types](../skills/domino-api-intro/SKILL.md#route-types)): `GET /environments/{environmentId}/json/paged/0/20` gives `buildLogsUrl` per revision, then `GET .../fetchBuildLogsSince?podName=all&containerName=all&tail=true` returns HTML log rows; parsing snippet in [domino-environments API.md](../skills/domino-environments/API.md#build-logs) |
 
 ## How to work

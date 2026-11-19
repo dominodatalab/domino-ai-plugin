@@ -1,12 +1,12 @@
 ---
 name: domino-launchers
 description: Create and run Domino Launchers - self-service web forms that pass text, select, multi-select, date, checkbox and uploaded-file inputs to a script that runs as a Domino Job. Covers the launcher wizard, the command placeholder syntax, how arguments reach the script, result files and email delivery, roles, and finding launcher runs through the Jobs API. Use when building self-service reports, batch scoring forms, or data-product UIs for non-technical users.
-compatibility: Domino 6.3 and Domino Cloud. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a Personal Access Token.
+compatibility: Domino 6.1. Requires DOMINO_API_HOST; in a run use DOMINO_API_PROXY or the localhost:8899 access-token endpoint, outside a run a service-account token (Bearer) or a user API key.
 ---
 
 # Domino Launchers
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
 A Launcher is a web form built in the Domino UI. When a consumer submits it, Domino starts a **Job** with the form values substituted into a command line, so every run is tracked, reproducible and auditable like any other Job. Results reach the consumer by email and through the Jobs dashboard. Launchers are defined in the UI wizard or through the Launchers web UI routes ("API" below); there is no YAML or file-based launcher definition and no Public API route.
 
@@ -42,15 +42,15 @@ Launcher output is Job output: every file the script creates or modifies is capt
 - Everyone on the launcher's notification list receives the email; the run also appears in **Jobs** with its inputs and results.
 - Notebooks: a command that names an `.ipynb` file executes the notebook and saves it; use `jupyter nbconvert` in a wrapper script for HTML or PDF.
 
-Details and patterns: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/jobs/customize-job-results and [EXAMPLES.md](./EXAMPLES.md).
+Details and patterns: https://docs.dominodatalab.com/en/6.1/user_guide/5b84c5/customize-job-result-views/ and [EXAMPLES.md](./EXAMPLES.md).
 
 ## Run a Launcher
 
-Consumers open **Deployments > Launchers**, click the launcher, fill in the form and run it. Collaborators with the **Contributor** or **Launcher User** role can run launchers; **Results Consumers** can only view results. Grant the role under Project **Settings > Access and Sharing** or with the Public API, `POST /api/projects/v1/projects/{projectId}/collaborators` `{"id": "<user id>", "role": "launcherUser"}` (6.3 and Cloud; `GET /api/users/v1/self` and the user routes give ids; details in [domino-projects](../domino-projects/SKILL.md)).
+Consumers open **Deployments > Launchers**, click the launcher, fill in the form and run it. Collaborators with the **Contributor** or **Launcher User** role can run launchers; **Results Consumers** can only view results. Grant the role under Project **Settings > Access and Sharing** or with the Public API, `POST /api/projects/v1/projects/{projectId}/collaborators` `{"id": "<user id>", "role": "launcherUser"}` (`GET /api/users/v1/self` and the user routes give ids; details in [domino-projects](../domino-projects/SKILL.md)).
 
 ## Copy a Launcher between Projects
 
-Open the launcher, click the gear icon > **Edit** > **Switch to JSON Edit Mode** to view or paste the JSON definition. This editor exists only on self-managed deployments; on Domino Cloud rebuild the launcher in the wizard.
+Open the launcher, click the gear icon > **Edit** > **Switch to JSON Edit Mode** to view or paste the JSON definition.
 
 ## API
 

@@ -93,4 +93,4 @@ proa build --locked --profile dist --artifact-out "target/proa-dist/$bin"
 out="target/proa-dist/$bin"
 ```
 
-`proa build` first checks the formatting of Proa's template macros and can stop on a difference, so run `proa fmt` and commit before building (`proa fmt --check` reports without writing). It then runs Cargo twice, so a cold build takes about twice as long as `cargo build`: over ten minutes for a small site on an 8-core hardware tier. Keep `--artifact-out` under `target/`: a path elsewhere in the project slows rebuilds. Publish and roll back as for any build in this skill ([APP.md](./APP.md#how-the-binary-is-shipped)).
+`proa build` first checks the formatting of Proa's template macros and can stop on a difference, so run `proa fmt` and commit before building (`proa fmt --check` reports without writing). It then runs Cargo twice, so a cold build takes about twice as long as `cargo build`: over ten minutes for a small site on an 8-core hardware tier. Keep `--artifact-out` under `target/`: a path elsewhere in the project slows rebuilds. Publish as for any build in this skill ([APP.md](./APP.md#how-the-binary-is-shipped)).

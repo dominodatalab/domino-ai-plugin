@@ -1,14 +1,14 @@
 //! Who the viewer is, and calls to the Domino API as the viewer or as the App's publisher.
 //!
-//! - **Identity.** Domino authenticates every request before it reaches the App and forwards the
-//!   viewer's token as `Authorization: Bearer <jwt>`; its `preferred_username` claim names the viewer.
-//!   The `domino-username` header is a convenience copy that Apps with extended identity propagation
-//!   do not receive, and there a client can send its own, so the token comes first.
-//! - **Viewer calls.** Without extended identity propagation the token only identifies the viewer and
-//!   most Domino routes reject it. With it (the App is published with it on, and the viewer consented)
-//!   the token is the viewer's own credential with their full permissions.
-//! - **Publisher calls.** `DOMINO_API_PROXY` adds the publisher's token to any request sent without
-//!   an `Authorization` header.
+//! - **Identity.** Domino authenticates every request before it reaches the App and passes the
+//!   viewer's username in the `domino-username` header. When the deployment setting
+//!   `SecureIdentityPropagationToAppsEnabled` is on, it also forwards a token for the viewer as
+//!   `Authorization: Bearer <jwt>`, whose `preferred_username` claim names the viewer; the token
+//!   comes first when present.
+//! - **Publisher calls** (the default). `DOMINO_API_PROXY` adds the publisher's token to any
+//!   request sent without an `Authorization` header.
+//! - **Viewer calls.** Acting for viewers is not available on Domino 6.1: the token only identifies
+//!   the viewer and Domino API routes reject it.
 //!
 //! The App chooses per call. Tokens are never logged.
 
@@ -30,8 +30,7 @@ pub enum NameSource {
 /// The viewer's Domino username from the forwarded token's `preferred_username` claim, or from the
 /// `domino-username` header when the request carries no token. Domino checked the token before
 /// forwarding the request; this function does not verify its signature itself. For decisions that
-/// grant access, verify the token, or, on an App with extended identity propagation, call the Domino
-/// API as the viewer; without it Domino rejects the viewer's token on most routes.
+/// grant access, verify the token.
 #[must_use]
 pub fn viewer_name(headers: &HeaderMap) -> Option<(String, NameSource)> {
     if let Some(token) = bearer(headers) {
@@ -49,11 +48,11 @@ pub fn viewer_name(headers: &HeaderMap) -> Option<(String, NameSource)> {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Identity {
-    /// The person viewing the App (needs extended identity propagation for most routes).
-    #[default]
-    Viewer,
     /// The person who published the App.
+    #[default]
     Publisher,
+    /// The person viewing the App (Domino 6.1 rejects the viewer's token on API routes).
+    Viewer,
 }
 
 /// An error to return to the browser: a status and a message that says what to fix.
@@ -62,8 +61,8 @@ pub type ApiError = (StatusCode, String);
 const NO_VIEWER_TOKEN: &str = "No viewer token: open the App through Domino. If it was, secure \
      identity propagation is off on this deployment.";
 
-const VIEWER_REJECTED: &str = " Without extended identity propagation, most Domino API routes reject \
-     the viewer's token.";
+const VIEWER_REJECTED: &str = " Domino 6.1 rejects the viewer's token on API routes; call as the \
+     publisher (drop ?as=viewer).";
 
 /// Domino API client configured from `DOMINO_API_HOST` and `DOMINO_API_PROXY`.
 #[derive(Clone)]

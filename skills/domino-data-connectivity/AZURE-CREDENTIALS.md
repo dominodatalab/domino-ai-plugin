@@ -11,7 +11,7 @@ package, published as a Professional Services blueprint.
   (`AD-User-README.md`, `advanced-credential-propagation/azure-ad-user-tokens/README.md`)
 - Blueprints index on docs.domino.ai: https://docs.domino.ai/cloud/examples/blueprints
 
-Applies to self-managed Domino 6.3, where your team administers Keycloak at
+Applies to self-managed Domino 6.1, where your team administers Keycloak at
 `https://<domino-domain>/auth/`. On Domino Cloud, request it through Domino Support. For
 service (non-user) identities, the companion "Azure authorization" blueprint
 (https://domino.ai/resources/blueprints/azure-authorization, code in

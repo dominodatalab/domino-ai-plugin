@@ -35,17 +35,19 @@ from mcp.server.mcpserver.exceptions import ToolError
 # ---------------------------------------------------------------------------------------------
 
 # Variables the server reads for its own configuration (not the ones Domino injects).
-_CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_MCP_ENV_FILE",
-                "DOMINO_INSECURE_HTTP", "CLAUDE_PLUGIN_OPTION_DOMINO_HOST",
-                "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN")
+_CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_USER_API_KEY",
+                "DOMINO_MCP_ENV_FILE", "DOMINO_INSECURE_HTTP", "CLAUDE_PLUGIN_OPTION_DOMINO_HOST",
+                "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY")
 
 # Values a host collects in its own settings UI and passes under these names (Claude Code plugin
-# options: `${user_config.domino_host}`, `${user_config.domino_token}`). They take precedence over
-# DOMINO_HOST and DOMINO_TOKEN from the environment, which take precedence over the env file.
+# options: `${user_config.domino_host}`, `${user_config.domino_token}`,
+# `${user_config.domino_api_key}`). They take precedence over the same variables from the
+# environment, which take precedence over the env file.
 _PLUGIN_OPTIONS = (("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", "DOMINO_HOST"),
-                   ("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "DOMINO_TOKEN"))
+                   ("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "DOMINO_TOKEN"),
+                   ("CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY", "DOMINO_API_KEY"))
 
-# Where DOMINO_HOST and DOMINO_TOKEN came from, for get_domino_environment_info.
+# Where DOMINO_HOST, DOMINO_TOKEN and DOMINO_API_KEY came from, for get_domino_environment_info.
 _CONFIG_SOURCES: Dict[str, str] = {}
 
 
@@ -129,7 +131,12 @@ def _env_file_path() -> Path:
 
 def _load_environment() -> None:
     """Import-time environment handling, in order: placeholders, plugin options, ancestor
-    recovery, env file. Records where DOMINO_HOST and DOMINO_TOKEN came from."""
+    recovery, env file. Records where DOMINO_HOST, DOMINO_TOKEN and DOMINO_API_KEY came from.
+
+    DOMINO_USER_API_KEY (python-domino's name for the user API key) fills DOMINO_API_KEY when that
+    is unset.
+    """
+    names = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_USER_API_KEY")
     _drop_unset_placeholders(os.environ)
     _CONFIG_SOURCES.clear()
     for option, name in _PLUGIN_OPTIONS:
@@ -138,19 +145,19 @@ def _load_environment() -> None:
             os.environ[name] = value
             _CONFIG_SOURCES[name] = "plugin options"
     _recover_domino_env()
-    for name in ("DOMINO_HOST", "DOMINO_TOKEN"):
+    for name in names:
         if os.environ.get(name) and name not in _CONFIG_SOURCES:
             _CONFIG_SOURCES[name] = "environment"
     env_file = _env_file_path()
     load_dotenv(env_file, override=False)
     _drop_unset_placeholders(os.environ)
-    for name in ("DOMINO_HOST", "DOMINO_TOKEN"):
+    for name in names:
         if os.environ.get(name) and name not in _CONFIG_SOURCES:
             _CONFIG_SOURCES[name] = f"env file {env_file}"
-    if os.environ.get("DOMINO_API_KEY") and not os.environ.get("DOMINO_TOKEN"):
-        print("domino_mcp_server: DOMINO_API_KEY is set but legacy API keys are not supported by "
-              "this server. Set DOMINO_TOKEN to a Personal Access Token or service account token.",
-              file=sys.stderr)
+    alias_source = _CONFIG_SOURCES.pop("DOMINO_USER_API_KEY", None)
+    if alias_source and not os.environ.get("DOMINO_API_KEY"):
+        os.environ["DOMINO_API_KEY"] = os.environ["DOMINO_USER_API_KEY"]
+        _CONFIG_SOURCES["DOMINO_API_KEY"] = f"{alias_source} (DOMINO_USER_API_KEY)"
 
 
 _load_environment()
@@ -169,14 +176,16 @@ def _auth_help() -> str:
         "Outside a Domino Workspace or Job this server needs your Domino URL and a token. "
         "(1) DOMINO_HOST: the address you open Domino at in the browser, for example "
         "https://domino.example.com. "
-        "(2) DOMINO_TOKEN: in Domino, Account > Account settings > Personal Access Token > Generate "
-        "new Token (a service account token also works; legacy API keys do not). "
-        "(3) Give both to the server: Claude Code asks for them when the plugin is enabled (change "
-        "them under /plugin > Installed > dominodatalab > Configure options); Gemini CLI asks at "
-        "install (change them with `gemini extensions config dominodatalab`); every other host, "
-        f"including Codex, Cursor and Antigravity, reads them from the env file {_env_file_path()} "
-        "as DOMINO_HOST=... and DOMINO_TOKEN=... lines (chmod 600). Then start a new session. Inside a Domino Workspace or Job nothing is needed. See "
-        "https://docs.domino.ai/cloud/reference/api/domino-api-authentication."
+        "(2) DOMINO_TOKEN: a Domino service account token (only an administrator can create one), "
+        "sent as a bearer token. Without one, use DOMINO_API_KEY: your user API key from your "
+        "Domino account settings (DOMINO_USER_API_KEY is also read), sent as X-Domino-Api-Key. "
+        "(3) Give them to the server: Claude Code asks for the URL, token and API key when the "
+        "plugin is enabled (change them under /plugin > Installed > dominodatalab > Configure "
+        "options); Gemini CLI asks at install (change them with `gemini extensions config "
+        "dominodatalab`); every other host, including Codex, Cursor and Antigravity, reads them "
+        f"from the env file {_env_file_path()} as DOMINO_HOST=... and DOMINO_TOKEN=... or "
+        "DOMINO_API_KEY=... lines (chmod 600). Then start a new session. Inside a Domino Workspace or Job nothing is needed. See "
+        "https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/."
     )
     legacy_dotenv = Path(__file__).resolve().parent / ".env"
     if legacy_dotenv.is_file():
@@ -220,59 +229,69 @@ def _get_domino_host() -> str:
 _TOKEN_BAD_CHARS = re.compile(r"[\s\x00-\x1f\x7f]")
 
 
-def _get_token() -> str | None:
-    """DOMINO_TOKEN, stripped of surrounding whitespace; None when unset.
+def _get_secret(name: str) -> str | None:
+    """Environment variable `name`, stripped of surrounding whitespace; None when unset.
 
     Rejects a value with inner whitespace or control characters without echoing it, because
     `requests` would otherwise include the header value in its exception text.
     """
-    raw = os.environ.get("DOMINO_TOKEN")
+    raw = os.environ.get(name)
     if raw is None:
         return None
-    token = raw.strip()
-    if not token:
+    value = raw.strip()
+    if not value:
         return None
-    if _TOKEN_BAD_CHARS.search(token):
-        raise DominoError("DOMINO_TOKEN contains whitespace or control characters inside the value; "
-                          "paste the token on one line with nothing else (the value is not shown here).")
-    return token
+    if _TOKEN_BAD_CHARS.search(value):
+        raise DominoError(f"{name} contains whitespace or control characters inside the value; "
+                          "paste it on one line with nothing else (the value is not shown here).")
+    return value
+
+
+def _get_token() -> str | None:
+    """DOMINO_TOKEN (service account token); None when unset."""
+    return _get_secret("DOMINO_TOKEN")
+
+
+def _get_api_key() -> str | None:
+    """DOMINO_API_KEY (user API key), used only when DOMINO_TOKEN is unset; None when unset."""
+    return _get_secret("DOMINO_API_KEY")
 
 
 def _get_auth_headers() -> Dict[str, str]:
     """Authentication headers for Domino API calls.
 
     Inside a Domino execution: none; the API proxy adds the user's token. Outside: DOMINO_TOKEN
-    (Personal Access Token or service account token) as a bearer. Legacy API keys
-    (DOMINO_API_KEY, X-Domino-Api-Key) are deprecated by Domino and not sent by this server.
+    (service account token) as a bearer, else DOMINO_API_KEY (user API key) as X-Domino-Api-Key.
     """
     if _is_domino_workspace():
         return {}
     token = _get_token()
     if token:
         return {"Authorization": f"Bearer {token}"}
-    if os.environ.get("DOMINO_API_KEY"):
-        raise DominoError("DOMINO_API_KEY is set, but legacy API keys (X-Domino-Api-Key) are "
-                          "deprecated by Domino and not supported by this server. " + _auth_help())
-    raise DominoError("DOMINO_TOKEN is not set. " + _auth_help())
+    key = _get_api_key()
+    if key:
+        return {"X-Domino-Api-Key": key}
+    raise DominoError("Neither DOMINO_TOKEN nor DOMINO_API_KEY is set. " + _auth_help())
 
 
 def _auth_mode() -> str:
     if _is_domino_workspace():
         return "api_proxy"
     try:
-        return "bearer_token" if _get_token() else "none"
+        if _get_token():
+            return "bearer_token"
+        return "api_key" if _get_api_key() else "none"
     except DominoError:
         return "invalid_token"
 
 
 def _redact(text: str) -> str:
-    """Remove the bearer token from any text that may reach the model or a log."""
-    try:
-        token = _get_token()
-    except DominoError:
-        token = (os.environ.get("DOMINO_TOKEN") or "").strip() or None
-    if token:
-        text = text.replace(token, "<redacted>")
+    """Remove the bearer token and API key from any text that may reach the model or a log."""
+    for name in ("DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_USER_API_KEY"):
+        secret = (os.environ.get(name) or "").strip()
+        if secret:
+            text = text.replace(secret, "<redacted>")
+    text = re.sub(r"(?i)(x-domino-api-key['\"]?\s*[:=]\s*['\"]?)[^\s'\"]+", r"\1<redacted>", text)
     return re.sub(r"(?i)bearer\s+[^\s'\"]+", "Bearer <redacted>", text)
 
 
@@ -350,10 +369,9 @@ def _describe_http_error(method: str, path: str, resp: requests.Response) -> str
     if detail:
         message += f": {detail}"
     if resp.status_code in (401, 403) and not _is_domino_workspace():
-        message += ". Check that DOMINO_TOKEN is a valid, unexpired Personal Access Token or " \
-                   "service account token for DOMINO_HOST and that the token's user can access " \
-                   "this project; a new token comes from Account > Account settings > Personal " \
-                   "Access Token in Domino."
+        message += ". Check that DOMINO_TOKEN is a valid, unexpired service account token (or " \
+                   "DOMINO_API_KEY a current user API key) for DOMINO_HOST and that its user can " \
+                   "access this project."
     return _redact(message)
 
 
@@ -611,9 +629,27 @@ def _require_dfs_project(user_name: str, project_name: str) -> Dict[str, Any]:
     return info
 
 
-def _latest_commit_id(project_id: str) -> str:
-    body = _api_json("GET", f"/api/projects/beta/projects/{project_id}/commits/latest") or {}
-    commit = body.get("commitId")
+def _latest_commit_from_list(user_name: str, project_name: str) -> str:
+    """Head commit from the legacy commit list, for deployments without commits/latest (6.1).
+
+    The route returns a JSON array of commit-id strings, newest first.
+    """
+    path = f"/v1/projects/{urllib.parse.quote(user_name, safe='')}/{urllib.parse.quote(project_name, safe='')}/commits"
+    entries = _api_json("GET", path)
+    if not isinstance(entries, list) or not entries or not isinstance(entries[0], str):
+        raise DominoError(f"GET {path} returned no commits for {user_name}/{project_name}")
+    return entries[0]
+
+
+def _latest_commit_id(project_id: str, user_name: str, project_name: str) -> str:
+    resp = _api("GET", f"/api/projects/beta/projects/{project_id}/commits/latest", allow=(404,))
+    if resp.status_code == 404:
+        return _latest_commit_from_list(user_name, project_name)
+    try:
+        body = resp.json() or {}
+    except ValueError:
+        body = {}
+    commit = body.get("commitId") if isinstance(body, dict) else None
     if not commit:
         raise DominoError(f"Could not read the latest commit of project {project_id}")
     return commit
@@ -675,7 +711,7 @@ def _read_state(user_name: str, project_name: str, path: str, project_id: str) -
     for a missing path). Any other failure raises, so nothing is ever written over a file that
     could not be read.
     """
-    commit_id = _latest_commit_id(project_id)
+    commit_id = _latest_commit_id(project_id, user_name, project_name)
     resp = _read_remote_file(project_id, commit_id, path)
     if resp.status_code == 200:
         raw = resp.content
@@ -808,7 +844,7 @@ def _pin_commit_for_recent_writes(user_name: str, project_name: str, info: Dict[
                           f"project's latest commit yet, so the Job would start without them. Retry "
                           f"run_domino_job in a minute, or pass commit_id of a commit that has them.")
     project_id = info["id"]
-    latest = _latest_commit_id(project_id)
+    latest = _latest_commit_id(project_id, user_name, project_name)
     confirmed = sorted((entry["written_at"], entry["commit_id"]) for _, entry in writes if entry.get("commit_id"))
     if confirmed and latest == confirmed[-1][1]:
         return latest
@@ -1331,18 +1367,15 @@ def get_domino_environment_info() -> Dict[str, Any]:
         info["is_git_based"] = None
         info["is_dfs_project"] = None
         if info["auth_mode"] == "none":
-            info["error"] = info.get("error") or ("DOMINO_TOKEN is not set. " + _auth_help())
+            info["error"] = info.get("error") or ("Neither DOMINO_TOKEN nor DOMINO_API_KEY is set. " + _auth_help())
         elif info["auth_mode"] == "invalid_token":
             try:
-                _get_token()
+                _get_auth_headers()
             except DominoError as e:
                 info["error"] = str(e)
-        if os.environ.get("DOMINO_API_KEY"):
-            info["warning"] = ("DOMINO_API_KEY is set but legacy API keys are not supported by this "
-                               "server; set DOMINO_TOKEN instead.")
         info["credential_sources"] = {name: _CONFIG_SOURCES.get(name, "not set")
-                                      for name in ("DOMINO_HOST", "DOMINO_TOKEN")}
-        if info["domino_host"] and info["auth_mode"] == "bearer_token":
+                                      for name in ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY")}
+        if info["domino_host"] and info["auth_mode"] in ("bearer_token", "api_key"):
             info["connection"] = _check_connection()
         info["note"] = ("Running outside Domino. Take the project owner, project name and the "
                         "DFS setting from the user or from domino_project_settings.md.")

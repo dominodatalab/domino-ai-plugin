@@ -46,9 +46,11 @@ async function predict(req, res) {
   res.writeHead(upstream.status, { 'Content-Type': 'application/json' }).end(await upstream.text())
 }
 
-// GET api/projects -> the Domino API as the viewer: forward the request's token. Never retry without it:
-// $DOMINO_API_HOST runs a call without Authorization as the publisher. Most routes accept the viewer's
-// token only when the App version has extended identity propagation.
+// GET api/projects -> example of forwarding the viewer's token, which arrives only when the deployment
+// setting SecureIdentityPropagationToAppsEnabled is on. Never retry without it: $DOMINO_API_HOST runs a
+// call without Authorization as the publisher. Domino 6.1 rejects the viewer's token on API routes, so
+// for real data call $DOMINO_API_PROXY with no Authorization header (the publisher) and scope the result
+// by the viewer's username (the domino-username header).
 async function projects(req, res) {
   const auth = req.headers.authorization
   if (!auth?.startsWith('Bearer ') || !auth.slice(7).trim()) return json(res, 401, { error: 'no viewer token' })

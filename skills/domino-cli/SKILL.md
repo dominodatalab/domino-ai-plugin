@@ -1,17 +1,16 @@
 ---
 name: domino-cli
-description: Use the Domino command-line client (domino login, run, create, init, get, restore, sync, upload, download, download-results, upload-dataset, create-snapshot, create-dataset-from-snapshot, help, version) and the Domino R package (library(domino) with domino.login, domino.get, domino.run, domino.download, domino.sync, domino.init, domino.upload) that wraps it. Covers installing the CLI graphically or headless on Linux, signing in with a browser or the device-code flow over SSH, working on a Domino File System project from a laptop, large uploads to Datasets, downloading run results, moving a project between deployments, force-restoring a broken local project, and proxy settings in domino.vmoptions. Use when the user mentions the Domino CLI, a `domino` shell command, syncing project files from a laptop, the Domino R package, or running Domino jobs from R or a terminal. Not the `dom` SSH tool kit and not python-domino.
-compatibility: Domino 6.3 and Domino Cloud. CLI builds older than 6.2.3 can no longer sign in; download the installer from the deployment you use. The R package (CRAN domino 0.3.1, 2017) shells out to the installed CLI and is documented as possibly outdated.
+description: Use the Domino command-line client (domino login, run, create, init, get, restore, sync, upload, download, download-results, upload-dataset, create-snapshot, create-dataset-from-snapshot, help, version) and the Domino R package (library(domino) with domino.login, domino.get, domino.run, domino.download, domino.sync, domino.init, domino.upload) that wraps it. Covers installing the CLI graphically or headless on Linux, signing in with an authorization code from the /authorizeCli page, working on a Domino File System project from a laptop, large uploads to Datasets, downloading run results, moving a project between deployments, force-restoring a broken local project, and proxy settings in domino.vmoptions. Use when the user mentions the Domino CLI, a `domino` shell command, syncing project files from a laptop, the Domino R package, or running Domino jobs from R or a terminal. Not the `dom` SSH tool kit and not python-domino.
+compatibility: Domino 6.1. Download the CLI installer from the deployment you use. The R package (CRAN domino 0.3.1, 2017) shells out to the installed CLI and is documented as possibly outdated.
 ---
 
 # Domino CLI and R package
 
-Applies to Domino 6.3 and Domino Cloud.
+Applies to Domino 6.1.
 
-Product pages: https://docs.domino.ai/cloud/reference/cli (index, install, reference, download
+Product pages: https://docs.dominodatalab.com/en/6.1/user_guide/30b067/domino-cli/ (index, install, reference, download
 files, force-restore, move a project, proxy) and
-https://docs.domino.ai/cloud/reference/r-package/domino-r-package. The 6.3 pages are the same
-content under `/6.3/`.
+https://docs.domino.ai/cloud/reference/r-package/domino-r-package.
 
 ## What it is, and what it is not
 
@@ -31,15 +30,14 @@ The CLI is a Java application (the headless install needs a JRE); it keeps its p
    for admin credentials; cancel and add `/Applications/domino` to `PATH` yourself if you lack
    them). Headless Linux:
    `apt install openjdk-8-jre-headless`, `wget https://<domino-url>/download/client/unix -O /tmp/domino-install-unix.sh`, `sh /tmp/domino-install-unix.sh`.
-2. Close and reopen the terminal, then `domino login https://<your-domino-url>`. The CLI opens
-   a browser to the Domino sign-in page and receives the authorization itself.
-3. No browser on this machine (SSH, a Workspace)? `domino login --device https://<your-domino-url>`
-   prints a verification URL and a short code; open it on any device, sign in, **Grant Access**.
-   The code expires quickly; rerun the command for a new one.
+2. Close and reopen the terminal, then `domino login https://<your-domino-url>`. The CLI asks
+   for an authorization code.
+3. Open `https://<your-domino-url>/authorizeCli` in a browser on any device (sign in if asked),
+   copy the code it shows, paste it at the prompt and press Enter; the CLI prints that the login
+   succeeded. This works the same over SSH or in a Workspace.
 
-A CLI older than 6.2.3 uses a retired authentication client and cannot log in; reinstall from
-**Download CLI**. After `domino login` the CLI keeps its own session; there is no token or
-API-key login for the CLI. Full install notes, OS support and proxies:
+After `domino login` the CLI keeps its own session; there is no token or API-key login for the
+CLI. Full install notes, OS support and proxies:
 [CLI-INSTALL.md](./CLI-INSTALL.md).
 
 ## Everyday workflow (DFS project)
@@ -89,7 +87,7 @@ domino.sync(); domino.init("name"); domino.upload("message")
 ```
 
 CRAN `domino` 0.3.1 (2017) runs the installed CLI with `system()`, so install and log in with the
-CLI first (the browser or device flow above). Its `domino.login(username, password, host)` feeds
+CLI first (the `/authorizeCli` code flow above). Its `domino.login(username, password, host)` feeds
 a username and password to the CLI's old interactive prompt and may fail against the current
 CLI; prefer a terminal `domino login`. Exported functions,
 signatures and limits: [R-PACKAGE.md](./R-PACKAGE.md).

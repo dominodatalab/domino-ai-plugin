@@ -126,6 +126,32 @@ Existing skills predate these requirements and many violate them (missing
 frontmatter, stale links). Fix violations in the files you are already changing. Do not sweep
 the tree in an unrelated PR; tree-wide fixes have their own tracked work.
 
+### On `release-6.1`
+
+This branch ships to self-managed Domino 6.1 only (version line `601`). Where they conflict, these
+rules replace the ones above and in "Domino API, SDK, and platform skills". When you cherry-pick
+from `main` or `develop`, adapt the change to them; nothing here merges back.
+
+- Routes and bodies come from the
+  [Domino 6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/).
+  The docs.domino.ai specs describe 6.3 and Cloud and list routes and fields 6.1 lacks; never take
+  one from them. Domino 6.1 serves no per-deployment `/docs` reference and publishes none for
+  `/v4/*`, so reader guidance points at the 6.1 reference (or, for `/v4`, the UI path), never at
+  `/docs`. NetApp Volumes: the service's shapes differ from its 6.1 API page; follow
+  `skills/netapp-volumes/API-NETAPP-VOLUMES.md`.
+- Product docs: cite `https://docs.dominodatalab.com/en/6.1/...` where a 6.1 page exists, and
+  docs.domino.ai only where none does.
+- python-domino: the 6.1 Workspace image ships `dominodatalab` 1.4.4, whose signatures differ
+  from `master`. Where they differ, use the Public API route instead, or say which version to install.
+- Authentication: Domino 6.1 has no Personal Access Tokens. Outside a run, recommend a service
+  account token as `Authorization: Bearer` first and a user API key as `X-Domino-Api-Key` as the
+  fallback (only administrators create service account tokens); do not call API keys deprecated.
+- Every `SKILL.md` carries `compatibility: Domino 6.1. ...` and opens its body with
+  `Applies to Domino 6.1.`
+- Features that need Domino 6.2 or later are not documented. Lint rule L17 fails a line that
+  names one without saying it is unavailable on 6.1 (CONTRIBUTING.md, after standard 13; fixtures
+  in `scripts/test-lint-later-terms.py`). Removed skills are listed in `scripts/removed-skills.txt`.
+
 ## Commands
 
 ```bash
@@ -244,6 +270,8 @@ memory. Scenario format, check types and cleanup: `evals/e2e/README.md`.
 
 ## Domino API, SDK, and platform skills
 
+On `release-6.1`, "On `release-6.1`" above replaces steps 3 and 4 and the doc-link rule below.
+
 Before you write or change Domino API, SDK, app, extension, or governance automation in this repo:
 
 1. Read **`skills/domino-api-intro/SKILL.md`** and apply its authentication rules.
@@ -255,7 +283,7 @@ Before you write or change Domino API, SDK, app, extension, or governance automa
    - **`API-SPECS.md`** for OpenAPI files and route discovery
 3. Follow https://docs.domino.ai/cloud/reference/api/domino-api-authentication for all HTTP auth (proxy, access token, PAT, service account). Legacy user API keys are described as deprecated, never recommended.
 4. For API paths and pages, use [API-SPECS.md](skills/domino-api-intro/API-SPECS.md) (public routes section) before guessing routes.
-5. Then use the relevant skill under `skills/` (python-sdk, apps, domino-governance, domino-extensions, and others).
+5. Then use the relevant skill under `skills/` (python-sdk, apps, and others).
 
 This applies even when another Domino skill is already active. The intro skill takes precedence for auth, host, and retry rules.
 

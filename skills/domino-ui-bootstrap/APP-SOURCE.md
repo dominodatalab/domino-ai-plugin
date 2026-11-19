@@ -4,7 +4,7 @@ Step 8 (make asset and API URLs survive the Domino proxy prefix) and Step 9 (the
 
 ## Step 8 — Make URLs proxy-aware (assets AND API calls)
 
-When this app runs inside Domino it's served under a proxy prefix (e.g. `https://<host>/preview/<appId>/`). Root-absolute URLs bypass the proxy and 404 — both asset tags emitted as `/assets/index-*.js` and user-written `fetch('/api/…')` calls.
+When this app runs inside Domino it's served under a proxy prefix (e.g. `https://<host>/apps-internal/<appId>/`). Root-absolute URLs bypass the proxy and 404 — both asset tags emitted as `/assets/index-*.js` and user-written `fetch('/api/…')` calls.
 
 Two things to get right:
 
@@ -38,7 +38,7 @@ Domino serves the App at `<prefix>` and `<prefix>/` alike, without a redirect. O
 <script>if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search + location.hash)</script>
 ```
 
-Keep `location.search` and `location.hash`: `HashRouter` routes and Extension context live there.
+Keep `location.search` and `location.hash`: `HashRouter` routes live there.
 
 ### 8d. Title, icon and storage
 
@@ -48,7 +48,7 @@ Keep `location.search` and `location.hash`: `HashRouter` routes and Extension co
 
 ### 8e. Identity and Domino calls come from the backend
 
-The page has no Domino token: Domino adds the viewer's token to each request on its way to the App's backend. Get the viewer's name and any Domino data from the App's own backend (`fetch(new URL('api/whoami', document.baseURI))`), which reads the `preferred_username` claim of the `Authorization` token and calls Domino as the viewer or the publisher ([domino-apps](../domino-apps/SKILL.md)). Never call Domino APIs from the browser, and never build links from `DOMINO_API_HOST`.
+The page has no Domino token: Domino adds the viewer's identity to each request on its way to the App's backend. Get the viewer's name and any Domino data from the App's own backend (`fetch(new URL('api/whoami', document.baseURI))`), which reads the `domino-username` header (or the `preferred_username` claim of the `Authorization` token when one arrives) and calls Domino as the publisher ([domino-apps](../domino-apps/SKILL.md)). Never call Domino APIs from the browser, and never build links from `DOMINO_API_HOST`.
 
 **When to apply this:**
 

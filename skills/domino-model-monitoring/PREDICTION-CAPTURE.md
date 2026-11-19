@@ -1,6 +1,6 @@
 # Prediction capture for Domino endpoints
 
-Source: https://docs.domino.ai/cloud/platform-capabilities/features/monitoring/3-set-up-domino-endpoints/1-set-up-prediction-capture.
+Source: https://docs.dominodatalab.com/en/6.1/user_guide/93e5c0/set-up-prediction-capture/.
 
 Integrated monitoring only works when the endpoint code records each prediction with Domino's data-capture library. Domino converts the records to Parquet in a project Dataset and the Model Monitor reads them from there; the Model Monitoring API cannot ingest endpoint predictions from any other source.
 

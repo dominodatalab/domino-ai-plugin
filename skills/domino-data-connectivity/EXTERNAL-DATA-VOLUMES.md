@@ -5,12 +5,12 @@ creates a labelled PersistentVolumeClaim, a Domino admin registers it, and users
 Projects. Domino does not propagate the user's identity to the underlying filesystem; access is
 whatever the PVC and the storage grant.
 
-Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/external-volumes
-(users), https://docs.domino.ai/cloud/admin/data-administration/external-data/external-data-volumes
-(admins), https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/sharing-and-security/share-edv
+Docs: https://docs.dominodatalab.com/en/6.1/user_guide/f12554/external-data-volumes-edvs/
+(users), https://docs.dominodatalab.com/en/6.1/admin_guide/053e1f/manage-external-data-volumes/
+(admins), https://docs.dominodatalab.com/en/6.1/user_guide/7ec608/share-edvs-securely/
 (access control). Replace `/cloud/` with `/6.3/` for the self-managed pages.
 
-**Domino Cloud**: EDVs require a remote Data Plane. **Domino 6.3**: available on the local Data
+**Domino Cloud**: EDVs require a remote Data Plane. **Domino 6.1**: available on the local Data
 Plane too.
 
 ## Mount path and usage
@@ -101,7 +101,7 @@ spec:
   label value `EFS`.
 - **SMB**: `csi.driver: smb.csi.k8s.io`, a `nodeStageSecretRef` for the share credentials and
   `mountOptions` such as `dir_mode=0777`, `file_mode=0777`, `vers=3.0`; label value `SMB`. The
-  SMB driver is off by default; on 6.3 enable it in the installer configuration with
+  SMB driver is off by default; on 6.1 enable it in the installer configuration with
   `release_overrides: csi-driver-smb: installed: true` and re-run the installer.
 - **Generic**: any PV you provision yourself (for example a Mountpoint for Amazon S3 volume, see
   [S3-MOUNTPOINT.md](./S3-MOUNTPOINT.md)); label value `Generic`.
@@ -118,8 +118,8 @@ spec:
 
 Admins can always access any EDV. Users without access either see nothing about the volume
 ("full censorship") or see its name and description so they can request access ("inactive
-censorship", the default). On 6.3 this is the `ShortLived.ExternalDataVolumesFullCensor`
-feature flag; on Cloud ask Domino Support.
+censorship", the default). On 6.1 this is the `ShortLived.ExternalDataVolumesFullCensor`
+feature flag (if your deployment does not list it, ask your administrator); on Cloud ask Domino Support.
 
 Edit, unregister, and add or remove Data Planes from the same page (three-dot menu > **Edit**;
 a PVC with the same name in another Data Plane shows up as an addition).
@@ -128,7 +128,7 @@ a PVC with the same name in another Data Plane shows up as an addition).
 
 The Public API has no EDV routes. The Domino Internal API has the full set; every route here is
 a **non-public route; may change in a future Domino version**. If a call answers 404 or 400,
-confirm the route and body in your deployment's `/docs`. Registration, update and unregistration
+use the admin UI instead. Registration, update and unregistration
 are admin operations: document them, never run them from a user context.
 
 | Call (non-public route; may change in a future Domino version) | Notes |
@@ -157,4 +157,4 @@ Mount path in executions stays `/domino/edv/<mountPath>` whichever way the EDV w
 | EDV missing on Domino Cloud | EDVs need a remote Data Plane; see https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data-plane |
 
 General data-access diagnosis (network routes, Data Plane locality):
-https://docs.domino.ai/cloud/admin/data-administration/troubleshoot-data
+https://docs.dominodatalab.com/en/6.1/admin_guide/e7055b/troubleshoot-data-issues/

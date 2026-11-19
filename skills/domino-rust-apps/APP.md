@@ -13,7 +13,7 @@ The template in `assets/app/` is a small server-rendered App: axum 0.8 for routi
 | `templates/*.html` | askama templates; a field typo fails `cargo build` |
 | `static/` | CSS and JavaScript served at `static/...` |
 
-Routes: `/` (page), `healthz`, `api/whoami`, `api/me` and `api/projects` (Domino API as viewer or publisher), `api/db` (Postgres check), `api/predict` (model endpoint), `refresh` (relative redirect). Delete the ones the App does not need, with their tests.
+Routes: `/` (page), `healthz`, `api/whoami`, `api/me` and `api/projects` (Domino API as the publisher), `api/db` (Postgres check), `api/predict` (model endpoint), `refresh` (relative redirect). Delete the ones the App does not need, with their tests.
 
 Add routes in `app()` with `/{id}` path parameters and a leading `/` (`.route("/items/{id}", get(item))`). The axum 0.7 forms `/:id` and `/*rest`, and a path without a leading `/`, panic when the router is built, so the App never reaches Running. The template's tests build the router, which catches this.
 
@@ -32,44 +32,28 @@ The App is served under a prefix such as `/apps/<id>/`, and the server receives 
 
 Keep HTML pages one level deep and pass identifiers as query strings (`item?id=42`), so the same relative links work from every page. If a page must be nested, compute `../` per level from `axum::extract::OriginalUri`.
 
-The App URL also answers without its trailing slash (`.../apps-internal/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. The prefix differs by how the App is opened (`/preview/<id>` in App Preview, `/apps-internal/<id>`, `/apps/<vanity>`, `/modelproducts/<id>`); `DOMINO_RUN_HOST_PATH` holds the current one with a trailing slash. Domino never sends `X-Script-Name`.
+The App URL also answers without its trailing slash (`.../apps-internal/<id>`), and there every relative URL resolves one level too high and fails with 404. The template's `templates/index.html` starts with a one-line script that adds the slash; keep it at the top of every page that can be opened directly. The prefix differs by how the App is opened (`/apps-internal/<id>`, `/apps/<vanity>`, `/modelproducts/<id>`); `DOMINO_RUN_HOST_PATH` holds the current one with a trailing slash. Domino never sends `X-Script-Name`.
 
 Domino's proxy inserts the deployment's branding into HTML responses: a `<title>` and a favicon link at the first literal `<head>` of each `text/html` response (not when the App compresses its responses). The inserted title comes first, so the browser tab shows it. The default favicon link, `/favicon.ico`, is root-absolute and answers 404 on the Apps host; the template's own `<link rel="icon" href="static/favicon.svg">` comes later in `<head>` and takes its place.
 
 `DOMINO_RUN_HOST_PATH` holds the prefix. Use it only where a value must be absolute, such as a cookie `Path` (set it to the prefix without the trailing slash, give the cookie an App-specific name, and add `HttpOnly; Secure; SameSite=Lax`): every App on the deployment shares one origin, so cookies and `localStorage` are shared across Apps. Domino removes its own session cookies before requests reach the App. Some deployments only show Apps inside Domino's page; there, opening the App URL directly answers 400.
 
-## Identity: acting as the viewer or the publisher
+## Identity and Domino API calls
 
-Domino authenticates every request before it reaches the App. What the App receives depends on its identity mode:
+Domino authenticates every request before it reaches the App and passes the viewer's username in `domino-username` (`Anonymous` for anonymous viewers). When the deployment setting `SecureIdentityPropagationToAppsEnabled` is on, the request also carries `Authorization: Bearer <jwt>`, a short-lived token for the viewer.
 
-| Mode | When | The App receives | Viewer calls to the Domino API |
-|---|---|---|---|
-| Default | Every App, unless set otherwise | `Authorization: Bearer <jwt>`: a short-lived token issued for Apps (audience `apps`), plus `domino-username` copied from it | Most routes reject the token, often with a 500; a few data-access routes accept it (Dataset snapshot file reads, Data Source lookup by name) |
-| Extended identity propagation | The App version has it on, and the viewer consented | `Authorization: Bearer <jwt>` with the viewer's own credential; no `domino-username`, and a client-supplied one passes through | Any route the viewer may use |
-| Secure identity propagation off | Deployment setting | `domino-username` only | None |
+`viewer_name()` in `src/domino.rs` reads the viewer from the token's `preferred_username` claim (`sub` is the Domino user id) and falls back to `domino-username` when no token arrived; `api/whoami` reports which source it used. Domino checked the token before forwarding the request. To rely on its claims inside the App, verify the RS256 signature against the Domino realm's keys and pin the issuer `https://<domino-domain>/auth/realms/DominoRealm`.
 
-`viewer_name()` in `src/domino.rs` reads the viewer from the token's `preferred_username` claim (`sub` is the Domino user id) and falls back to `domino-username` only when no token arrived; `api/whoami` reports which source it used. Never read `domino-username` while a token is present. Domino checked the token before forwarding the request. To rely on its claims inside the App, verify the RS256 signature against the Domino realm's keys and pin the issuer `https://<domino-domain>/auth/realms/DominoRealm`; do not require audience `apps`, which extended-mode tokens lack. For decisions that grant access, verify the token, or, on an App with extended identity propagation, call the Domino API as the viewer; without it Domino rejects the viewer's token on most routes.
+Acting for viewers is not available on Domino 6.1: the viewer's token identifies the viewer, and Domino API routes reject it, often with a 500. Call the Domino API as the publisher, the user the App was started as:
 
-`src/domino.rs` calls the Domino API with either identity, chosen per call:
-
-| Identity | How the template calls | Token scope |
+| Identity | How the template calls | Use on Domino 6.1 |
 |---|---|---|
-| Viewer (default) | `$DOMINO_API_HOST` + the viewer's bearer token | Identifies the viewer only, unless the App has extended identity propagation and the viewer consented; then the viewer's full Domino permissions |
-| Publisher (`?as=publisher`) | `$DOMINO_API_PROXY` with no `Authorization` header; the proxy adds the publisher's token | The publisher's permissions |
+| Publisher (the template's default) | `$DOMINO_API_PROXY` with no `Authorization` header; the proxy adds the publisher's token | Every Domino API call. Where data is per viewer, filter it in the App by the viewer's username |
+| Viewer (`?as=viewer`) | `$DOMINO_API_HOST` + the viewer's bearer token | Rejected by Domino; the template passes Domino's status through and turns a missing token into a 401 |
 
-With extended identity propagation, `/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) show the difference: the viewer and the publisher see different users and project lists. Without it the viewer calls fail, often with a 500, and only `?as=publisher` answers. Use the viewer's identity whenever the App reads or changes data on someone's behalf, so Domino enforces that person's permissions; use the publisher's only for the App's own shared resources. "Publisher" is the user the App was started as.
+`/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) call as the publisher. `?as=viewer` remains for testing and gets Domino's rejection back.
 
-`DOMINO_API_HOST` can be a local API gateway inside the App's pod (`http://127.0.0.1:<port>`). It accepts browser-session, service-account and Personal Access Token credentials, and runs a request that has no `Authorization` header as the publisher. Never drop the viewer's token and retry without it: that silently changes whose permissions apply. Never build links for the browser from `DOMINO_API_HOST` or `DOMINO_USER_HOST`; either can be an address inside the pod. `localhost:8899` is the default behind `DOMINO_API_PROXY`, not a fixed address: use the variable.
-
-Extended identity propagation:
-
-- It is part of the App version: **Allow App to act for viewers in Domino** in the App's sharing settings, or `"extendedIdentityPropagationToAppsEnabled": true` in the version's `content` ([domino-apps API-APPS.md](../domino-apps/API-APPS.md)). Changing it creates a version. Only a SysAdmin or CloudAdmin can publish an App with it on, and it cannot be turned off for that App afterwards.
-- The deployment-wide setting `com.cerebro.domino.apps.extendedIdentityPropagationToAppsEnabled` must be on (it is by default).
-- Each viewer sees a consent prompt; consent lasts 8 hours by default and up to 30 days. Until a viewer consents, every request to the App, JSON routes included, redirects to Domino's `/app-consent?appId=<id>&callback=<url>` page, so scripts and `curl` get HTML instead of the App's response. Open the App in a browser and consent first.
-- Without it, Domino rejects the viewer's token on most routes, often with a 500; the template passes Domino's status through and turns a missing token into a 401 that says which setting to check.
-- Scripts and other non-browser clients call the App with a Personal Access Token as the bearer; the App receives that token and acts with it. Consent must already exist for that user (granted once in a browser): until then every request, JSON included, gets a 302 to `/app-consent`, and a request with no credentials gets a 302 to the sign-in page. Tokens from the Domino CLI login are refused where `DOMINO_API_HOST` is the local gateway (403).
-- Never log or return the token. `TraceLayer` does not log headers.
-- Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/identity
+`DOMINO_API_HOST` runs a request that has no `Authorization` header as the publisher. Never build links for the browser from `DOMINO_API_HOST` or `DOMINO_USER_HOST`; either can be an address inside the pod. `localhost:8899` is the default behind `DOMINO_API_PROXY`, not a fixed address: use the variable. A request to the App without browser credentials gets a 302 to the sign-in page. Never log or return a token; `TraceLayer` does not log headers. Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/identity
 
 ## Streaming, WebSockets and limits
 
@@ -102,19 +86,19 @@ Write every outbound call anticipating that the trust store holds the organizati
 
 ## Startup and shutdown
 
-- `main` reads configuration, binds `0.0.0.0:$PORT` and serves. It writes nothing: no migrations, no seeding, no files. Restarts, live sync and autoscaled replicas all run it again, often at the same time.
+- `main` reads configuration, binds `0.0.0.0:$PORT` and serves. It writes nothing: no migrations, no seeding, no files. Every restart and publish runs it again.
 - `app.sh` starts the binary with `exec`. `shutdown_signal()` resolves on SIGTERM or Ctrl-C, and axum then finishes in-flight requests, which matters for local runs and Jobs. When Domino stops an App it ends the container, and the server may not get to run its shutdown path, so never rely on shutdown to save state: write anything durable when it happens.
 - Logs go to stdout, which the App's **Logs** tab shows. `RUST_LOG` (an environment variable) sets the level, for example `RUST_LOG=info,domino_rust_app=debug`. ANSI colours are on only when stdout is a terminal.
 
 ## How the binary is shipped
 
-`scripts/build-dist.sh` runs `cargo build --locked --profile dist` and stores `target/dist/<name>` as a dated build: `<root>/<label>/<name>` with `<root>/<label>.stamp` beside it, where `<root>` is `$DIST_DIR` (default `/mnt/artifacts/dist/<name>`, one folder per App) and `<label>` is the UTC date (`2026.10.15`, then `2026.10.15.2` for a later build that day). It keeps the previous build, so a reverted commit starts again without a rebuild; labels, Version Notes and rollback: [domino-apps FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds). Stamp line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/`, `migrations/` and `pgo/`; then `build=`, `commit=`, `rustc --version`, `RUSTFLAGS=` and `arch=` (the build node's `uname -m`). `KEEP_BUILDS` changes how many builds stay (default 2) and `BUILD_LABEL` sets the label (CI).
+`scripts/build-dist.sh` runs `cargo build --locked --profile dist` and stores `target/dist/<name>` as a dated build: `<root>/<label>/<name>` with `<root>/<label>.stamp` beside it, where `<root>` is `$DIST_DIR` (default `/mnt/artifacts/dist/<name>`, one folder per App) and `<label>` is the UTC date (`2026.10.15`, then `2026.10.15.2` for a later build that day). It keeps the previous build, so a reverted commit starts again without a rebuild; build labels and going back: [domino-apps FRAMEWORKS.md](../domino-apps/FRAMEWORKS.md#build-once-and-version-builds). Stamp line 1 is the hash `scripts/stamp.sh` computes over `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `src/` and, if present, `build.rs`, `.cargo/`, `templates/`, `static/`, `migrations/` and `pgo/`; then `build=`, `commit=`, `rustc --version`, `RUSTFLAGS=` and `arch=` (the build node's `uname -m`). `KEEP_BUILDS` changes how many builds stay (default 2) and `BUILD_LABEL` sets the label (CI).
 
 At start, `app.sh` recomputes the hash over the App's files and runs the newest build, in `/mnt/artifacts/dist/<name>` (or `$DIST_DIR`) and then `./dist`, whose stamp matches it and whose `arch=` matches the node. It copies that binary to a temporary directory, marks it executable, exports the label as `APP_BUILD` (logged, and reported by `/healthz`) and `exec`s it. With no match it prints which step to repeat and exits, and the App shows as failed in its logs. It never compiles.
 
 Hardware tiers can run on different node types: amd64 or arm64, and different CPU generations within one architecture. Build the binary on the App's own environment and hardware tier; a Job with that tier is the reliable way when the Workspace uses another. A binary for the wrong architecture cannot run at all; one built with `-C target-cpu` for a newer CPU crashes on older ones ([TOOLING.md](./TOOLING.md#target-cpu)).
 
-An App version pins the Git commit and the artifacts commit together, so App Preview, deployment and starting an older version all run the build that matches their source. Add any other build input (an `include_str!` file outside `src/`) to the list in `scripts/stamp.sh`.
+`app.sh` always runs the build that matches the source the App started from. Add any other build input (an `include_str!` file outside `src/`) to the list in `scripts/stamp.sh`.
 
 Where the binary lives:
 

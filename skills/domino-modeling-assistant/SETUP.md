@@ -2,7 +2,7 @@
 
 When the plugin is installed from the source repository (for example Claude Code, or Codex from a local marketplace), the Domino MCP server is **bundled with the plugin** and starts automatically: no manual cloning, installation, or MCP configuration is required. Skills-only distributions (such as the ChatGPT plugin directory) don't include the server; see [Register the server manually](#register-the-server-manually).
 
-**Inside a Domino Workspace:** everything is auto-detected (project, authentication, DFS/Git mode). Skip straight to [Step 3: Test the integration](#step-3-test-the-integration).
+**Inside a Domino Workspace:** the Workspace needs a custom Compute Environment with the coding assistant, this plugin and `uv` ([Step 4](#step-4-choose-a-compute-environment)). With that in place everything is auto-detected (project, authentication, DFS/Git mode); skip straight to [Step 3: Test the integration](#step-3-test-the-integration).
 
 **Outside Domino (laptop, CI):** set two environment variables and create a project settings file. Follow the full guide below.
 
@@ -18,21 +18,22 @@ When the plugin is installed from the source repository (for example Claude Code
 
 > **Skip this step inside a Domino Workspace.** There the server calls the platform through `DOMINO_API_PROXY`, which Domino sets and which adds the user's token; no credential is configured or sent.
 
-### Create a Personal Access Token
+### Get a credential
 
-1. Log into Domino.
-2. Go to **Account** > **Account settings** > **Personal Access Token**.
-3. Click **Generate new Token**, give it a name and an expiration, and click **Create token**.
-4. Copy the token now; it is shown only once. On a laptop it goes only where the next section puts it (`DOMINO_TOKEN` or the env file): that is the laptop's own copy, since Domino user and Project environment variables are not readable outside Domino. Inside a Workspace no token is needed.
+- **Service account token (first choice):** a Domino administrator creates a service account and a token for it and gives you the value. It goes in `DOMINO_TOKEN`.
+- **User API key (fallback):** **Account** > **Account Settings** > **API Key**, then **Regenerate**; the key is shown once, and regenerating it invalidates the previous key. It carries your identity. It goes in `DOMINO_API_KEY`, which the server sends as `X-Domino-Api-Key` when `DOMINO_TOKEN` is not set.
 
-Reference: https://docs.domino.ai/cloud/reference/api/domino-api-authentication (6.3: replace `cloud` with `6.3`). A Personal Access Token carries your identity and expires; rotate it before it does. For unattended automation use a Domino service account token instead. The server does not accept legacy API keys: if `DOMINO_API_KEY` is set without `DOMINO_TOKEN`, every API tool fails with a message telling you to set `DOMINO_TOKEN`.
+On a laptop the value goes only where the next section puts it: that is the laptop's own copy, since Domino user and Project environment variables are not readable outside Domino. Inside a Workspace no credential is needed.
+
+Reference: https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/
 
 ### Give the URL and token to the server
 
 | Variable | Value |
 |---|---|
 | `DOMINO_HOST` | The address you open Domino at in your browser, for example `https://domino.example.com`; `DOMINO_API_HOST` is accepted as a fallback |
-| `DOMINO_TOKEN` | The Personal Access Token or service account token, sent as `Authorization: Bearer` |
+| `DOMINO_TOKEN` | A service account token, sent as `Authorization: Bearer` |
+| `DOMINO_API_KEY` | Your user API key, used only when `DOMINO_TOKEN` is not set; sent as `X-Domino-Api-Key`. Put it in the env file: the plugin settings below ask only for the token |
 
 Claude Code asks for both when the plugin is enabled (change them under `/plugin` > Installed > dominodatalab > Configure options), and Gemini CLI asks at install (change them with `gemini extensions config dominodatalab`). Every other host, including Codex, Cursor and Antigravity, reads them from the env file `~/.config/domino-mcp-server/.env`. Have the user write it themselves; this keeps the token off the screen and out of shell history, and makes the file readable only by them:
 
@@ -41,6 +42,8 @@ bash -c 'mkdir -p ~/.config/domino-mcp-server && umask 077 &&
   read -r -p "Domino URL (https://...): " host && read -rs -p "Domino token: " token && echo &&
   printf "DOMINO_HOST=%s\nDOMINO_TOKEN=%s\n" "$host" "$token" > ~/.config/domino-mcp-server/.env'
 ```
+
+With a user API key instead of a token, write `DOMINO_API_KEY=%s` in place of `DOMINO_TOKEN=%s`.
 
 The server also reads `$DOMINO_MCP_ENV_FILE` or `$XDG_CONFIG_HOME/domino-mcp-server/.env` where the host passes those variables (Codex passes neither), and `DOMINO_HOST` and `DOMINO_TOKEN` from the environment where the host passes it (Gemini CLI drops TOKEN-named variables). Plugin settings win over the environment, which wins over the env file. A `.env` in the project directory is not read. Never ask the user to paste the token into the conversation, and never commit it or put it in a shared configuration file.
 
@@ -110,7 +113,7 @@ The assistant calls `run_domino_job(..., wait_seconds=300)` and, if the Job outl
 
 ## Step 4: Choose a compute environment
 
-Use the **Domino Standard Environment** for the project (**Settings** > **Compute Environment**). On Domino 6.3 and Cloud it ships with the coding assistants, the Domino skills, MLflow, and the common ML libraries. If your organization needs a different assistant, pinned versions, or extra tools, build a custom environment as described at https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/custom-environments (6.3: replace `cloud` with `6.3`).
+Jobs started by the assistant run in the project's default environment; the Domino Standard Environment ships MLflow and the common ML libraries. To run the assistant inside a Workspace, the Domino 6.1 Standard Environment is not enough: it does not include a coding assistant, the Domino skills or `uv`. Build a custom Compute Environment on top of it whose Dockerfile installs `uv`, the assistant's CLI and this plugin, and select it for the Workspace (**Settings** > **Compute Environment**). Dockerfile instructions and builds: the `domino-environments` skill.
 
 ## Troubleshooting
 
@@ -123,6 +126,13 @@ Use the **Domino Standard Environment** for the project (**Settings** > **Comput
    - **Codex:** `/mcp` in a session, or `codex mcp list`, should show `domino_server`.
    - **Other hosts:** open the host's MCP server list and confirm `domino_server` is connected.
 4. If the server isn't listed at all, your plugin distribution may be skills-only; register it manually as described below.
+
+### Domino 6.1 Workspace image
+
+The standard Domino 6.1 Workspace image has no Node or npm, `python3 -m venv` can fail at
+`ensurepip` (use `uv venv`), and git needs `safe.directory` for a clone owned by another user.
+`uv` must be able to write `.venv` inside the plugin directory. The docs server (`domino_docs`)
+covers Domino 6.3 and Cloud; for 6.1 use https://docs.dominodatalab.com/en/6.1/.
 
 ### Register the server manually
 
@@ -138,7 +148,7 @@ Codex strips the shell environment from MCP servers, so on a laptop use the env 
 ### "Unauthorized" or "DOMINO_TOKEN is not set" errors
 
 1. **Workspace:** this should not happen; the API proxy authenticates. Restart the Workspace if it persists.
-2. **Laptop:** the error names the variable to fix. Verify `DOMINO_HOST` and `DOMINO_TOKEN` are set in the environment the server runs in (or in the env file), that `DOMINO_HOST` starts with `https://`, and that the Personal Access Token has not expired or been revoked (**Account settings** > **Personal Access Token** shows its status). Remove any `DOMINO_API_KEY`; it is not accepted.
+2. **Laptop:** the error names the variable to fix. Verify `DOMINO_HOST` and `DOMINO_TOKEN` (or `DOMINO_API_KEY`) are set in the environment the server runs in (or in the env file), that `DOMINO_HOST` starts with `https://`, and that the service account token has not expired or been invalidated, or the API key has not been regenerated since you copied it.
 
 ### "Project not found"
 
@@ -163,5 +173,3 @@ Hosts block shell `sleep`, so a status call without `wait_seconds` returns at on
 
 - [SKILL.md](./SKILL.md): overview of modeling assistant capabilities and the MCP server tool reference
 - `mcp-servers/domino_mcp_server/README.md` in the plugin repository: full tool, route and environment-variable reference
-- https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/modeling-assistant: the end-to-end walkthrough
-- https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants/domino-skills: the other Domino skills the assistant can use

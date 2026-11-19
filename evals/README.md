@@ -27,7 +27,7 @@ on deployment and CI/CD requests, `domino-debug-proxy` on a scaffold, `domino-ex
 run comparison, `netapp-volumes` / `domino-data-sdk` on a Dataset path question, `domino-datasets` /
 `domino-data-sdk` on a NetApp question, `netapp-volumes` on a Data API download, the endpoint
 skills on nightly batch scoring, and `domino-distributed-computing` on existing Slurm scripts. Where a neighbour's description also claims the request
-(`domino-apps` on a 404, `domino-trace-setup` on evaluators, `domino-experiment-tracking` on setup,
+(`domino-apps` on a 404, `domino-experiment-tracking` on setup,
 `domino-python-sdk` on an auth question) the case keeps only the positive `skill-fired` check;
 sharpening those descriptions is the fix, not a ban.
 

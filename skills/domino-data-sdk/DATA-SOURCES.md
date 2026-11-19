@@ -1,8 +1,8 @@
 # Data Sources with DataSourceClient
 
-Docs: https://docs.domino.ai/cloud/reference/api/data_api/datasource_usecases (query, object
+Docs: https://docs.dominodatalab.com/en/6.1/api_guide/d49ab1/data-source-use-cases/ (query, object
 store, write to file, configuration override, custom authentication) and
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/data-source-connectors/use-data-sources.
+https://docs.dominodatalab.com/en/6.1/user_guide/fa5f3a/use-data-sources/.
 Source: `domino_data/data_sources.py` and `domino_data/configuration_gen.py` in
 https://github.com/dominodatalab/domino-data.
 
@@ -22,7 +22,7 @@ connector. Attributes on either:
 |---|---|
 | `name`, `identifier` | Display name and ID |
 | `datasource_type` | Connector type, for example `SnowflakeConfig`, `RedshiftConfig`, `S3Config`, `GenericS3Config`, `ADLSConfig`, `BigQueryConfig`, `DatabricksConfig`, `PostgreSQLConfig`, `MySQLConfig`, `SQLServerConfig`, `OracleConfig`, `GCSConfig`, `AzureBlobStorageConfig`, `DatasetConfig` |
-| `auth_type` | How the Data Source authenticates, for example `Basic`, `AWSIAMRole`, `OAuth`, `NoAuth`, `GCPBasic`, `AzureBasic`, `PersonalToken`, `KeyPair` |
+| `auth_type` | How the Data Source authenticates, for example `Basic`, `AWSIAMRole`, `OAuth`, `NoAuth`, `GCPBasic`, `AzureBasic`, `PersonalToken` |
 | `owner` | Owner's username |
 | `config` | Connection settings as a dict (no secrets) |
 
@@ -88,9 +88,9 @@ Common classes and fields (all optional keyword arguments):
 
 | Class | Configuration fields | Credential fields |
 |---|---|---|
-| `SnowflakeConfig` | `database`, `schema`, `warehouse`, `role`, `datetime_precision` | `username`, `password`, `private_key`, `passphrase` |
+| `SnowflakeConfig` | `database`, `schema`, `warehouse`, `role`, `datetime_precision` | `username`, `password`, `token` |
 | `RedshiftConfig` | `database`, `datetime_precision`, `region` | `username`, `password`, `aws_access_key_id`, `aws_secret_access_key`, `aws_session_token` |
-| `PostgreSQLConfig`, `MySQLConfig` | `database`, `datetime_precision`, `region` | `username`, `password`, AWS keys, (Postgres) `client_cert`, `client_key`, `ca_cert` |
+| `PostgreSQLConfig`, `MySQLConfig` | `database`, `datetime_precision`, `region` | `username`, `password`, AWS keys |
 | `S3Config` | `bucket`, `subfolder`, `region` | `aws_access_key_id`, `aws_secret_access_key`, `aws_session_token` |
 | `GenericS3Config` | `bucket`, `subfolder`, `host`, `region` | `aws_access_key_id`, `aws_secret_access_key` |
 | `ADLSConfig`, `AzureBlobStorageConfig` | `container` | `access_key` |
@@ -103,17 +103,19 @@ Credential fields take their values from a Domino user or Project environment va
 (`os.environ`), never a literal in code; prefer fixing the Data Source's stored credentials over
 overriding them.
 
-`datetime_precision` (relational sources, Domino 6.3 and later) is `seconds`, `milliseconds`,
+`datetime_precision` (relational sources; in `dominodatalab-data` 6.3.0, not 6.2.0) is `seconds`, `milliseconds`,
 `microseconds` or `nanoseconds` (default); lower it when extreme datetimes overflow.
 
 ## Authentication override
 
 ```python
-client = DataSourceClient(token="<personal-access-token>")        # explicit bearer
+import os
+
+client = DataSourceClient(token=os.environ["DATA_API_TOKEN"])     # explicit bearer, e.g. a service-account token
 client = DataSourceClient(token_file="/path/to/token")            # alternate token file
 ```
 
-`api_key=` and `DOMINO_USER_API_KEY` are the deprecated legacy key. If `DOMINO_USER_API_KEY`
+`api_key=` and `DOMINO_USER_API_KEY` take a user API key. If `DOMINO_USER_API_KEY`
 is set in the run, listing and signed-URL calls use it; unset it to force the proxy JWT. Data
 Sources with Individual credentials need the current user to have entered theirs under
 **Data > Data Sources**.

@@ -1,6 +1,6 @@
 # MLflow Basics for Domino Experiment Tracking
 
-`MLFLOW_TRACKING_URI` is preconfigured in Workspaces and Jobs, so MLflow experiment tracking in Domino needs no tracking-server setup. Product reference: https://docs.domino.ai/cloud/platform-capabilities/features/development/track-monitor
+`MLFLOW_TRACKING_URI` is preconfigured in Workspaces and Jobs, so MLflow experiment tracking in Domino needs no tracking-server setup. Product reference: https://docs.dominodatalab.com/en/6.1/user_guide/da707d/track-and-monitor-experiments/
 
 ## Setting Up an Experiment
 

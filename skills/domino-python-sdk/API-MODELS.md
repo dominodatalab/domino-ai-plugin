@@ -1,8 +1,7 @@
 # Domino Models API
 
 Model APIs (hosted prediction endpoints), Model Deployments, the Registered Models
-registry, and how to invoke an endpoint. Routes marked **Cloud** exist only on Domino
-Cloud. Lifecycle guidance and the v1/v2 registry split:
+registry, and how to invoke an endpoint. Lifecycle guidance and the registry routes:
 [API-MODEL-SERVING.md](./API-MODEL-SERVING.md) and
 [domino-model-serving](../domino-model-serving/SKILL.md); deployment workflow and
 monitoring: [domino-model-endpoints](../domino-model-endpoints/SKILL.md).
@@ -43,7 +42,7 @@ POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 20
 
 Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`,
 `environmentVariables` (array of `{"key", "value"}`, may be empty), `version`. Optional:
-`hardwareTierId`, `replicas`, `resourceQuotaId`, `bundleId` (governance).
+`hardwareTierId`, `replicas`, `resourceQuotaId`.
 
 `version` (required fields `projectId`, `source`, `logHttpRequestResponse`,
 `monitoringEnabled`): `source.type` is `File` (`file`, `function`, optional
@@ -109,16 +108,8 @@ Public API has no stop route; stop it first with
 non-public route; may change in a future Domino version) or from the UI, then `DELETE`. After
 deletion `GET` returns 404 and the list no longer includes the record.
 
-**Cloud only:** `PUT /api/modelServing/beta/modelApis/{modelApiId}/access` saves
-`visibility` (`Public`/`Discoverable`/`Private`) and the **complete** collaborator list
-(`collaborators[]` with `id`, `isOrganization`, `role` `Owner`/`Editor`/`Operator`/`Viewer`)
-in one request: anyone omitted loses the assigned role, including the caller, and the
-last Owner cannot be omitted, so load the current list from
-`GET .../collaborators` and send it back with your change. `POST .../collaborators`
-adds one principal (fails if the id is already assigned; only Owners can add);
-`PUT .../collaborators/{collaboratorId}` changes a role; `GET/PUT .../visibility`
-reads or sets visibility alone (the v1 record's `access.isPublic` is a separate legacy
-flag); `GET .../consumer/access` reports the caller's access.
+The Domino 6.1 Public API has no route for endpoint visibility or collaborators; set them in
+the UI (**Settings** > **Access and Sharing**).
 
 ### Versions and logs
 
@@ -163,48 +154,39 @@ shape follows the target type's `effectiveModelDeploymentSchema`. The record's
 
 ## Registered models (registry)
 
-List and register use v2; per-model reads use v1 keyed by **model name**. Version
-creation goes through `POST /api/registeredmodels/v2` as well: the v1 route
-`POST /api/registeredmodels/v1/{modelName}/versions` is deprecated.
+Domino 6.1 has only the v1 registry routes, keyed by **model name**. Register from an MLflow
+experiment run; if a call returns 400, check the bodies in the 6.1 Platform API reference
+([API-SPECS.md](../domino-api-intro/API-SPECS.md)).
 
 ```
-GET  /api/registeredmodels/v2            params: projectId, searchPattern, modelCategory (genai|ml), pageToken, maxResults (default 25), orderBy
-POST /api/registeredmodels/v2            register a model or add a version
-GET  /api/registeredmodels/v1            ML models only; v2 returns all categories by default
+GET  /api/registeredmodels/v1            params: projectId, searchPattern, pageToken, maxResults (default 25), orderBy
+POST /api/registeredmodels/v1            register a new model from an experiment run
 GET  /api/registeredmodels/v1/{modelName};  PATCH /api/registeredmodels/v1/{modelName}
-GET  /api/registeredmodels/v1/{modelName}/versions;  GET .../versions/{version};  GET .../versions/{version}/modelapis
-GET  /api/registeredmodels/v2/{modelName}/versions[/{version}]
+GET  /api/registeredmodels/v1/{modelName}/versions;  POST .../versions (add a version)
+GET  /api/registeredmodels/v1/{modelName}/versions/{version};  GET .../versions/{version}/modelapis
 ```
 
-Register (`POST /api/registeredmodels/v2`) requires `modelName`, `modelSource` and
-`create` (true to create the registered model; false to add a version to an existing
-one, and `true` on an existing name is a 400). `modelSource` is
-`{"sourceType": "mlflow", "mlflowSource": {"experimentRunId": "...", "loggedModelId": "m-..."}}`
-(or `"artifactPath": "..."` instead of `loggedModelId`), or
-`{"sourceType": "huggingface", "huggingFaceSource": {"modelId": "org/model", "modelRevision": "...", "huggingFaceToken": "..."}}`.
-Optional: `description`, `discoverable`, `modelCategory` (`genai`, `ml`), `modelType`,
-`projectId` (required for Hugging Face sources only; MLflow sources take the project from
-the run). Response: `{"registeredModel": {...}, "modelVersion": {...}}`.
-
-**Use `loggedModelId` for models logged with MLflow 3.** MLflow 3 clients store
-`log_model` output as a LoggedModel (`m-<id>`) rather than as a run artifact, so a
-version registered with `artifactPath: "model"` points at a path that does not exist and
-`mlflow.pyfunc.load_model("models:/<name>/<version>")` fails. Get the id from the run
-(`mlflow.last_logged_model()`, or the `model_id` on the logged model info).
+Register (`POST /api/registeredmodels/v1`) requires `modelName`, `experimentRunId` and
+`discoverable`; optional `description` and `tags`. Add a version
+(`POST .../{modelName}/versions`) with `experimentRunId`, `artifact` (the run's model
+artifact path, for example `model`) and `description`. The registry has no Hugging Face
+source on Domino 6.1; register from a run that logged the model with MLflow.
 
 ```python
-result = requests.post(f"{base_url}/api/registeredmodels/v2", headers=headers, json={
+result = requests.post(f"{base_url}/api/registeredmodels/v1", headers=headers, json={
     "modelName": "fraud-classifier",
     "description": "Random forest fraud classifier",
-    "create": True,
-    "modelSource": {"sourceType": "mlflow",
-                    "mlflowSource": {"experimentRunId": run_id, "loggedModelId": logged_model_id}},
+    "experimentRunId": run_id,
+    "discoverable": False,
 }).json()
-print(result["modelVersion"]["modelVersion"])
+version = requests.post(f"{base_url}/api/registeredmodels/v1/fraud-classifier/versions",
+                        headers=headers, json={"experimentRunId": run_id, "artifact": "model",
+                                               "description": "retrained"}).json()
 ```
 
-List responses use `{"items": [...], "metadata": {"nextPageToken", ...}}`; page with
-`pageToken` / `maxResults` (both v1 and v2), not `offset` / `limit`.
+`GET /api/registeredmodels/v1` pages with `pageToken` / `maxResults` (the response's
+`metadata.nextPageToken`); `GET /api/registeredmodels/v1/{modelName}/versions` pages with
+`offset` / `limit`.
 
 ## Invoking a Model API
 
@@ -212,7 +194,7 @@ Use the invocation URL shown on the Model API's page (the deployment's external 
 `/models/{modelApiId}/latest/model`; not the in-run `$DOMINO_API_HOST`), with the
 endpoint's access token: the user's, or one you create and store
 ([Access tokens](../domino-model-endpoints/DEPLOY-ENDPOINT.md#access-tokens)). Per
-https://docs.domino.ai/cloud/platform-capabilities/features/model-deployment/domino-endpoint-authorization:
+https://docs.dominodatalab.com/en/6.1/user_guide/e038f2/select-domino-endpoint-authorization-mode/:
 
 - Restricted **synchronous** endpoint: HTTP Basic, username and password both the token.
 - Restricted **asynchronous** endpoint: `Authorization: Bearer <token>`.

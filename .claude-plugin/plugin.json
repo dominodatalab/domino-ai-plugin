@@ -1,7 +1,7 @@
 {
   "name": "dominodatalab",
-  "version": "2026.603.10",
-  "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, GenAI tracing, Flows, Spark/Ray/Dask clusters, governance, and the Domino APIs and SDKs",
+  "version": "2026.601.11",
+  "description": "Domino Data Lab skills for Workspaces, Jobs, Compute Environments, Datasets, Projects, Apps, model endpoints and monitoring, MLflow experiment tracking, Flows, Spark/Ray/Dask/MPI clusters, LLM access, and the Domino APIs and SDKs, for Domino 6.1",
   "author": {
     "name": "Domino Data Lab",
     "url": "https://www.domino.ai"
@@ -10,7 +10,7 @@
   "repository": "https://github.com/dominodatalab/domino-ai-plugin",
   "license": "MIT",
   "privacyPolicyUrl": "https://domino.ai/legal/privacy-policy",
-  "keywords": ["domino", "mlops", "data-science", "machine-learning","experiment-tracking","genai-tracing","spark","ray","dask","app-deployment"],
+  "keywords": ["domino", "mlops", "data-science", "machine-learning","experiment-tracking","spark","ray","dask","app-deployment"],
   "userConfig": {
     "domino_host": {
       "type": "string",
@@ -20,8 +20,15 @@
     },
     "domino_token": {
       "type": "string",
-      "title": "Domino Personal Access Token",
-      "description": "Only for use outside a Domino Workspace: in Domino, Account > Account settings > Personal Access Token > Generate new Token. Kept in your system's secure credential store. Leave empty inside a Workspace.",
+      "title": "Domino service account token",
+      "description": "Only for use outside a Domino Workspace: a service account token from your Domino administrator (only administrators can create one). Kept in your system's secure credential store. Leave empty to use a user API key below, or inside a Workspace.",
+      "sensitive": true,
+      "required": false
+    },
+    "domino_api_key": {
+      "type": "string",
+      "title": "Domino user API key",
+      "description": "Only for use outside a Domino Workspace, when you have no service account token: your user API key from your Domino account settings. Used only when the token is empty. Kept in your system's secure credential store. Leave empty inside a Workspace.",
       "sensitive": true,
       "required": false
     }

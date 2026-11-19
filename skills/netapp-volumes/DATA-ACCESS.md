@@ -1,10 +1,10 @@
 # Mount paths and data access
 
 Where NetApp Volumes and their snapshots appear inside a Workspace, Job or App, how
-tagged and pinned snapshots mount, read/write examples, and file-handling practices. The
+snapshots mount, read/write examples, and file-handling practices. The
 REST API is in [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md). Sources:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/netapp-volumes/add-remove-netapp-volumes
-and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datasets/version-data-with-snapshots.
+https://docs.dominodatalab.com/en/6.1/user_guide/306570/add-or-remove-netapp-volumes-on-projects/
+and https://docs.dominodatalab.com/en/6.1/user_guide/dbdbff/version-data-with-snapshots/.
 
 ## NetApp Volumes vs Domino Datasets
 
@@ -15,19 +15,18 @@ and https://docs.domino.ai/cloud/platform-capabilities/core-concepts/data/datase
 | Size limit | None from Domino; set by the ONTAP volume type (up to 300 TiB for a FlexVol) | Domino-managed |
 | Snapshot time | About 3 seconds regardless of size | Seconds to hours as data grows |
 | Snapshot storage | None at creation (redirect-on-write) | Duplicates the captured data |
-| Commit message on snapshots | Yes | No (tags only) |
-| New asset from a snapshot | No (volumes can be copied for Project Templates) | Yes, a new Dataset |
+| New asset from a snapshot | No | Yes, a new Dataset |
 | Admin prerequisite | Registered ONTAP filesystem | None |
-| REST API | `/remotefs/v1` | `/api/datasetrw/v1` and `/v2` |
+| REST API | `/remotefs/v1` ([base path](./API-NETAPP-VOLUMES.md#base-path-and-shapes)) | `/api/datasetrw/v1` and `/v2` |
 
 ## Mount paths
 
 Paths mirror the Dataset scheme. Volumes are global, so there is no local/imported split.
 
-| Project type | Read-write volume | Snapshots by number | Tagged snapshot |
-|--------------|-------------------|---------------------|-----------------|
-| DFS | `/domino/netapp-volumes/<name>` | `/domino/netapp-volumes/snapshots/<name>/<number>` | `/domino/netapp-volumes/snapshot-tags/<name>/<tag>` |
-| Git-based | `/mnt/netapp-volumes/<name>` | `/mnt/netapp-volumes/snapshots/<name>/<number>` | `/mnt/netapp-volumes/snapshot-tags/<name>/<tag>` |
+| Project type | Read-write volume | Snapshots by number |
+|--------------|-------------------|---------------------|
+| DFS | `/domino/netapp-volumes/<name>` | `/domino/netapp-volumes/snapshots/<name>/<number>` |
+| Git-based | `/mnt/netapp-volumes/<name>` | `/mnt/netapp-volumes/snapshots/<name>/<number>` |
 
 `<number>` is the snapshot's `version` from the API. Renaming a volume changes `<name>` and
 therefore every path; update scripts after a rename.
@@ -40,17 +39,9 @@ therefore every path; update scripts after a rename.
 
 ### Snapshot mounting
 
-- By default an attached volume mounts its live data and all of its snapshots
-  (`snapshots/<name>/<number>`).
-- If a snapshot has a tag, Domino also mounts it under `snapshot-tags/<name>/<tag>`. If a
-  snapshot carries several tags, only the most recently added tag is mounted. Tags can be
-  moved to newer snapshots by Owners and Editors.
-- **Pinning**: on the **Data Plane & Hardware** tab at launch you can pin a volume to one
-  snapshot (`Snapshot #<version> - <date>`). The pinned snapshot then mounts read-only at
-  the read-write path (`/domino/netapp-volumes/<name>` or `/mnt/netapp-volumes/<name>`),
-  the read-write mount and the `snapshots/<name>` directory are disabled, and tag mounts
-  stay. The pin applies to every restart of a Workspace, to a single one-off Job run, or
-  to every run of a scheduled Job.
+- An attached volume mounts its live data and its snapshots
+  (`snapshots/<name>/<number>`, read-only). Volumes and snapshots mount only when selected
+  at launch; if one is missing, start a new execution and select it.
 
 ### Identify the project type
 
@@ -72,9 +63,8 @@ else:
 ```python
 import pandas as pd
 
-df = pd.read_parquet(f"{netapp_root}/large-training-data/features.parquet")                      # live data
-df_v2 = pd.read_parquet(f"{netapp_root}/snapshot-tags/large-training-data/v2-0/features.parquet")  # tagged snapshot (tag names cannot contain dots)
-df_n3 = pd.read_parquet(f"{netapp_root}/snapshots/large-training-data/3/features.parquet")        # snapshot number 3
+df = pd.read_parquet(f"{netapp_root}/large-training-data/features.parquet")                # live data
+df_n3 = pd.read_parquet(f"{netapp_root}/snapshots/large-training-data/3/features.parquet")  # snapshot number 3
 ```
 
 ### Writing
@@ -87,7 +77,7 @@ df.to_parquet(f"{out_dir}/output.parquet", index=False)
 print(os.listdir(f"{netapp_root}/large-training-data"))
 ```
 
-Writes need the Editor or Owner role; a pinned snapshot is read-only.
+Writes need the Editor or Owner role; snapshot paths are read-only.
 
 ## Best practices
 
@@ -103,27 +93,22 @@ Writes need the Editor or Owner role; a pinned snapshot is read-only.
 ### Snapshot before destructive changes
 
 ```python
-requests.post(f"{remotefs_url}/remotefs/v1/snapshots", headers=remotefs_headers,
-              json={"volumeId": volume_id, "description": "Pre-processing baseline",
-                    "tagNames": ["pre-processing-2026-01"]})
+requests.post(f"{nv}/snapshots", headers=remotefs_headers,
+              json={"volumeId": volume_id, "description": "pre-processing-2026-01"})
 process_data()
 ```
 
-Setup for `remotefs_url` and `remotefs_headers`: [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#authentication-and-base-urls).
-For Jobs, `snapshotNetAppVolumesOnCompletion: true` on `POST /api/jobs/v1/jobs` does
-this automatically at the end of the run on deployments where an administrator has
-enabled it (otherwise the job is rejected with 400; see
-[API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#mount-volumes-in-a-job)).
+Setup for `nv` and `remotefs_headers`: [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#authentication-and-base-urls).
 
-### Reference tags, not numbers, in reproducible runs
+### Reference snapshot numbers in reproducible runs
 
 ```python
-TRAINING_DATA = f"{netapp_root}/snapshot-tags/dataset/v2-0"     # tag names: letters, digits, _ and - only
+TRAINING_DATA = f"{netapp_root}/snapshots/dataset/3"     # one specific snapshot, read-only
 df = pd.read_parquet(f"{TRAINING_DATA}/features.parquet")
 ```
 
-Tag paths stay stable when you re-tag a newer snapshot; numbered paths identify one
-specific snapshot forever. Or pin the snapshot at launch and keep reading the live path.
+A numbered path identifies one snapshot for as long as that snapshot exists; record the
+number with the run's results.
 
 ### Use columnar formats and lazy readers for large data
 

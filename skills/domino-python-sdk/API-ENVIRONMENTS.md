@@ -2,7 +2,7 @@
 
 Create, revise and inspect Compute Environments. Routes marked **Cloud** exist only on
 Domino Cloud. Product docs:
-https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments.
+https://docs.dominodatalab.com/en/6.1/user_guide/e46d54/customize-environments/.
 
 ## Authentication
 
@@ -16,7 +16,7 @@ Read `GET $DOMINO_API_HOST/version`.
 | Target | Create environments and revisions with |
 |--------|----------------------------------------|
 | Domino Cloud (`6.4.0` and later) | `POST /api/environments/v2/environments` and `POST /api/environments/v2/environments/{environmentId}/revisions`. On Cloud the beta create routes are **deprecated**: they cannot set a CPU architecture and gain no new capabilities. |
-| Domino 6.3 | `POST /api/environments/beta/environments` and `.../beta/environments/{environmentId}/revisions` (v2 does not exist on 6.3) |
+| Domino 6.1 (`6.1.x`) | `POST /api/environments/beta/environments` and `.../beta/environments/{environmentId}/revisions` (v2 does not exist on 6.1) |
 
 List (`GET /api/environments/beta/environments`), get and archive
 (`/api/environments/v1/environments/{environmentId}`) and the revision `PATCH` are the same
@@ -50,11 +50,10 @@ There is no `baseEnvironmentId`.
 Build fields (shared by create and revision bodies): `image` (base image URI),
 `dockerfileInstructions`, `preSetupScript`, `postSetupScript`, `preRunScript`,
 `postRunScript`, `environmentVariables` (`[{"key", "value"}]`), `workspaceTools`,
-`supportedClusters` (`dask`, `mpi`, `ray`, `slurm`, `spark`), `skipCache`, `summary`,
+`supportedClusters` (`dask`, `mpi`, `ray`, `spark`), `skipCache`, `summary`,
 `useVpn`. Environment-level fields: `name`, `description`, `visibility`, `addBaseDependencies`,
 `isRestricted` (needs the ClassifyEnvironments permission), `isCurated`, `orgOwnerId`
-(private environments owned by an organization), `rebuildOnBaseChanges`. `tags` is deprecated
-in favour of taxonomy tags.
+(private environments owned by an organization), `rebuildOnBaseChanges`, `tags`.
 
 **Cloud** (`POST /api/environments/v2/environments`): the build fields sit under
 `initialRevision` (`image`, `buildConfiguration` with the Dockerfile and scripts,
@@ -83,7 +82,7 @@ URI; copy one from an existing environment's details page (the DSE image) or you
 registry. `PUT .../description` works, but the description is not returned by the
 Public `GET`.
 
-**6.3** (`POST /api/environments/beta/environments`): the same fields flat.
+**6.1** (`POST /api/environments/beta/environments`): the same fields flat.
 
 ```python
 env = requests.post(f"{base_url}/api/environments/beta/environments", headers=headers, json={
@@ -129,7 +128,7 @@ returns it.
 
 ```
 POST  /api/environments/v2/environments/{environmentId}/revisions     Cloud: {"image", "buildConfiguration": {...}, "environmentVariables", "architectures", ...}
-POST  /api/environments/beta/environments/{environmentId}/revisions   6.3: the flat build fields (deprecated on Cloud)
+POST  /api/environments/beta/environments/{environmentId}/revisions   6.1: the flat build fields (deprecated on Cloud)
 PATCH /api/environments/beta/environments/{environmentId}/revisions/{revisionId}   body: {"isRestricted": true}
 ```
 
@@ -209,7 +208,7 @@ Body reference: [API-JOBS.md](./API-JOBS.md#start-a-job).
 `dockerfileInstructions` is a Dockerfile fragment appended to the base image. Domino
 images must run as the `ubuntu` user, and the docs recommend installing packages as
 `root`: add `USER root` before the install commands and `USER ubuntu` after them
-(https://docs.domino.ai/cloud/platform-capabilities/core-concepts/compute-environments/add-packages-to-environments/preload-environment-packages).
+(https://docs.dominodatalab.com/en/6.1/user_guide/813d89/preload-environment-packages/).
 
 ```dockerfile
 USER root
@@ -232,7 +231,7 @@ and `scikit-learn<2`). Packages the DSE does not ship, such as torch, take their
 `create_environment(name, visibility, ...)`, `create_environment_revision(environment_id, ...)`,
 `restrict_environment_revision(environment_id, revision_id)`, `archive_environment(environment_id)`.
 `create_environment` and `create_environment_revision` call the beta routes above (current on
-6.3, deprecated on Cloud, where they still work but cannot set `architectures`).
+6.1, deprecated on Cloud, where they still work but cannot set `architectures`).
 `create_environment_revision` posts a complete definition and fills omitted fields with
 defaults, not with the environment's current values: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments).
 Signatures: [SDK-EXAMPLES.md](./SDK-EXAMPLES.md#environments-and-hardware-tiers). There is

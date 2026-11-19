@@ -1,13 +1,12 @@
 # Export targets: NVIDIA Fleet Command, Snowflake, SageMaker, the Exports page
 
 **Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
-They are documented on the product pages cited below and in each deployment's
-`https://<domino-domain>/docs` (`openapi-internal.json`). Auth: [SKILL.md](./SKILL.md#authentication).
+They are documented on the product pages cited below. Auth: [SKILL.md](./SKILL.md#authentication).
 
 ## NVIDIA Fleet Command (edge)
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/export-nvidia
-(same on 6.3). Domino pushes the endpoint container image and a Helm chart to private
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/5cef47/export-models-to-nvidia-fleet-command/.
+Domino pushes the endpoint container image and a Helm chart to private
 repositories in NVIDIA NGC; Fleet Command then deploys them to edge systems. The route is
 labelled beta.
 
@@ -44,8 +43,8 @@ Constraints:
 
 ## Snowflake (Snowpark UDF)
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/snowflake-queries
-(same on 6.3). Domino uploads the model artifact, the file holding the predict function and its
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/a1b168/snowflake-queries/.
+Domino uploads the model artifact, the file holding the predict function and its
 dependent modules to a Snowflake stage and registers the function as a Snowpark Python UDF, so
 scoring runs where the data lives. The documented path is the UI publish flow.
 
@@ -95,7 +94,7 @@ the next export).
 
 Two mechanisms exist; prefer the first.
 
-**Deployment targets (Public API, 6.3 and Cloud).** An admin registers an external
+**Deployment targets (Public API).** An admin registers an external
 deployment target (`GET/POST /api/admin/v1/deploymentTargets`, types from
 `/api/admin/v1/deploymentTargetTypes`, resource configurations under
 `.../{deploymentTargetId}/resourceConfigurations`). A user then deploys a **registered model**
@@ -103,7 +102,7 @@ from **Endpoints > External > Create external endpoint** (model, environment, ta
 min/max instances with CPU-based autoscaling at 80%, streaming, visibility) or with
 `POST /api/modelServing/v1/modelDeployments`; lifecycle via `.../{modelDeploymentId}/start|stop`
 and `.../versions`. Only supported when the Domino control plane runs on AWS EKS. Product page:
-https://docs.domino.ai/cloud/platform-capabilities/features/models/deploy-sagemaker. REST
+https://docs.dominodatalab.com/en/6.1/user_guide/02ec6d/deploy-models-to-sagemaker/. REST
 details: [domino-python-sdk API-MODELS.md](../domino-python-sdk/API-MODELS.md).
 
 **Legacy image export (non-public route; may change in a future Domino version).** `POST /v4/models/{modelId}/{modelVersionId}/exportImageForSagemaker`

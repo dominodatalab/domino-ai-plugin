@@ -50,7 +50,7 @@ Platform API calls go through `os.environ["DOMINO_API_PROXY"]` with no `Authoriz
 
 ## Coding assistants in Jupyter
 
-The DSE includes CLI coding agents that work from a JupyterLab terminal; VS Code adds the extension panels. Docs: https://docs.domino.ai/cloud/platform-capabilities/features/coding-assistants
+The DSE does not include coding assistants. A CLI agent the user installs (in the environment Dockerfile, or with Package or Home Directory Persistence) runs from a JupyterLab terminal; see [SKILL.md](./SKILL.md#coding-assistants-and-extra-apps).
 
 ## Notebooks as Jobs
 
@@ -75,6 +75,6 @@ See [domino-jobs](../domino-jobs/SKILL.md) for scheduling and the Jobs API.
 
 ## Docs
 
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/launch-a-workspace
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/use-package-persistence
-- https://docs.domino.ai/cloud/platform-capabilities/core-concepts/workspaces/run-multiple-apps-in-a-workspace
+- https://docs.dominodatalab.com/en/6.1/user_guide/e6e601/launch-a-workspace/
+- https://docs.dominodatalab.com/en/6.1/user_guide/e82a92/use-package-persistence-in-domino/
+- https://docs.dominodatalab.com/en/6.1/user_guide/2c01ae/run-multiple-applications-in-a-workspace/

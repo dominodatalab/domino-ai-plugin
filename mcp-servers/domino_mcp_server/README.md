@@ -20,7 +20,7 @@ the client's name and protocol version on stderr when the host first lists or ca
 | `check_domino_job_run_status` | read | Execution status of a job (`Queued`, `Running`, `Succeeded`, `Failed`, ...); with `wait_seconds` waits on the server until it completes or the cap is reached | `GET /api/jobs/beta/jobs/{jobId}` (Public API) |
 | `check_domino_job_run_results` | read | Job output: `stdOut` by default, or `stdErr`, `prepareOutput`, `complete` | `GET /api/jobs/beta/jobs/{jobId}/logs` (Public API) |
 | `list_domino_project_files` | read | Files and subdirectories of one directory of a DFS project (not recursive) | `GET /v4/files/browseFiles`, `GET /v4/files/browseDirectories` (Internal API) |
-| `download_file_from_domino_project` | read | Content of a file at the latest commit (text as `content`, binary as `content_base64`); records the version for `smart_sync_file` | `GET /api/projects/beta/projects/{id}/commits/latest`, `GET /api/projects/v1/projects/{id}/files/{commitId}/{path}/content` (Public API) |
+| `download_file_from_domino_project` | read | Content of a file at the latest commit (text as `content`, binary as `content_base64`); records the version for `smart_sync_file` | `GET /api/projects/beta/projects/{id}/commits/latest`; where that returns 404 (Domino 6.1), the first commit id from `GET /v1/projects/{owner}/{project}/commits` (legacy API, newest first). Then `GET /api/projects/v1/projects/{id}/files/{commitId}/{path}/content` (Public API) |
 | `upload_file_to_domino_project` | write | Creates a file of any type in a DFS project (`file_content` text or `content_base64`); replaces an existing one only with `overwrite=True`; refuses Git-based projects; returns the `commitId` that contains the file | `PUT /v1/projects/{owner}/{project}/{path}` (legacy API) |
 | `sync_local_file_to_domino` | write | Reads a local file as bytes (model artifacts, images, text) and uploads it unchanged; returns `commitId` | as above |
 | `smart_sync_file` | write | Upload of any file type (`content` text or `content_base64`) with conflict detection; never replaces a file it has not seen unless `force_overwrite=True`; refuses Git-based projects; returns `commitId` | the read routes above plus the legacy upload |
@@ -154,19 +154,23 @@ variables above from the nearest ancestor process that has `DOMINO_API_PROXY` or
 | Variable | Value |
 |---|---|
 | `DOMINO_HOST` | Your Domino URL, for example `https://domino.example.com` (`DOMINO_API_HOST` is accepted as a fallback). `http://` is refused except for localhost, because it would send the token in clear text; set `DOMINO_INSECURE_HTTP=true` to allow it deliberately |
-| `DOMINO_TOKEN` | A [Personal Access Token](https://docs.domino.ai/cloud/reference/api/domino-api-authentication) (Account settings > Personal Access Token) or a service account token, sent as `Authorization: Bearer`. Surrounding whitespace is stripped; a value with whitespace inside is rejected. Ignored when `DOMINO_API_PROXY` is set. The token never appears in tool results, errors or logs. |
-| `CLAUDE_PLUGIN_OPTION_DOMINO_HOST`, `CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN` | Set by a host from its own settings UI (Claude Code passes the plugin options `domino_host` and `domino_token`). Non-empty values take precedence over `DOMINO_HOST` and `DOMINO_TOKEN`; the server moves them into those names at start and removes them from its environment |
+| `DOMINO_TOKEN` | A [service account token](https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/) (an administrator creates it), sent as `Authorization: Bearer`. Domino 6.1 has no Personal Access Tokens. Surrounding whitespace is stripped; a value with whitespace inside is rejected. Ignored when `DOMINO_API_PROXY` is set. The token never appears in tool results, errors or logs. |
+| `DOMINO_API_KEY` | A user API key, sent as `X-Domino-Api-Key` when `DOMINO_TOKEN` is unset (below). `DOMINO_USER_API_KEY`, python-domino's name for it, is read when `DOMINO_API_KEY` is unset |
+| `CLAUDE_PLUGIN_OPTION_DOMINO_HOST`, `CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN`, `CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY` | Set by a host from its own settings UI (Claude Code passes the plugin options `domino_host`, `domino_token` and `domino_api_key`). Non-empty values take precedence over `DOMINO_HOST`, `DOMINO_TOKEN` and `DOMINO_API_KEY`; the server moves them into those names at start and removes them from its environment |
 
-Precedence: plugin options, then `DOMINO_HOST` and `DOMINO_TOKEN` from the environment, then the
-env file below. `get_domino_environment_info` reports where each value came from
+Precedence: plugin options, then `DOMINO_HOST`, `DOMINO_TOKEN` and `DOMINO_API_KEY` from the
+environment, then the env file below. `get_domino_environment_info` reports where each value came from
 (`credential_sources`) and, when both are set, asks Domino who the token belongs to
 (`GET /api/users/v1/self`): `connection.authenticated_as`, or `connection.error` with the fix.
 User-facing setup steps for every host: the repository README, "Your Domino URL and token".
 
-Legacy user API keys (`DOMINO_API_KEY`, `X-Domino-Api-Key`) are deprecated by Domino and not
-supported by this server: a PAT is rejected on that header, and a legacy key is not sent. If
-`DOMINO_API_KEY` is set and `DOMINO_TOKEN` is not, every API tool fails with a message that says
-to set `DOMINO_TOKEN`, and the server prints the same warning on stderr at start.
+On Domino 6.1 only administrators can create service-account tokens, so most users authenticate
+with a user API key: set `DOMINO_API_KEY` (the `domino_api_key` plugin option, the Gemini CLI
+setting, or a `DOMINO_API_KEY=` line in the env file) to your user API key from your Domino
+account settings; the server sends it as `X-Domino-Api-Key`. `DOMINO_TOKEN` wins when both are
+set. The key, like the token, is stripped of surrounding whitespace, rejected with whitespace
+inside, and never appears in tool results, errors or logs. `get_domino_environment_info` reports
+`auth_mode` `bearer_token` or `api_key`.
 
 When the host does not pass these variables, the server reads an env file (`KEY=value` lines,
 existing non-empty variables win): `$DOMINO_MCP_ENV_FILE` if set, else
@@ -183,9 +187,9 @@ and `DOMINO_HOST`; a missing variable names both and links the authentication pa
 
 | Host | File | Environment |
 |---|---|---|
-| Claude Code | `.mcp.json` (plugin root): `uv run --frozen --directory ${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server domino_mcp_server.py` | The plugin declares two options in `.claude-plugin/plugin.json` (`userConfig`: `domino_host`, and `domino_token` marked `sensitive`, which Claude Code keeps in the system's secure credential store). Claude Code asks for them when the plugin is enabled; `/plugin` → Installed → dominodatalab → Configure options changes them. The `env` block passes them as `CLAUDE_PLUGIN_OPTION_DOMINO_HOST` and `CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN` (`${user_config.…}`), the names the plugin directory expects for plugin options. The server also inherits Claude Code's environment, so `DOMINO_HOST` and `DOMINO_TOKEN` exported before starting Claude Code still work. An option that was never set arrives empty or as literal `${…}` text, which the server treats as unset. |
+| Claude Code | `.mcp.json` (plugin root): `uv run --frozen --directory ${CLAUDE_PLUGIN_ROOT}/mcp-servers/domino_mcp_server domino_mcp_server.py` | The plugin declares three options in `.claude-plugin/plugin.json` (`userConfig`: `domino_host`, and `domino_token` and `domino_api_key` marked `sensitive`, which Claude Code keeps in the system's secure credential store). Claude Code asks for them when the plugin is enabled; `/plugin` → Installed → dominodatalab → Configure options changes them. The `env` block passes them as `CLAUDE_PLUGIN_OPTION_DOMINO_HOST`, `CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN` and `CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY` (`${user_config.…}`), the names the plugin directory expects for plugin options. The server also inherits Claude Code's environment, so `DOMINO_HOST` and `DOMINO_TOKEN` exported before starting Claude Code still work. An option that was never set arrives empty or as literal `${…}` text, which the server treats as unset. |
 | Codex and the ChatGPT desktop app (local marketplace) | `mcp.json` (Agent Plugins format, `${PLUGIN_ROOT}`) | No `env` block (the format forbids secrets there) and Codex strips the shell environment. Inside a Workspace the server recovers the Domino variables itself; on a laptop use the env file above, at `~/.config/domino-mcp-server/.env`: Codex passes neither `XDG_CONFIG_HOME` nor `DOMINO_MCP_ENV_FILE`. |
-| Cursor | `.cursor-plugin/mcp.json` (`${CURSOR_PLUGIN_ROOT}`) | `${env:DOMINO_HOST}` and `${env:DOMINO_TOKEN}`, resolved from the environment Cursor runs in (the Cursor CLI may not see your shell's). Cursor prompts only for a plugin's manifest `variables`, which admins set team-wide, so the token is never one: use the env file. Whether Cursor passes literal text or an empty string for an unset variable is not documented; the server treats both as unset. |
+| Cursor | `.cursor-plugin/mcp.json` (`${CURSOR_PLUGIN_ROOT}`) | `${env:DOMINO_HOST}`, `${env:DOMINO_TOKEN}` and `${env:DOMINO_API_KEY}`, resolved from the environment Cursor runs in (the Cursor CLI may not see your shell's). Cursor prompts only for a plugin's manifest `variables`, which admins set team-wide, so the token is never one: use the env file. Whether Cursor passes literal text or an empty string for an unset variable is not documented; the server treats both as unset. |
 | Gemini CLI | `gemini-extension.json` (`${extensionPath}`) | Extension `settings` with `envVar` `DOMINO_HOST` and `DOMINO_TOKEN` (sensitive, kept in the keychain): Gemini asks at install and `gemini extensions config dominodatalab` changes them. Gemini drops TOKEN-named variables from the environment it passes, so a shell `DOMINO_TOKEN` never arrives. |
 | Antigravity | `mcp_config.json` (`${PLUGIN_ROOT}`) | Inherits the environment `agy` starts with, unfiltered; otherwise the env file. |
 | Any other host | register a stdio server with the same `uv run --frozen --directory <path to this directory> domino_mcp_server.py` command | pass `DOMINO_HOST` and `DOMINO_TOKEN` the way the host supports, or use the env file |
@@ -203,7 +207,7 @@ Everything with an equivalent in both published Public API specs
 
 | Operation | Route | Status |
 |---|---|---|
-| List the files of a DFS project directory | `GET /v4/files/browseFiles`, `GET /v4/files/browseDirectories` | Domino Internal API, may change between Domino versions (documented per cluster at `https://<domino-domain>/docs`) |
+| List the files of a DFS project directory | `GET /v4/files/browseFiles`, `GET /v4/files/browseDirectories` | Domino Internal API, may change between Domino versions (no published reference on Domino 6.1) |
 | Upload a file to a DFS project | `PUT /v1/projects/{owner}/{project}/{path}` | Legacy API, in no published spec |
 
 Both are labelled at the point of use in `domino_mcp_server.py`. For Git-based projects, commit

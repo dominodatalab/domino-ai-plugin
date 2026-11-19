@@ -14,7 +14,8 @@ Outside Domino there is no API proxy and no access-token sidecar. The worker nee
 | Variable | Value |
 |---|---|
 | `DOMINO_API_HOST` | the deployment URL users open in a browser (python-domino reads the same variable) |
-| `DOMINO_TOKEN_FILE` | path to a file whose first line is a Personal Access Token or service-account token created in Domino; the worker mounts it from Airflow's own secret mechanism, since Domino Project and user environment variables are not readable outside Domino |
+| `DOMINO_TOKEN_FILE` | path to a file whose first line is a service account token created in Domino; the worker mounts it from Airflow's own secret mechanism, since Domino Project and user environment variables are not readable outside Domino |
+| `DOMINO_USER_API_KEY` | fallback when no service account token is available: your user API key (**Account > Account Settings > API Key**), sent as `X-Domino-Api-Key`; inject it from the same secret mechanism |
 
 Airflow Variables are fine for the host; keep the token out of Variables unless the Variable is
 backed by a secrets backend.
@@ -61,6 +62,10 @@ as `commitId` on a DFS project or read a result file with
 rendered because `op_args` of a `@task` are templated. Polling, logs and result hand-off:
 [JOBS-API-PATTERN.md](./JOBS-API-PATTERN.md).
 
+This pattern is for an orchestrator that runs **outside** Domino. For a pipeline **inside**
+Domino use [domino-flows](../domino-flows/SKILL.md); for one recurring script use a scheduled
+Job ([domino-jobs](../domino-jobs/SKILL.md)).
+
 ## python-domino operators
 
 The product page describes both integrations through python-domino; the operators come with the
@@ -92,8 +97,9 @@ on Airflow 3.
 `api_proxy` > `auth_token` > `domino_token_file` > `api_key` > env `DOMINO_API_PROXY` > env
 `DOMINO_TOKEN_FILE` > env `DOMINO_USER_API_KEY`. The host comes from `host` or env
 `DOMINO_API_HOST`. The operators expose `host`, `api_key` and `domino_token_file` only, so a
-token goes in through `domino_token_file` (the client re-reads the file on every request, so
-rotating the token in place needs no restart) or the `DOMINO_TOKEN_FILE` environment variable.
+service account token goes in through `domino_token_file` (the client re-reads the file on every
+request, so rotating the token in place needs no restart) or the `DOMINO_TOKEN_FILE` environment
+variable; a user API key goes in through `api_key` or `DOMINO_USER_API_KEY`.
 
 ### `DominoOperator`
 
@@ -111,7 +117,7 @@ change in a future Domino version). python-domino's README:
 | `project` | `str`, required | `owner/project-name` |
 | `command` | `List[str]`, required | file to run first, then arguments; templated |
 | `host` | `str`, `None` | deployment URL; else env `DOMINO_API_HOST` |
-| `api_key` | `str`, `None` | legacy API key; do not use |
+| `api_key` | `str`, `None` | user API key (fallback when no service account token is available) |
 | `domino_token_file` | `str`, `None` | path to a file holding a Bearer token |
 | `isDirect` | `bool`, `None` | run `command[0]` as a shell command; must then be a single element |
 | `commitId` | `str`, `None` | DFS commit to run from (not a git SHA on a Git-based project) |
@@ -178,7 +184,7 @@ from airflow.models import Variable
 from domino.airflow import DominoOperator
 
 HOST = Variable.get("DOMINO_API_HOST")           # https://<deployment>
-TOKEN_FILE = "/var/run/secrets/domino/token"     # mounted secret, first line = PAT or SA token
+TOKEN_FILE = "/var/run/secrets/domino/token"     # mounted secret, first line = service account token
 
 with DAG("churn_pipeline", start_date=datetime(2026, 1, 1), schedule="0 2 * * *", catchup=False) as dag:
     prepare = DominoOperator(

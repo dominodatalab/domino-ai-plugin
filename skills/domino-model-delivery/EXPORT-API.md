@@ -1,7 +1,7 @@
 # Model Export API: build an endpoint image and push it to your registry
 
-Product page: https://docs.domino.ai/cloud/platform-capabilities/features/models/integrate-ci-cd-workflows
-(same content on the 6.3 page). The API turns a project plus an inference function into the same
+Product page: https://docs.dominodatalab.com/en/6.1/user_guide/ba503b/integrated-deployment-to-ci-cd-workflows/.
+The API turns a project plus an inference function into the same
 container image a Domino endpoint runs (environment, project files, Flask or Plumber harness,
 auth and load-balancing layer) and pushes it to a registry you own. The other targets (NVIDIA
 Fleet Command, Snowflake, SageMaker) and the Exports page: [EXPORT-TARGETS.md](./EXPORT-TARGETS.md).
@@ -12,18 +12,18 @@ customer runtime). To serve it, publish a Domino endpoint instead
 and monitors it.
 
 **Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
-Each deployment documents them under `https://<domino-domain>/docs`
-(`openapi-internal.json`); on Domino 6.3 confirm the field lists and required flags there before
-relying on them.
+Domino 6.1 publishes no reference for them.
 
 ## Setup for a pipeline
 
-A CI/CD runner is outside Domino, so use the deployment URL and a Bearer token; other contexts:
+A CI/CD runner is outside Domino, so use the deployment URL and a service-account token (or a
+user API key); other contexts:
 [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ```bash
 BASE="$DOMINO_API_HOST"                      # outside Domino: export DOMINO_API_HOST=<deployment URL users open in a browser>
-AUTH="Authorization: Bearer $DOMINO_TOKEN"   # PAT or service-account token created in Domino; the CI system's own secret holds the runner's copy (Domino variables are not readable there)
+AUTH="Authorization: Bearer $DOMINO_TOKEN"   # service-account token created in Domino; the CI system's own secret holds the runner's copy (Domino variables are not readable there)
+# with a user API key instead: AUTH="X-Domino-Api-Key: $DOMINO_USER_API_KEY"
 ```
 
 ## Sequence
@@ -142,10 +142,11 @@ echo "quay.io/acme/credit-risk:$TAG"
 
 ### GitHub Actions job that runs it
 
-GitHub secrets hold the Domino token (a Personal Access Token, or a service-account token for a
-pipeline that acts as nobody in particular) and the registry credentials, because a runner
-outside Domino cannot read Domino Project or user environment variables; the token is created
-in Domino and copied there once. Repository variables hold the ids. No API key anywhere.
+GitHub secrets hold the Domino token (a service-account token, so the pipeline acts as no
+particular user; a user API key works with the `X-Domino-Api-Key` header instead) and the
+registry credentials, because a runner outside Domino cannot read Domino Project or user
+environment variables; the token is created in Domino and copied there once. Repository
+variables hold the ids.
 
 ```yaml
 name: export-model
@@ -156,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOMINO_API_HOST: ${{ vars.DOMINO_API_HOST }}        # https://<deployment URL>
-      DOMINO_TOKEN: ${{ secrets.DOMINO_TOKEN }}           # PAT or service-account token, sent as Bearer
+      DOMINO_TOKEN: ${{ secrets.DOMINO_TOKEN }}           # service-account token, sent as Bearer
       PROJECT_ID: ${{ vars.DOMINO_PROJECT_ID }}
       ENVIRONMENT_ID: ${{ vars.DOMINO_ENVIRONMENT_ID }}
       REGISTRY_USER: ${{ secrets.REGISTRY_USER }}

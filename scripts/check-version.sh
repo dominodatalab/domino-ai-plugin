@@ -151,6 +151,10 @@ if [ -n "$base_version" ] && [ "$head_version" != "$base_version" ] && parse "$b
   [ "$head_year" -ge "$base_year" ] || fail "year must not go backwards: base $base_version, head $head_version"
   if [ "$head_line" = "$base_line" ]; then
     [ "$head_n" -gt "$base_n" ] || fail "N must increase within line $head_line: base $base_version, head $head_version"
+  elif [[ "$base_branch" =~ ^release-([0-9]+)\.([0-9]+)$ ]] && [ "$base_line" -gt "$head_line" ]; then
+    # A release-X.Y branch that followed main still carries main's newer line; its first own
+    # release moves to X.Y (rule 4 already holds head to that line). N still never repeats.
+    [ "$head_n" -gt "$base_n" ] || fail "N must not repeat: base $base_version, head $head_version"
   else
     [ "$head_line" -gt "$base_line" ] || fail "the Domino line must not go backwards: base $base_version, head $head_version"
     [[ "$base_branch" =~ ^release- ]] && fail "a release-X.Y branch never changes line: base $base_version, head $head_version"

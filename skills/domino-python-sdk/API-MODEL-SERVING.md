@@ -6,17 +6,15 @@ and bodies: [API-MODELS.md](./API-MODELS.md). Pitfalls and workflow:
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
-## Registered models v1 vs v2
+## Registered models
 
 | Operation | Path | Notes |
 |-----------|------|--------|
-| List, register, add a version | `/api/registeredmodels/v2` | `pageToken` / `maxResults` pagination; `modelCategory` filter; `create: false` adds a version to an existing model |
+| List, register from an experiment run | `/api/registeredmodels/v1` | `pageToken` / `maxResults` pagination |
 | Get, update, read versions, model APIs for a version | `/api/registeredmodels/v1/{modelName}/...` | Path key is the **model name**, not an id |
-| Versions (v2 read) | `/api/registeredmodels/v2/{modelName}/versions[/{version}]` | |
+| Add a version from an experiment run | `POST /api/registeredmodels/v1/{modelName}/versions` | |
 
-Use v2 for discovery and writes, v1 for per-model reads.
-`POST /api/registeredmodels/v1/{modelName}/versions` is deprecated; do not use it for new
-automation.
+Domino 6.1 has only the v1 registry routes. Bodies: [API-MODELS.md](./API-MODELS.md#registered-models-registry).
 
 ## Model Serving (`/api/modelServing/v1`)
 
@@ -51,27 +49,14 @@ separate resources with separate lifecycles; do not mix their ids.
   [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md#stop-and-delete)).
 - A Model Deployment has `start` and `stop`; after `stop` or `DELETE`, `GET` the resource
   to confirm the state before issuing the next call.
-- Collaborator and visibility routes under `/api/modelServing/beta` exist only on Domino
-  Cloud.
 
 ## MLflow vs REST
 
 | Need | Use |
 |------|-----|
 | Experiment tracking, run artifacts | `MLFLOW_TRACKING_URI` and the MLflow client ([domino-experiment-tracking](../domino-experiment-tracking/SKILL.md)) |
-| Registry record, governance attachments | `/api/registeredmodels/...` |
+| Registry record | `/api/registeredmodels/v1/...` |
 | Hosted prediction endpoint | `/api/modelServing/v1/modelApis` plus the endpoint's invocation URL |
-
-## GenAI endpoints
-
-`GET/POST /api/gen-ai/beta/endpoints`, `GET/DELETE .../{endpointId}`,
-`GET/PATCH .../versions/{versionNumber}`, `.../start`, `.../stop`, `.../realTimeLogs`,
-`.../request-metrics`, `.../pod-resource-metrics`, `.../vllm-*-metrics`,
-`GET /api/gen-ai/beta/default-endpoint-environment`,
-`GET /api/gen-ai/beta/vanity-url-availability/{vanityUrl}`. Invoke a
-GenAI endpoint at the URL the endpoint's page shows, not at a management route. These
-are Domino-hosted LLM endpoints; the routes, bodies and calling pattern are in
-[domino-llm-access/HOST-AN-LLM-API.md](../domino-llm-access/HOST-AN-LLM-API.md).
 
 ## Discovery
 

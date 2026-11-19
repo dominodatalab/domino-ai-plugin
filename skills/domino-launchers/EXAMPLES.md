@@ -182,7 +182,7 @@ Outside Domino: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
 ## Manage launchers from code
 
-These are the Launchers page's own routes (non-public route; may change in a future Domino version; [route types](../domino-api-intro/SKILL.md#route-types)). They are scoped by the Project's owner username and name, not by id, and take a bearer token on `$DOMINO_API_HOST` (in a run, the access-token endpoint; outside, a Personal Access Token; [domino-api-intro](../domino-api-intro/SKILL.md)).
+These are the Launchers page's own routes (non-public route; may change in a future Domino version; [route types](../domino-api-intro/SKILL.md#route-types)). They are scoped by the Project's owner username and name, not by id, and take a bearer token on `$DOMINO_API_HOST` (in a run, the access-token endpoint; outside, a service-account token; a user API key sent as `X-Domino-Api-Key` in place of the bearer is the fallback (if it returns 401, use a service-account token); [domino-api-intro](../domino-api-intro/SKILL.md)).
 
 The launcher object, as sent to create and update:
 
