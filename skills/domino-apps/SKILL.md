@@ -52,7 +52,7 @@ Auth: https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authent
 
 ## REST automation
 
-`/api/apps/beta` for create, reads, instance logs and stop (`DELETE .../instances/{instanceId}`). Starting or restarting an App: the UI, or `POST /api/apps/beta/apps/{appId}/versions`, which creates a version and starts it. Routes and logs: [API-APPS.md](./API-APPS.md). CI/CD with GitHub Actions and a service account: [REACT-CICD.md](./REACT-CICD.md).
+`/api/apps/beta` for create, reads, instance logs and stop (`DELETE .../instances/{instanceId}`). Creating an App also starts it. Restarting an existing App: the UI, or `POST /api/apps/beta/apps/{appId}/versions`, which creates a version and starts it. Routes and logs: [API-APPS.md](./API-APPS.md). CI/CD with GitHub Actions and a service account: [REACT-CICD.md](./REACT-CICD.md).
 
 ## Reference files
 

@@ -128,7 +128,7 @@ spec). Still open:
 - Whether a 6.1 deployment serves `/docs` (inferred absent from the release manifests; check with
   `curl -s -o /dev/null -w '%{http_code}' https://<host>/docs/openapi/openapi-public.json`).
 - Whether `POST /api/apps/beta/apps/{appId}/versions` stops the instance already running (the skills
-  stop it first), and whether `POST /api/apps/beta/apps` with a `version` starts the App.
+  stop it first), and whether `vanityUrl` in that body is ignored (the skills set it with `PATCH`).
 - Whether a Git-based App starts from a commit only a tag reaches (the domino-apps CI flow).
 - NetApp grant roles `VolumeEditor` and `VolumeReader` (from `main`; only `VolumeOwner` is confirmed
   on 6.1.1).
@@ -192,6 +192,17 @@ Platform API spec. Where they conflict with the per-file logs below, these entri
   it with multi-line fixtures and fails when the rule is disabled; `build-openai.sh` runs it.
 - **AGENTS.md:** an "On `release-6.1`" block lists the rules that replace the 6.3/Cloud ones on this
   branch. `CONTRIBUTING.md` still describes per-deployment `/docs`.
+
+## Round 4: re-review (PR #130, items 13 and 14)
+
+- **Workspace git ref:** `overrideMainGitRepoRef` in `domino-workspaces/API.md` uses `"branches"`;
+  the `/v4` workspace route rejects `"branch"`. The Projects skills keep `"branch"` (the public route
+  maps it).
+- **App create starts the App:** `POST /api/apps/beta/apps` starts the App on its first version, so
+  `domino-python-sdk/API-APPS.md` waits on `currentVersion.id` after create, and stop-then-`POST`
+  versions is a separate restart example. `domino-apps/API-APPS.md` and `SKILL.md` say the same.
+  `dfsCommitId` is honored on create and ignored on version-create; `vanityUrl` is dropped from the
+  version-create body (set it with `PATCH` on the version).
 
 ## Skill changes, per file
 

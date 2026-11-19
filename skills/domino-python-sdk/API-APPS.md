@@ -52,9 +52,12 @@ Required: `name`, `projectId`, `visibility` (`AUTHENTICATED`, `GRANT_BASED`,
 `version` fields (`AppVersionCreationRequest`, none required): `hardwareTierId`,
 `environmentId`, `environmentRevisionId`, `gitRef`
 (`{"type": "head" | "commitId" | "branches" | "tags" | "custom", "value": "..."}`; Git-based
-Projects), `externalVolumeMountIds`, `netAppVolumeIds`, `vanityUrl`. `dfsCommitId` is in the
-schema but ignored: a DFS Project's version runs its latest commit. There is no version
-`description`.
+Projects), `externalVolumeMountIds`, `netAppVolumeIds`, `dfsCommitId` (DFS Projects; honored
+on create only). There is no version `description`. Set a vanity URL afterwards with `PATCH`
+on the version (below).
+
+Creating an App also starts it on that first version, so do not follow the create with a
+version `POST`: poll `currentVersion.id` until `Running` (see the workflow below).
 
 ```python
 app = requests.post(f"{base_url}/api/apps/beta/apps", headers=headers, json={
@@ -82,14 +85,15 @@ DELETE /api/apps/beta/apps/{appId}
 
 ```
 GET   /api/apps/beta/apps/{appId}/versions
-POST  /api/apps/beta/apps/{appId}/versions                       body: the version object above; starts the App
+POST  /api/apps/beta/apps/{appId}/versions                       body: the version object above (no dfsCommitId, no vanityUrl); starts the App
 GET   /api/apps/beta/apps/{appId}/versions/{versionId}
 PATCH /api/apps/beta/apps/{appId}/versions/{versionId}            body: {"vanityUrl": "..."}
 ```
 
-`POST .../versions` is the start and restart route: it creates the version and starts an
-instance of it, so do not create a version only for bookkeeping. Stop the running instance
-first (below), then poll the new version until `Running`. A version record carries
+`POST .../versions` is the restart route for an existing App: it creates the version and
+starts an instance of it, so do not create a version only for bookkeeping. Stop the running
+instance first (below), then poll the new version until `Running`. In a DFS Project it runs
+the Project's latest commit (`dfsCommitId` is ignored here), so sync first. A version record carries
 `currentInstance` (`id`, `status`, `createdAt`, `dfsCommitId`, `gitCommitId`). Instance
 statuses include: `Queued`, `Pending`, `Preparing`, `Running`, `Stopped`. Do not start Apps
 with python-domino `app_publish`: it calls the Domino Internal API (non-public route; may
@@ -143,6 +147,18 @@ app = requests.post(apps_url, headers=headers, json={
 }).json()
 app_id = app["id"]
 
+def wait_running(app_id, version_id, timeout=900):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        version = requests.get(f"{apps_url}/{app_id}/versions/{version_id}", headers=headers).json()
+        status = (version.get("currentInstance") or {}).get("status", "Pending")
+        if status in ("Running", "Serving"):
+            return status
+        if status in ("Failed", "Error", "Stopped", "Succeeded"):
+            raise RuntimeError(f"App is not serving: {status}")
+        time.sleep(10)
+    raise TimeoutError("Timed out waiting for the app")
+
 def stop_running(app_id):
     current = requests.get(f"{apps_url}/{app_id}", headers=headers).json().get("currentVersion") or {}
     instance = current.get("currentInstance") or {}
@@ -150,28 +166,23 @@ def stop_running(app_id):
         requests.delete(f"{apps_url}/{app_id}/versions/{current['id']}/instances/{instance['id']}",
                         headers=headers)
 
-# Restart on new code: stop the running instance, then create a version (this starts it)
+# Create starts the App on its first version: wait for it, do not POST a version
+wait_running(app_id, app["currentVersion"]["id"])
+print("App is up:", app["url"])
+
+stop_running(app_id)                                   # stop the App when done
+```
+
+Restart an existing App on new code: stop the running instance, then create a version (this
+starts it).
+
+```python
 stop_running(app_id)
 version = requests.post(f"{apps_url}/{app_id}/versions", headers=headers, json={
     "hardwareTierId": "small-k8s", "environmentId": env_id,
     # Git-based Project: "gitRef": {"type": "commitId", "value": "<sha>"}
 }).json()
-version_id = version["id"]
-
-deadline = time.time() + 900
-while time.time() < deadline:
-    version = requests.get(f"{base_url}/api/apps/beta/apps/{app_id}/versions/{version_id}",
-                           headers=headers).json()
-    status = (version.get("currentInstance") or {}).get("status", "Pending")
-    if status in ("Running", "Serving"):
-        print("App is up:", app["url"]); break
-    if status in ("Failed", "Error", "Stopped", "Succeeded"):
-        print("App is not serving:", status); break
-    time.sleep(10)
-else:
-    print("Timed out waiting for the app")
-
-stop_running(app_id)                                   # stop the App when done
+wait_running(app_id, version["id"])
 ```
 
 ## App requirements

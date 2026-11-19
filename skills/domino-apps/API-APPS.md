@@ -26,7 +26,7 @@ The Apps API on Domino 6.1 is `/api/apps/beta`. It has no draft or publish route
 | Use | Route |
 |---|---|
 | List Apps | `GET /api/apps/beta/apps` (`projectId`, `name`, `includeTemplateApps`, `sortField`, `sortOrder`, `limit`, `offset`; no status or owner filter, so read `currentVersion.currentInstance.status` from each item) |
-| Create an App | `POST /api/apps/beta/apps` |
+| Create an App | `POST /api/apps/beta/apps`; this **also starts the App** on its first version, so poll `currentVersion.id` from the response instead of creating a version |
 | Read, update, delete an App | `GET`, `PATCH`, `DELETE /api/apps/beta/apps/{appId}` |
 | Versions | `GET /api/apps/beta/apps/{appId}/versions`; `POST` the same path **creates a version and starts the App on it** (see [Start and stop](#start-and-stop)); `GET`, `PATCH .../versions/{versionId}` (`PATCH` takes only `vanityUrl`) |
 | Instances of a version | `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`; `GET .../instances/{instanceId}` |
@@ -43,7 +43,8 @@ The Apps API on Domino 6.1 is `/api/apps/beta`. It has no draft or publish route
 
 ## Start and stop
 
-- **Start or restart**: publish from the UI (**Deployments > Apps > Publish Domino App**, or the App's page), or `POST /api/apps/beta/apps/{appId}/versions`. That call creates a version and starts an instance of it, so never create a version only to record one. Body fields (all optional): `hardwareTierId`, `environmentId`, `environmentRevisionId`, `gitRef` (`{"type": "head" | "commitId" | "branches" | "tags" | "custom", "value": "..."}`), `netAppVolumeIds`, `externalVolumeMountIds`, `vanityUrl`. In a Git-based Project, `gitRef` picks the code. In a DFS Project the version runs the Project's latest commit, and `dfsCommitId` is ignored, so sync before you call it. Stop the running instance first (below) so two do not serve at once:
+- **Start**: creating the App (`POST /api/apps/beta/apps`, or **Deployments > Apps > Publish Domino App**) starts it on its first version; poll `currentVersion.id` from the response. In a DFS Project the create body's `version.dfsCommitId` picks the commit.
+- **Restart an existing App**: the App's page in the UI, or `POST /api/apps/beta/apps/{appId}/versions`. That call creates a version and starts an instance of it, so never create a version only to record one. Body fields (all optional): `hardwareTierId`, `environmentId`, `environmentRevisionId`, `gitRef` (`{"type": "head" | "commitId" | "branches" | "tags" | "custom", "value": "..."}`), `netAppVolumeIds`, `externalVolumeMountIds`. Set a vanity URL with `PATCH .../versions/{versionId}`, not here. In a Git-based Project, `gitRef` picks the code. In a DFS Project the version runs the Project's latest commit, and `dfsCommitId` is ignored, so sync before you call it. Stop the running instance first (below) so two do not serve at once:
 
 ```bash
 # in a run; outside, add the credential header and use the deployment URL

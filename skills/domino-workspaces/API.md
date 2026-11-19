@@ -41,7 +41,7 @@ body = {
     "ssh": {"enabled": False},
     "persistence": {"persistPackages": False, "persistHomeDirectory": False},
     # optional: "overrideVolumeSizeGiB": 20, "netAppVolumeIds": [],
-    #           "overrideMainGitRepoRef": {"type": "branch", "value": "main"},
+    #           "overrideMainGitRepoRef": {"type": "branches", "value": "main"},
     #           "computeClusterConfig": {...}            # see "Attach a cluster"
 }
 ws = requests.post(f"{base}/v4/workspace/project/{project_id}/workspace", json=body)   # non-public route; may change in a future Domino version
