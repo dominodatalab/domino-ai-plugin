@@ -11,7 +11,7 @@ Version `2026.603.10` → `2026.601.11`.
 |---|---|
 | Skills | 35 → 28: 7 removed, 28 adapted (every `compatibility:` and opening line now says Domino 6.1) |
 | Plugin-level files | `rules/domino.md`, README, AGENTS.md, the 3 agent routers, all 4 manifests |
-| MCP server | user API key fallback (`X-Domino-Api-Key`); `commits/latest` 404 fallback; README; tests |
+| MCP server | user API key fallback (`X-Domino-Api-Key`) and plugin option; `commits/latest` 404 fallback to the legacy commit list; README; tests |
 | Evals | 15 cases/scenarios removed, 12 rewritten for 6.1 rules, HPC dryrun cases removed |
 | Repo mechanics | version bump, `check-version.sh` exception for a release branch leaving main's line |
 
@@ -22,10 +22,14 @@ Version `2026.603.10` → `2026.601.11`.
 - `scripts/check-codeowners.py`: ok, 28 skills
 - `claude plugin validate .claude-plugin/plugin.json` and `claude plugin validate .`: passed
 - `scripts/check-version.sh origin/release-6.1`: ok (re-run after commit)
-- MCP server `pytest`: 125 passed
-- `evals/e2e/tools/dryrun_checks.py`: 22/22
-- Not run: `claude plugin eval` (model calls) and the live end-to-end round on a 6.1 Workspace.
-  AGENTS.md requires the live round before shipping write-path changes; none exists for 6.1 yet.
+- MCP server `pytest`: 127 passed; `claude --plugin-dir . mcp list`: `domino_server` connected
+- `scripts/test-lint-later-terms.py`: ok (also run by `scripts/build-openai.sh`)
+- Rust template (`skills/domino-rust-apps/assets/app`) on 1.99.1: `cargo test` 17 passed,
+  `cargo clippy --all-targets -- -D warnings` clean, `cargo fmt --check` clean
+- `evals/e2e/tools/dryrun_checks.py`: 22/22 (before round 3)
+- Not run: `claude plugin eval` (model calls), `gemini extensions validate .` (no `npx` in the
+  authoring Workspace), and the live end-to-end round on a 6.1 Workspace. AGENTS.md requires the
+  live round before shipping write-path changes; none exists for 6.1 yet.
 
 ## Branch-wide decisions
 
@@ -78,11 +82,16 @@ governance the recommended option, delist, was taken).
   `get_domino_environment_info` checks the connection in either mode and reports `DOMINO_API_KEY` in
   `credential_sources`; the start-up "not supported" warning removed; help and 401/403 text drop PAT.
 - `_latest_commit_id`: on 404 from `GET /api/projects/beta/projects/{id}/commits/latest`, falls back to
-  `GET /v1/projects/{owner}/{project}/commits` and takes the first commit id (newest first, as the
-  domino-python-sdk skill documents for `commits_list()`); object entries with commit times are ordered
-  by time. Callers pass owner and project name.
-- `tests/test_server.py`: 5 tests updated for the new auth behaviour; 4 added (API key header, token wins
-  over key, commit fallback by time, commit fallback first id).
+  `GET /v1/projects/{owner}/{project}/commits`, which on 6.1.1 returns a flat JSON array of commit ids,
+  newest first, and takes `entries[0]`. Callers pass owner and project name.
+- User API key as a plugin option (round 3): `domino_api_key` in `.claude-plugin/plugin.json`
+  (`CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY` in `.mcp.json`), a `DOMINO_API_KEY` setting in
+  `gemini-extension.json`, `DOMINO_API_KEY` forwarded by `.cursor-plugin/mcp.json`.
+  `DOMINO_USER_API_KEY` fills `DOMINO_API_KEY` when that is unset; both are redacted. `_auth_help`
+  names the `DOMINO_API_KEY=` env-file line.
+- `tests/test_server.py`: 5 tests updated for the new auth behaviour; added: API key header, token wins
+  over key, commit fallback first id, API-key plugin option, `DOMINO_USER_API_KEY` fallback,
+  `DOMINO_API_KEY` wins over `DOMINO_USER_API_KEY`.
 - `README.md`: `DOMINO_TOKEN` row, API key paragraph, and the `download_file_from_domino_project` route row.
 
 ## Evals
@@ -111,22 +120,23 @@ governance the recommended option, delist, was taken).
 
 ## Open items to confirm on a live 6.1 instance
 
-From the compat doc, still open:
-- 6.1 request bodies for `/api/apps/beta`, and whether any public route starts an App version.
-- `POST /api/registeredmodels/v1` body (documented from the 6.3 spec's v1 schema with "check `/docs`").
-- NetApp Volumes base path (`/remotefs/v1` vs `/domino-netapp-volumes/v1`); the skill tells the
-  reader to probe it.
+Settled in round 3 (code review against the 6.1.1 source and the 6.1 Platform API spec): the
+`/api/apps/beta` bodies and start route, the NetApp base path and body shapes, the commit-list sort
+order, the `POST /api/registeredmodels/v1` body schema, and `netAppVolumeIds` on Jobs (all in the 6.1
+spec). Still open:
+
+- Whether a 6.1 deployment serves `/docs` (inferred absent from the release manifests; check with
+  `curl -s -o /dev/null -w '%{http_code}' https://<host>/docs/openapi/openapi-public.json`).
+- Whether `POST /api/apps/beta/apps/{appId}/versions` stops the instance already running (the skills
+  stop it first), and whether `POST /api/apps/beta/apps` with a `version` starts the App.
+- Whether a Git-based App starts from a commit only a tag reaches (the domino-apps CI flow).
+- NetApp grant roles `VolumeEditor` and `VolumeReader` (from `main`; only `VolumeOwner` is confirmed
+  on 6.1.1).
 - Whether `localhost:8899/access-token` works on 6.1 (kept, with a fallback to `$DOMINO_API_PROXY`;
   the 6.1 auth page documents only the proxy).
 - `/api/governance/v1` on 6.1 (moot while governance is delisted).
-
-Raised during the work:
-- Sort order of `GET /v1/projects/{owner}/{project}/commits` (MCP fallback, domino-jobs,
-  domino-projects and domino-python-sdk assume newest first).
-- python-domino `app_publish` with a commit only a tag reaches (the domino-apps CI flow).
-- Whether `SecureIdentityPropagationToAppsEnabled` is on by default; the app templates still forward
-  the viewer's token on their example Domino API call (comments updated, code unchanged).
-- NetApp grant `entityType`/`accessLevel` values, `netAppVolumeIds` on Jobs.
+- Whether `SecureIdentityPropagationToAppsEnabled` is on by default; server.js still forwards the
+  viewer's token on its example call (the Rust template now defaults to the publisher).
 - Whether launcher web routes accept `X-Domino-Api-Key`; Bedrock `AWS_PROFILE` propagation; exact
   6.1 MPI image tags; MLflow alias support; the admin Grafana menu path.
 - The domino-cli skill still links docs.domino.ai pages that describe the device flow; the 6.1 CLI
@@ -149,9 +159,43 @@ and "Carry doc changes into the release-6.1 branch"), then these approved branch
   `s08`, `s11`, `s12`, `s13` scenarios or `tools/probe_hpc.py`; its run and format examples use `s05`
   and `s14`.
 
+## Round 3: code review (PR #130)
+
+Fixes for the review of the 6.1 adaptation, checked against the Domino 6.1.1 source and the 6.1
+Platform API spec. Where they conflict with the per-file logs below, these entries are current.
+
+- **NetApp Volumes:** base path `/remotefs/v1` only; lists return `{"data", "meta"}`; volume create
+  requires `grants` (`[{"targetId", "targetRole": "VolumeOwner"}]`); the grants `PUT` takes a bare
+  array of `{"targetId", "targetRole"}`; snapshot create and update take `description`, not `name`.
+  The 6.1 NetApp API page shows the older shapes, and the skill says not to follow it. Same changes in
+  SKILL.md, TROUBLESHOOTING.md, DATA-ACCESS.md, domino-api-intro HOSTS.md and LIMITS.md.
+- **Apps start route:** `POST /api/apps/beta/apps/{appId}/versions` creates a version and starts it;
+  it is now the documented 6.1 start and restart route (`gitRef` honored, `dfsCommitId` ignored), and
+  the skills stop the running instance first. python-domino `app_publish` is off the start path: the
+  `dominodatalab` 1.4.4 in the 6.1 image takes no App or commit. `REACT-CICD.md`'s `deploy_app.py`
+  uses `requests` only. listApps filters, create fields and version fields match the 6.1 spec; the
+  Version Notes advice is gone (versions have no `description`).
+- **No per-deployment `/docs` on 6.1:** `API-SPECS.md` says so and points at the 6.1 Platform API
+  reference. About 35 "confirm in your deployment's `/docs`" lines in 23 files now point at the 6.1
+  reference (public routes) or drop the clause (`/v4` routes keep the non-public label).
+- **Fields and routes 6.1 lacks:** removed `capacityType`, `snapshotNetAppVolumesOnCompletion`,
+  `snapshotSelection` (Jobs, scheduled Jobs, Airflow/Kubeflow pattern), `capacityType` and
+  `datasetMountSelection` (Workspaces), `bundleId` (Model APIs), `/v4/datasetrw/snapshot/{id}/files/recursive`
+  (listing goes through `DatasetClient` with `snapshot_id`). Scheduled-Job git ref type is `branches`;
+  registered-model versions page with `offset`/`limit`; the service-account response key is `username`.
+- **Rust template:** Domino API calls default to the publisher; `?as=viewer` stays, unlinked.
+- **Evals:** Kubeflow criterion accepts a user API key sent as `X-Domino-Api-Key`; endpoint-latency
+  expects Grafana through an administrator; apps-cicd requires the versions route and fails
+  `app_publish`.
+- **MCP server:** see "MCP server" above (commit-list fallback simplified, API-key plugin option).
+- **Lint:** L17 is `later_term_hits()` in `lint-skills.py`; `scripts/test-lint-later-terms.py` calls
+  it with multi-line fixtures and fails when the rule is disabled; `build-openai.sh` runs it.
+- **AGENTS.md:** an "On `release-6.1`" block lists the rules that replace the 6.3/Cloud ones on this
+  branch. `CONTRIBUTING.md` still describes per-deployment `/docs`.
+
 ## Skill changes, per file
 
-The per-skill logs below were written while each group of skills was edited.
+The per-skill logs below were written while each group of skills was edited, before round 3.
 
 ### Change log: auth group (6.1 branch)
 
