@@ -11,8 +11,14 @@
     },
     {
       "name": "Domino service account token",
-      "description": "Only for use outside a Domino Workspace: a service account token from your Domino administrator. Kept in your system keychain. To use a user API key instead, leave this empty and set DOMINO_API_KEY in the env file. Leave empty inside a Workspace.",
+      "description": "Only for use outside a Domino Workspace: a service account token from your Domino administrator (only administrators can create one). Kept in your system keychain. Leave empty to use a user API key instead, or inside a Workspace.",
       "envVar": "DOMINO_TOKEN",
+      "sensitive": true
+    },
+    {
+      "name": "Domino user API key",
+      "description": "Only for use outside a Domino Workspace, when you have no service account token: your user API key from your Domino account settings. Used only when the token is empty. Kept in your system keychain. Leave empty inside a Workspace.",
+      "envVar": "DOMINO_API_KEY",
       "sensitive": true
     }
   ],

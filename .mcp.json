@@ -11,7 +11,8 @@
       ],
       "env": {
         "CLAUDE_PLUGIN_OPTION_DOMINO_HOST": "${user_config.domino_host}",
-        "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN": "${user_config.domino_token}"
+        "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN": "${user_config.domino_token}",
+        "CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY": "${user_config.domino_api_key}"
       }
     },
     "domino_docs": {

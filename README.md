@@ -32,7 +32,7 @@ Skills say which Domino versions they apply to; see [Compatibility](#compatibili
 | Component | Claude Code | ChatGPT / Codex | Cursor | Gemini CLI | Antigravity |
 | --- | --- | --- | --- | --- | --- |
 | `skills/` (28 skills) | ✅ | ✅ | ✅ | ✅ discovered from `skills/` | ✅ imported from `skills/` |
-| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; credentials from the env file, see [Your Domino URL and token](#your-domino-url-and-token)) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same two values at install) | ✅ via `mcp_config.json` (stdio; credentials from `agy`'s environment or the env file) |
+| Domino MCP server (`mcp-servers/`) | ✅ via `.mcp.json` (stdio) | Codex local install: ✅ via `mcp.json` (stdio). Public directory: needs a hosted HTTPS endpoint (see [OpenAI build](#openai-build)) | ✅ via `.cursor-plugin/mcp.json` (stdio; credentials from the env file, see [Your Domino URL and token](#your-domino-url-and-token)) | ✅ via `gemini-extension.json` (stdio; Gemini CLI asks for the same values at install) | ✅ via `mcp_config.json` (stdio; credentials from `agy`'s environment or the env file) |
 | Domino docs MCP server (`https://docs.domino.ai/mcp`) | ✅ via `.mcp.json` | Codex local install: ✅ via `mcp.json`. Not in the public directory package | ✅ via `.cursor-plugin/mcp.json` | ✅ via `gemini-extension.json` | ✅ via `mcp_config.json` |
 | Always-on Domino guidance (`rules/domino.md`) | ✅ loaded at every session start by a `SessionStart` hook | Codex local install: the lead section, as the bundled MCP server's instructions. Not available to skills-only directory plugins | ✅ always-applied plugin rule (`alwaysApply: true`) | ✅ the extension's context file (`contextFileName`) | ✅ always-on rule (`trigger: always_on`) in the installed copy |
 | Subagents (`agents/`) | ✅ routers that preload their skills | ❌ | Routing prompts only: Cursor loads `agents/` without `skills:` or `tools:`, so nothing is preloaded | ❌ the files are `_`-prefixed, which Gemini CLI skips (its sub-agent schema differs) | Imported as prompts (`agy` reports 3 agents); `skills:` and `tools:` are Claude Code fields |
@@ -56,18 +56,19 @@ Everywhere else (your laptop, CI), the MCP server needs two values:
 | Setting | What to enter | Where to get it |
 |---|---|---|
 | **Domino URL** (`DOMINO_HOST`) | The address you open Domino at in your browser: `https://` and the host name, no path, for example `https://domino.example.com` | Your browser's address bar while you use Domino. Not `DOMINO_API_HOST`, which inside Domino is an in-cluster address |
-| **Token** (`DOMINO_TOKEN`) | A service account token, sent as `Authorization: Bearer`. Without one, put `DOMINO_API_KEY=<your user API key>` in the env file instead (sent as `X-Domino-Api-Key`; the hosts' settings prompts take only the token) | An administrator creates service accounts and their tokens; your user API key is in your Domino account settings ([docs](https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/)). Domino 6.1 has no Personal Access Tokens |
+| **Token** (`DOMINO_TOKEN`) | A service account token, sent as `Authorization: Bearer`. Only administrators can create one on Domino 6.1, so most users enter a user API key instead | An administrator creates service accounts and their tokens; your user API key is in your Domino account settings ([docs](https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/)). Domino 6.1 has no Personal Access Tokens |
+| **User API key** (`DOMINO_API_KEY`) | Your user API key, sent as `X-Domino-Api-Key`, used when the token is empty. `DOMINO_USER_API_KEY` is also read | Your Domino account settings |
 
 Each host takes them its own way:
 
 | Host | How |
 |---|---|
-| Claude Code | Asks for both when you enable the plugin; the token goes to your system's secure credential store. Change them later in `/plugin` → **Installed** → **dominodatalab** → **Configure options**, then start a new session |
-| Gemini CLI | Asks at `gemini extensions install` (the token first, then the URL); the token goes to the system keychain. Change them with `gemini extensions config dominodatalab` |
+| Claude Code | Asks for the URL, the token and the API key when you enable the plugin (leave the one you don't use empty); the token and key go to your system's secure credential store. Change them later in `/plugin` → **Installed** → **dominodatalab** → **Configure options**, then start a new session |
+| Gemini CLI | Asks at `gemini extensions install` for the URL, the token and the API key; the token and key go to the system keychain. Change them with `gemini extensions config dominodatalab` |
 | Codex and the ChatGPT desktop app | Can't ask. Write the env file below at exactly `~/.config/domino-mcp-server/.env`: Codex starts the server with a stripped environment and passes no other location |
-| Cursor | Doesn't ask. Write the env file below. `.cursor-plugin/mcp.json` also forwards `DOMINO_HOST` and `DOMINO_TOKEN` from the environment Cursor runs in, which the Cursor CLI may not share with your shell |
-| Antigravity | Doesn't ask. Write the env file below, or start `agy` with `DOMINO_HOST` and `DOMINO_TOKEN` in its environment |
-| Any host | The env file below, or `DOMINO_HOST` and `DOMINO_TOKEN` in the environment the host starts the server with |
+| Cursor | Doesn't ask. Write the env file below. `.cursor-plugin/mcp.json` also forwards `DOMINO_HOST`, `DOMINO_TOKEN` and `DOMINO_API_KEY` from the environment Cursor runs in, which the Cursor CLI may not share with your shell |
+| Antigravity | Doesn't ask. Write the env file below, or start `agy` with `DOMINO_HOST` and `DOMINO_TOKEN` (or `DOMINO_API_KEY`) in its environment |
+| Any host | The env file below, or `DOMINO_HOST` and `DOMINO_TOKEN` (or `DOMINO_API_KEY`) in the environment the host starts the server with |
 
 **The env file** is `~/.config/domino-mcp-server/.env` (or `$XDG_CONFIG_HOME/domino-mcp-server/.env`,
 or the file `$DOMINO_MCP_ENV_FILE` names; under Codex only the first, since Codex passes the server
@@ -78,6 +79,14 @@ appearing on screen or in your shell history:
 bash -c 'mkdir -p ~/.config/domino-mcp-server && umask 077 &&
   read -r -p "Domino URL (https://...): " host && read -rs -p "Domino token: " token && echo &&
   printf "DOMINO_HOST=%s\nDOMINO_TOKEN=%s\n" "$host" "$token" > ~/.config/domino-mcp-server/.env'
+```
+
+With a user API key instead of a token, the second line of the file is `DOMINO_API_KEY=<key>`:
+
+```bash
+bash -c 'mkdir -p ~/.config/domino-mcp-server && umask 077 &&
+  read -r -p "Domino URL (https://...): " host && read -rs -p "Domino user API key: " key && echo &&
+  printf "DOMINO_HOST=%s\nDOMINO_API_KEY=%s\n" "$host" "$key" > ~/.config/domino-mcp-server/.env'
 ```
 
 When values come from more than one place, the host's own settings win, then the environment, then

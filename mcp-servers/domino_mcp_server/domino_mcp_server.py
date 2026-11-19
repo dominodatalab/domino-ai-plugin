@@ -35,17 +35,19 @@ from mcp.server.mcpserver.exceptions import ToolError
 # ---------------------------------------------------------------------------------------------
 
 # Variables the server reads for its own configuration (not the ones Domino injects).
-_CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_MCP_ENV_FILE",
-                "DOMINO_INSECURE_HTTP", "CLAUDE_PLUGIN_OPTION_DOMINO_HOST",
-                "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN")
+_CONFIG_VARS = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_USER_API_KEY",
+                "DOMINO_MCP_ENV_FILE", "DOMINO_INSECURE_HTTP", "CLAUDE_PLUGIN_OPTION_DOMINO_HOST",
+                "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY")
 
 # Values a host collects in its own settings UI and passes under these names (Claude Code plugin
-# options: `${user_config.domino_host}`, `${user_config.domino_token}`). They take precedence over
-# DOMINO_HOST and DOMINO_TOKEN from the environment, which take precedence over the env file.
+# options: `${user_config.domino_host}`, `${user_config.domino_token}`,
+# `${user_config.domino_api_key}`). They take precedence over the same variables from the
+# environment, which take precedence over the env file.
 _PLUGIN_OPTIONS = (("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", "DOMINO_HOST"),
-                   ("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "DOMINO_TOKEN"))
+                   ("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "DOMINO_TOKEN"),
+                   ("CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY", "DOMINO_API_KEY"))
 
-# Where DOMINO_HOST and DOMINO_TOKEN came from, for get_domino_environment_info.
+# Where DOMINO_HOST, DOMINO_TOKEN and DOMINO_API_KEY came from, for get_domino_environment_info.
 _CONFIG_SOURCES: Dict[str, str] = {}
 
 
@@ -129,7 +131,12 @@ def _env_file_path() -> Path:
 
 def _load_environment() -> None:
     """Import-time environment handling, in order: placeholders, plugin options, ancestor
-    recovery, env file. Records where DOMINO_HOST and DOMINO_TOKEN came from."""
+    recovery, env file. Records where DOMINO_HOST, DOMINO_TOKEN and DOMINO_API_KEY came from.
+
+    DOMINO_USER_API_KEY (python-domino's name for the user API key) fills DOMINO_API_KEY when that
+    is unset.
+    """
+    names = ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_USER_API_KEY")
     _drop_unset_placeholders(os.environ)
     _CONFIG_SOURCES.clear()
     for option, name in _PLUGIN_OPTIONS:
@@ -138,15 +145,19 @@ def _load_environment() -> None:
             os.environ[name] = value
             _CONFIG_SOURCES[name] = "plugin options"
     _recover_domino_env()
-    for name in ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY"):
+    for name in names:
         if os.environ.get(name) and name not in _CONFIG_SOURCES:
             _CONFIG_SOURCES[name] = "environment"
     env_file = _env_file_path()
     load_dotenv(env_file, override=False)
     _drop_unset_placeholders(os.environ)
-    for name in ("DOMINO_HOST", "DOMINO_TOKEN", "DOMINO_API_KEY"):
+    for name in names:
         if os.environ.get(name) and name not in _CONFIG_SOURCES:
             _CONFIG_SOURCES[name] = f"env file {env_file}"
+    alias_source = _CONFIG_SOURCES.pop("DOMINO_USER_API_KEY", None)
+    if alias_source and not os.environ.get("DOMINO_API_KEY"):
+        os.environ["DOMINO_API_KEY"] = os.environ["DOMINO_USER_API_KEY"]
+        _CONFIG_SOURCES["DOMINO_API_KEY"] = f"{alias_source} (DOMINO_USER_API_KEY)"
 
 
 _load_environment()
@@ -165,14 +176,15 @@ def _auth_help() -> str:
         "Outside a Domino Workspace or Job this server needs your Domino URL and a token. "
         "(1) DOMINO_HOST: the address you open Domino at in the browser, for example "
         "https://domino.example.com. "
-        "(2) DOMINO_TOKEN: a Domino service account token (an administrator creates it), sent as "
-        "a bearer token. Without one, set DOMINO_API_KEY to your user API key from your Domino "
-        "account settings; it is sent as X-Domino-Api-Key. "
-        "(3) Give both to the server: Claude Code asks for them when the plugin is enabled (change "
-        "them under /plugin > Installed > dominodatalab > Configure options); Gemini CLI asks at "
-        "install (change them with `gemini extensions config dominodatalab`); every other host, "
-        f"including Codex, Cursor and Antigravity, reads them from the env file {_env_file_path()} "
-        "as DOMINO_HOST=... and DOMINO_TOKEN=... lines (chmod 600). Then start a new session. Inside a Domino Workspace or Job nothing is needed. See "
+        "(2) DOMINO_TOKEN: a Domino service account token (only an administrator can create one), "
+        "sent as a bearer token. Without one, use DOMINO_API_KEY: your user API key from your "
+        "Domino account settings (DOMINO_USER_API_KEY is also read), sent as X-Domino-Api-Key. "
+        "(3) Give them to the server: Claude Code asks for the URL, token and API key when the "
+        "plugin is enabled (change them under /plugin > Installed > dominodatalab > Configure "
+        "options); Gemini CLI asks at install (change them with `gemini extensions config "
+        "dominodatalab`); every other host, including Codex, Cursor and Antigravity, reads them "
+        f"from the env file {_env_file_path()} as DOMINO_HOST=... and DOMINO_TOKEN=... or "
+        "DOMINO_API_KEY=... lines (chmod 600). Then start a new session. Inside a Domino Workspace or Job nothing is needed. See "
         "https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/."
     )
     legacy_dotenv = Path(__file__).resolve().parent / ".env"
@@ -275,7 +287,7 @@ def _auth_mode() -> str:
 
 def _redact(text: str) -> str:
     """Remove the bearer token and API key from any text that may reach the model or a log."""
-    for name in ("DOMINO_TOKEN", "DOMINO_API_KEY"):
+    for name in ("DOMINO_TOKEN", "DOMINO_API_KEY", "DOMINO_USER_API_KEY"):
         secret = (os.environ.get(name) or "").strip()
         if secret:
             text = text.replace(secret, "<redacted>")
@@ -617,34 +629,16 @@ def _require_dfs_project(user_name: str, project_name: str) -> Dict[str, Any]:
     return info
 
 
-_COMMIT_TIME_KEYS = ("timestamp", "commitTime", "committedAt", "created", "createdAt", "date")
-
-
-def _commit_time(entry: Dict[str, Any]) -> Any:
-    for key in _COMMIT_TIME_KEYS:
-        if entry.get(key) is not None:
-            return entry[key]
-    return None
-
-
 def _latest_commit_from_list(user_name: str, project_name: str) -> str:
     """Head commit from the legacy commit list, for deployments without commits/latest (6.1).
 
-    The list holds commit-id strings, newest first (what python-domino's commits_list() returns).
-    Entries that are objects with commit times are ordered by time instead.
+    The route returns a JSON array of commit-id strings, newest first.
     """
     path = f"/v1/projects/{urllib.parse.quote(user_name, safe='')}/{urllib.parse.quote(project_name, safe='')}/commits"
-    body = _api_json("GET", path)
-    entries = body.get("commits", body.get("data")) if isinstance(body, dict) else body
-    if not isinstance(entries, list) or not entries:
+    entries = _api_json("GET", path)
+    if not isinstance(entries, list) or not entries or not isinstance(entries[0], str):
         raise DominoError(f"GET {path} returned no commits for {user_name}/{project_name}")
-    head = entries[0]
-    if all(isinstance(e, dict) and _commit_time(e) is not None for e in entries):
-        head = max(entries, key=_commit_time)
-    commit = head if isinstance(head, str) else (head.get("id") or head.get("commitId")) if isinstance(head, dict) else None
-    if not commit:
-        raise DominoError(f"Could not read the latest commit of {user_name}/{project_name} from GET {path}")
-    return commit
+    return entries[0]
 
 
 def _latest_commit_id(project_id: str, user_name: str, project_name: str) -> str:

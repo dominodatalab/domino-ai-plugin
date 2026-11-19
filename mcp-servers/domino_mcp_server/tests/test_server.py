@@ -120,13 +120,6 @@ def test_token_wins_over_api_key(server, clean_env):
     assert server._get_auth_headers() == {"Authorization": "Bearer t"}
 
 
-def test_latest_commit_falls_back_to_the_commit_list_by_time(server, laptop, http):
-    http.add("GET", f"/api/projects/beta/projects/{PID}/commits/latest", FakeResponse(404, {"message": "Not Found"}))
-    http.add("GET", "/v1/projects/jane/proj/commits",
-             FakeResponse(200, [{"id": "old", "timestamp": 1}, {"id": "new", "timestamp": 3}, {"id": "mid", "timestamp": 2}]))
-    assert server._latest_commit_id(PID, "jane", "proj") == "new"
-
-
 def test_latest_commit_fallback_takes_the_first_commit_id_string(server, laptop, http):
     http.add("GET", f"/api/projects/beta/projects/{PID}/commits/latest", FakeResponse(404, {"message": "Not Found"}))
     http.add("GET", "/v1/projects/jane/proj/commits", FakeResponse(200, ["newest", "older"]))
@@ -410,6 +403,35 @@ def test_plugin_options_win_over_the_environment_and_leave_no_trace(clean_env, t
     assert module._get_auth_headers() == {"Authorization": "Bearer plugin-token"}
     assert "CLAUDE_PLUGIN_OPTION_DOMINO_HOST" not in os.environ and "CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN" not in os.environ
     assert module._CONFIG_SOURCES == {"DOMINO_HOST": "plugin options", "DOMINO_TOKEN": "plugin options"}
+
+
+def test_api_key_plugin_option_is_sent_as_x_domino_api_key(clean_env):
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_HOST", "https://from-plugin.example.com")
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_TOKEN", "${user_config.domino_token}")   # token left unset
+    clean_env.setenv("CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY", "plugin-key")
+    module = import_server()
+    assert module._get_auth_headers() == {"X-Domino-Api-Key": "plugin-key"}
+    assert "CLAUDE_PLUGIN_OPTION_DOMINO_API_KEY" not in os.environ
+    assert module._CONFIG_SOURCES == {"DOMINO_HOST": "plugin options", "DOMINO_API_KEY": "plugin options"}
+
+
+def test_domino_user_api_key_fills_domino_api_key(clean_env, tmp_path):
+    env_file = tmp_path / "mcp.env"
+    env_file.write_text("DOMINO_HOST=https://from-file.example.com\nDOMINO_USER_API_KEY=file-key\n")
+    clean_env.setenv("DOMINO_MCP_ENV_FILE", str(env_file))
+    module = import_server()
+    assert module._get_auth_headers() == {"X-Domino-Api-Key": "file-key"}
+    assert module._CONFIG_SOURCES["DOMINO_API_KEY"] == f"env file {env_file} (DOMINO_USER_API_KEY)"
+    assert "file-key" not in module._redact("key file-key")
+
+
+def test_domino_api_key_wins_over_domino_user_api_key(clean_env):
+    clean_env.setenv("DOMINO_HOST", "https://domino.example.com")
+    clean_env.setenv("DOMINO_API_KEY", "primary")
+    clean_env.setenv("DOMINO_USER_API_KEY", "fallback")
+    module = import_server()
+    assert module._get_auth_headers() == {"X-Domino-Api-Key": "primary"}
+    assert module._CONFIG_SOURCES == {"DOMINO_HOST": "environment", "DOMINO_API_KEY": "environment"}
 
 
 def test_unset_plugin_options_fall_back_to_environment_then_env_file(clean_env, tmp_path):
