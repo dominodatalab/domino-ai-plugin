@@ -34,8 +34,10 @@ command -v zip >/dev/null || { echo "zip is required" >&2; exit 2; }
 cd "$root"
 python3 scripts/sync-manifests.py --check
 if python3 -c "import yaml" 2>/dev/null; then
+  python3 scripts/test-lint-later-terms.py
   python3 scripts/lint-skills.py
 else
+  uv run --quiet --with pyyaml python scripts/test-lint-later-terms.py
   uv run --quiet --with pyyaml python scripts/lint-skills.py
 fi
 

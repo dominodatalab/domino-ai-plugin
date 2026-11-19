@@ -61,6 +61,19 @@ LATER_ALLOWED = re.compile(
     r"|\bGit(Hub)?\b[^\n]{0,60}(token|credential)|(token|credential)[^\n]{0,60}\bGit(Hub)?\b"
     r"|\bpat\b[^\n]{0,10}#[^\n]*personal access token",
     re.I)
+
+
+def later_term_hits(lines: list[str]) -> list[tuple[int, str]]:
+    """L17 over one file's lines: (line number, term) for each line that names a 6.2+ feature
+    without an allow phrase on that line or the next."""
+    hits = []
+    for n, line in enumerate(lines, 1):
+        hit = LATER_TERMS.search(line)
+        if hit and not LATER_ALLOWED.search(" ".join(lines[n - 1:n + 1])):
+            hits.append((n, hit.group(0)))
+    return hits
+
+
 DENYLIST = [
     ("L1", "provenance narrative",
      r"\b(live (test|records|run|call|behaviou?r)|test (cluster|deployment)|internal (Domino )?(test )?cluster|our (test|run|cluster|live)|no other credential existed|the audit (found|showed)|(verified|confirmed|validated|tested|smoke-tested|run|ran) live\b|(verified|confirmed|validated|tested) (on|against) (a |the |this )?(deployment|cluster|instance|DSE|Domino Cloud|Cloud|6\.\d)|from one deployment|one (Domino )?(Cloud )?cluster's reference|from the (Cloud/)?6\.4(\.0)? internal reference)",
@@ -153,12 +166,9 @@ def lint_content(errors: list[str], warnings: list[str], claude_allowed: set[str
                     (errors if tier == "error" else warnings).append(msg)
     for path in paths:
         rel = path.relative_to(ROOT).as_posix()
-        lines = path.read_text(encoding="utf-8").split("\n")
-        for n, line in enumerate(lines, 1):
-            hit = LATER_TERMS.search(line)
-            if hit and not LATER_ALLOWED.search(" ".join(lines[n - 1:n + 1])):
-                errors.append(f"{rel}:{n}: L17 '{hit.group(0)}' needs Domino 6.2 or later; "
-                              f"say it is not available on Domino 6.1, or remove it")
+        for n, term in later_term_hits(path.read_text(encoding="utf-8").split("\n")):
+            errors.append(f"{rel}:{n}: L17 '{term}' needs Domino 6.2 or later; "
+                          f"say it is not available on Domino 6.1, or remove it")
     removed = load_allowlist(REMOVED_SKILLS_FILE)
     readme = ROOT / "README.md"
     targets = [p for p in paths if p != RULES_FILE] + ([readme] if readme.is_file() else [])
