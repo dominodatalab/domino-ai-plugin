@@ -46,8 +46,9 @@ started as). Which identity a call carries:
 
 ## NetApp Volumes (`/remotefs/v1`)
 
-Reference: https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/. Confirm the base
-path (`/remotefs/v1` or `/domino-netapp-volumes/v1`) in your deployment's `/docs`.
+Reference: https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/. The service
+answers on `/remotefs/v1`, not the base path that page lists, and its shapes differ from the page:
+use [API-NETAPP-VOLUMES.md](../netapp-volumes/API-NETAPP-VOLUMES.md#base-path-and-shapes).
 
 | Operation | Inside a run | Outside Domino |
 |-----------|--------------|----------------|

@@ -12,9 +12,7 @@ customer runtime). To serve it, publish a Domino endpoint instead
 and monitors it.
 
 **Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
-Each deployment documents them under `https://<domino-domain>/docs`
-(`openapi-internal.json`); confirm the field lists and required flags there before relying on
-them.
+Domino 6.1 publishes no reference for them.
 
 ## Setup for a pipeline
 

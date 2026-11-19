@@ -1,6 +1,6 @@
 # CI/CD for a React app on Domino with GitHub Actions
 
-A push to `uat` or `main` builds the app once in CI, commits the build on a commit tagged `build-<label>`, and starts the App on that commit in a Domino project with python-domino. `app.sh` only serves the build, so the App starts in seconds and needs neither npm nor registry access. The App is published once by a person; CI restarts it on the new build on every push. Build labels: [FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds).
+A push to `uat` or `main` builds the app once in CI, commits the build on a commit tagged `build-<label>`, and starts the App on that commit in a Domino project through the Apps API. `app.sh` only serves the build, so the App starts in seconds and needs neither npm nor registry access. The App is published once by a person; CI restarts it on the new build on every push. Build labels: [FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds).
 
 ## Architecture
 
@@ -37,13 +37,11 @@ The App's entry point is `app-code/app.sh`; it serves the build in `app-code/dis
 |---|---|---|
 | Secret | `DOMINO_TOKEN` | Service account token |
 | Variable | `DOMINO_URL` | Public URL of the deployment (what you open in the browser), no trailing slash |
-| Variable | `PROJECT_NAME` | Domino project name (`-uat` suffix in the UAT environment) |
-| Variable | `PROJECT_OWNER` | Username of the project owner |
 | Variable | `APP_ID` | ID of the App published in step 6 |
 | Variable | `ENVIRONMENT_ID` | Compute Environment ID |
 | Variable | `HARDWARE_TIER_ID` | Hardware Tier ID, for example `small-k8s` |
 
-Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate. The runner is outside Domino and cannot read Domino Project or user environment variables, so the GitHub secret is its own copy of a service account token created in Domino. To act as yourself instead, store your user API key, pass it to `Domino(...)` as `api_key=` in place of `auth_token=`, and send it as `X-Domino-Api-Key` in the script's `requests` call. `DOMINO_URL` and `DOMINO_TOKEN` here are GitHub names the runner reads, not variables Domino injects.
+Create `uat` and `production` GitHub environments (Settings > Environments), add the secret and variables to each, and require reviewers on `production` for a manual gate. The runner is outside Domino and cannot read Domino Project or user environment variables, so the GitHub secret is its own copy of a service account token created in Domino. To act as yourself instead, store your user API key and send it as `X-Domino-Api-Key` in the script's `HEADERS`. `DOMINO_URL` and `DOMINO_TOKEN` here are GitHub names the runner reads, not variables Domino injects.
 
 ## Workflow
 
@@ -98,57 +96,64 @@ jobs:
         env:
           DOMINO_URL: ${{ vars.DOMINO_URL }}
           DOMINO_TOKEN: ${{ secrets.DOMINO_TOKEN }}
-          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
-          PROJECT_OWNER: ${{ vars.PROJECT_OWNER }}
           APP_ID: ${{ vars.APP_ID }}
           ENVIRONMENT_ID: ${{ vars.ENVIRONMENT_ID }}
           HARDWARE_TIER_ID: ${{ vars.HARDWARE_TIER_ID }}
           BUILD_SHA: ${{ env.BUILD_SHA }}
           BUILD_LABEL: ${{ env.BUILD_LABEL }}
         run: |
-          pip install dominodatalab requests
+          pip install requests
           python cicd/deploy_app.py
 ```
 
 ## Deploy script
 
-`cicd/deploy_app.py` starts the App on the build commit with python-domino `app_publish`, which stops the running App first and wraps the Domino Internal API (`/v4/modelProducts/{appId}/start` and `.../stop`; non-public routes; may change in a future Domino version), then polls `app_get_status` and reads the viewer URL from `GET /api/apps/beta/apps/{appId}`. More on these calls: [API-APPS.md](./API-APPS.md#start-and-stop).
+`cicd/deploy_app.py` uses only the Public API: it stops the running instance, then `POST /api/apps/beta/apps/{appId}/versions` with the build commit as `gitRef`, which creates a version and starts the App on it, then polls that version and prints the viewer URL from `GET /api/apps/beta/apps/{appId}`. More on these calls: [API-APPS.md](./API-APPS.md#start-and-stop).
 
 ```python
 #!/usr/bin/env python3
-"""Restart a Domino App on a new build from CI (python-domino app_publish)."""
+"""Restart a Domino App on a new build from CI (Apps beta versions route)."""
 import os
 import sys
 import time
 
 import requests
-from domino import Domino
 
 BASE = os.environ["DOMINO_URL"].rstrip("/")
-TOKEN = os.environ["DOMINO_TOKEN"]
 APP_ID = os.environ["APP_ID"]
 BUILD_SHA = os.environ["BUILD_SHA"]          # the commit tagged build-<label>: source plus its build
 BUILD_LABEL = os.environ["BUILD_LABEL"]
+APP_URL = f"{BASE}/api/apps/beta/apps/{APP_ID}"
+HEADERS = {"Authorization": f"Bearer {os.environ['DOMINO_TOKEN']}"}   # user API key: {"X-Domino-Api-Key": ...}
+
+
+def api(method, url, **kwargs):
+    resp = requests.request(method, url, headers=HEADERS, timeout=60, **kwargs)
+    resp.raise_for_status()
+    return resp.json() if resp.content else {}
 
 
 def main():
-    domino = Domino(f"{os.environ['PROJECT_OWNER']}/{os.environ['PROJECT_NAME']}", host=BASE, auth_token=TOKEN)
+    current = api("GET", APP_URL).get("currentVersion") or {}
+    instance = current.get("currentInstance") or {}
+    if instance.get("id") and instance.get("status") not in ("Stopped", "Succeeded", "Failed", "Error"):
+        print(f"stopping instance {instance['id']}")
+        api("DELETE", f"{APP_URL}/versions/{current['id']}/instances/{instance['id']}")
+
     print(f"starting App {APP_ID} on build {BUILD_LABEL} ({BUILD_SHA})")
-    domino.app_publish(
-        app_id=APP_ID,
-        hardware_tier_id=os.environ["HARDWARE_TIER_ID"],
-        environment_id=os.environ["ENVIRONMENT_ID"],
-        commit_id=BUILD_SHA,
-    )
+    version = api("POST", f"{APP_URL}/versions", json={   # creating the version starts it
+        "hardwareTierId": os.environ["HARDWARE_TIER_ID"],
+        "environmentId": os.environ["ENVIRONMENT_ID"],
+        "gitRef": {"type": "commitId", "value": BUILD_SHA},
+    })
     for _ in range(90):
-        status = domino.app_get_status(APP_ID)
+        v = api("GET", f"{APP_URL}/versions/{version['id']}")
+        status = (v.get("currentInstance") or {}).get("status", "Pending")
         print(f"status: {status}")
         if status == "Running":
-            app = requests.get(f"{BASE}/api/apps/beta/apps/{APP_ID}",
-                               headers={"Authorization": f"Bearer {TOKEN}"}, timeout=60).json()
-            print(f"deployed: {app.get('url')}")
+            print(f"deployed: {api('GET', APP_URL).get('url')}")
             return
-        if status in ("Failed", "Error"):
+        if status in ("Failed", "Error", "Stopped", "Succeeded"):
             sys.exit(f"App start ended with status {status}; read the instance logs in Domino")
         time.sleep(10)
     sys.exit("timed out waiting for the App to start")

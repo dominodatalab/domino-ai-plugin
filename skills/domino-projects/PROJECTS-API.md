@@ -66,7 +66,7 @@ r = requests.post(f"{base}/api/projects/v2/projects", headers=headers, json={
 
 ### Git credentials
 
-List: public `GET /api/users/beta/credentials/{userId}` (needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); confirm it in your deployment's `/docs`). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
+List: public `GET /api/users/beta/credentials/{userId}` (needs `UpdateUser`) returns `credentials[]` with `id`, `name`, `gitServiceProvider`, `domain`, `fingerprint` and `protocol`; `userId` is `user.id` from `GET /api/users/v1/self`. Create: **Account Settings** > **Git Credentials**, or `POST /v4/accounts/{userId}/gitcredentials` (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)). Keep the secret in a user environment variable (**Account Settings** > **User Environment Variables**) and read it from `os.environ`; never print or log it.
 
 ```python
 user_id = requests.get(f"{base}/api/users/v1/self", headers=headers).json()["user"]["id"]
@@ -94,7 +94,7 @@ requests.delete(f"{base}/api/projects/v1/projects/{project_id}/collaborators/<co
 
 Needs `ManageCollaborators`; adding a user who is already a member returns 400. User ids are the `ownerId` and `collaborators[].id` values returned by the project routes; the users API is in [API-ADMIN.md](../domino-python-sdk/API-ADMIN.md).
 
-No public route changes visibility after creation. Use **Settings** > **Access & Sharing**, or the Domino Internal API route `PATCH /v4/projects/{projectId}/visibility` with `{"visibility": "Private"}` (`Public`, `Searchable` or `Private`; non-public route; may change in a future Domino version). It answers 200 with an empty body, `GET /api/projects/v1/projects/{projectId}` then reports the new value, and an unknown value returns 400 with a JSON validation error. Confirm the route in your deployment's `/docs` first.
+No public route changes visibility after creation. Use **Settings** > **Access & Sharing**, or the Domino Internal API route `PATCH /v4/projects/{projectId}/visibility` with `{"visibility": "Private"}` (`Public`, `Searchable` or `Private`; non-public route; may change in a future Domino version). It answers 200 with an empty body, `GET /api/projects/v1/projects/{projectId}` then reports the new value, and an unknown value returns 400 with a JSON validation error.
 
 ```python
 requests.patch(f"{base}/v4/projects/{project_id}/visibility", headers=headers,   # non-public route; may change in a future Domino version
@@ -103,7 +103,7 @@ requests.patch(f"{base}/v4/projects/{project_id}/visibility", headers=headers,  
 
 ## Project settings (defaults)
 
-No python-domino method and no public route cover the defaults every Workspace and Job starts with; set them in **Settings** > **Hardware & Environment**, or with the Domino Internal API (`GET` and `PUT /v4/projects/{projectId}/settings`, non-public route; may change in a future Domino version; `PUT` answers 200 and the following `GET` returns the new tier; confirm in `/docs`). The `PUT` body (`ProjectSettingsUpdateDto`) takes `defaultEnvironmentId`, `defaultEnvironmentRevisionSpec` (`ActiveRevision`, `LatestRevision`, `RestrictedRevision`, or `{"revisionId": "..."}`), `defaultHardwareTierId` and `defaultVolumeSizeGiB`; `GET` also returns `sparkClusterMode` and `minVolumeSizeGiB`, `maxVolumeSizeGiB`, `recommendedVolumeSizeGiB`, which are not settable here.
+No python-domino method and no public route cover the defaults every Workspace and Job starts with; set them in **Settings** > **Hardware & Environment**, or with the Domino Internal API (`GET` and `PUT /v4/projects/{projectId}/settings`, non-public route; may change in a future Domino version; `PUT` answers 200 and the following `GET` returns the new tier). The `PUT` body (`ProjectSettingsUpdateDto`) takes `defaultEnvironmentId`, `defaultEnvironmentRevisionSpec` (`ActiveRevision`, `LatestRevision`, `RestrictedRevision`, or `{"revisionId": "..."}`), `defaultHardwareTierId` and `defaultVolumeSizeGiB`; `GET` also returns `sparkClusterMode` and `minVolumeSizeGiB`, `maxVolumeSizeGiB`, `recommendedVolumeSizeGiB`, which are not settable here.
 
 ```python
 settings = requests.get(f"{base}/v4/projects/{project_id}/settings", headers=headers).json()   # non-public route; may change in a future Domino version

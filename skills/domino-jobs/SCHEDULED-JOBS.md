@@ -1,6 +1,6 @@
 # Scheduled Jobs over the API
 
-Scheduled Jobs are created in the UI (**Jobs > Schedules > Schedule a Job**) or through the routes below. The Public API has no scheduled-Job route and python-domino has no scheduled-Job method, so the API path is the Domino Internal API that the UI itself calls: **non-public route; may change in a future Domino version**. Confirm the bodies in your deployment's `/docs` (`openapi-internal.json`).
+Scheduled Jobs are created in the UI (**Jobs > Schedules > Schedule a Job**) or through the routes below. The Public API has no scheduled-Job route and python-domino has no scheduled-Job method, so the API path is the Domino Internal API that the UI itself calls: **non-public route; may change in a future Domino version**.
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
@@ -44,8 +44,7 @@ body = {
     # optional:
     # "overrideEnvironmentId": "<environment id>",    # default: the Project's environment
     # "publishModelId": "<Domino endpoint id>",       # "Update Domino endpoint" after success
-    # "capacityType": "on-demand",                    # or "spot"
-    # "mainRepoGitRef": {"type": "branch", "value": "main"},   # Git-based Projects
+    # "mainRepoGitRef": {"type": "branches", "value": "main"},   # Git-based Projects; head | commitId | tags | branches
     # "computeClusterProperties": {"clusterType": "Ray", "computeEnvironmentId": "<id>", "workerCount": 2,
     #                              "workerHardwareTierId": {"value": "small-k8s"}, "masterHardwareTierId": {"value": "small-k8s"}},
     # "snapshotDatasetsOnCompletion": True, "netAppVolumeIds": [], "externalVolumeMounts": [],
@@ -57,7 +56,7 @@ key = sched["id"]
 print(key, sched["schedule"]["humanReadableCronString"], sched["hardwareTierName"])
 ```
 
-Response (the schedule object, also returned by GET and PUT): `id`, `created`, `projectId`, `title`, `command`, `schedule.{cronString, isCustom, humanReadableCronString}`, `timezoneId`, `isPaused`, `allowConcurrentExecution`, `hardwareTierIdentifier`, `hardwareTierName`, `environmentRevisionSpec`, `overrideEnvironmentId`, `publishModelId`, `scheduledByUserId`, `scheduledByUserName`, `notifyOnCompleteEmailAddresses`, `dataConfig.{datasetConfig, snapshotDatasetsOnCompletion, snapshotNetAppVolumesOnCompletion, externalVolumeMounts, netAppVolumeIds, snapshotSelection}`, `computeClusterProperties`, `mainRepoGitRef`.
+Response (the schedule object, also returned by GET and PUT): `id`, `created`, `projectId`, `title`, `command`, `schedule.{cronString, isCustom, humanReadableCronString}`, `timezoneId`, `isPaused`, `allowConcurrentExecution`, `hardwareTierIdentifier`, `hardwareTierName`, `environmentRevisionSpec`, `overrideEnvironmentId`, `publishModelId`, `scheduledByUserId`, `scheduledByUserName`, `notifyOnCompleteEmailAddresses`, `dataConfig.{datasetConfig, snapshotDatasetsOnCompletion, externalVolumeMounts, netAppVolumeIds}`, `computeClusterProperties`, `mainRepoGitRef`.
 
 The `command` is what the Jobs UI calls **File Name** with arguments; it runs from the Project working directory with the same rules as `runCommand` ([SCRIPT-PATTERNS.md](./SCRIPT-PATTERNS.md#job-commands)). On a DFS Project the schedule runs the Project's committed files at fire time, so upload or sync the script first.
 

@@ -42,7 +42,7 @@ POST /api/modelServing/v1/modelApis        -> the Model API record (spec says 20
 
 Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`,
 `environmentVariables` (array of `{"key", "value"}`, may be empty), `version`. Optional:
-`hardwareTierId`, `replicas`, `resourceQuotaId`, `bundleId` (governance).
+`hardwareTierId`, `replicas`, `resourceQuotaId`.
 
 `version` (required fields `projectId`, `source`, `logHttpRequestResponse`,
 `monitoringEnabled`): `source.type` is `File` (`file`, `function`, optional
@@ -155,8 +155,8 @@ shape follows the target type's `effectiveModelDeploymentSchema`. The record's
 ## Registered models (registry)
 
 Domino 6.1 has only the v1 registry routes, keyed by **model name**. Register from an MLflow
-experiment run; confirm the bodies in your deployment's `/docs`
-([API-SPECS.md](../domino-api-intro/API-SPECS.md)) if a call returns 400.
+experiment run; if a call returns 400, check the bodies in the 6.1 Platform API reference
+([API-SPECS.md](../domino-api-intro/API-SPECS.md)).
 
 ```
 GET  /api/registeredmodels/v1            params: projectId, searchPattern, pageToken, maxResults (default 25), orderBy
@@ -184,8 +184,9 @@ version = requests.post(f"{base_url}/api/registeredmodels/v1/fraud-classifier/ve
                                                "description": "retrained"}).json()
 ```
 
-List responses use `{"items": [...], "metadata": {"nextPageToken", ...}}`; page with
-`pageToken` / `maxResults`, not `offset` / `limit`.
+`GET /api/registeredmodels/v1` pages with `pageToken` / `maxResults` (the response's
+`metadata.nextPageToken`); `GET /api/registeredmodels/v1/{modelName}/versions` pages with
+`offset` / `limit`.
 
 ## Invoking a Model API
 

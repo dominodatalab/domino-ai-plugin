@@ -96,7 +96,7 @@ The UI's YAML form of the same data is in [WORKSPACE-TOOLS.md](./WORKSPACE-TOOLS
 
 ## Project default environment and tier
 
-A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (non-public route; may change in a future Domino version; confirm in your deployment's `/docs`). Every field is optional and a partial body changes only what it names:
+A Project's defaults are set under Project **Settings > Hardware & Environment** or with the Internal API (non-public route; may change in a future Domino version). Every field is optional and a partial body changes only what it names:
 
 ```python
 base = os.environ["DOMINO_API_PROXY"]

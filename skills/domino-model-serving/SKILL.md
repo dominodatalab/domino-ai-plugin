@@ -46,7 +46,7 @@ Logs: `GET .../versions/{modelApiVersionId}/buildLogs`, `exportLogs`, `instanceL
 
 ## Registered models
 
-- List: `GET /api/registeredmodels/v1?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register from an experiment run: `POST /api/registeredmodels/v1` (new model) or `POST /api/registeredmodels/v1/{modelName}/versions` (new version); confirm the request bodies in your deployment's `/docs` (`/docs/openapi/openapi-public.json`). `mlflow.register_model` or `log_model(registered_model_name=...)` registers without a Domino route.
+- List: `GET /api/registeredmodels/v1?projectId=&searchPattern=&maxResults=` (token-paginated with `pageToken`). Register from an experiment run: `POST /api/registeredmodels/v1` (new model) or `POST /api/registeredmodels/v1/{modelName}/versions` (new version); check the request bodies in the [6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/). `mlflow.register_model` or `log_model(registered_model_name=...)` registers without a Domino route.
 - Get and patch: `GET|PATCH /api/registeredmodels/v1/{modelName}` (`PATCH` takes `description` and `discoverable`; `GET` returns neither `discoverable` nor aliases); versions at `/api/registeredmodels/v1/{modelName}/versions/{version}`; endpoints serving a version at `.../versions/{version}/modelapis`.
 - Aliases and tags are MLflow features: the MLflow client on `MLFLOW_TRACKING_URI`, or `/api/2.0/mlflow/registered-models/...` on the deployment URL; see `domino-experiment-tracking`.
 

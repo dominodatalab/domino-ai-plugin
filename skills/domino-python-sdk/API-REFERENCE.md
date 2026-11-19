@@ -2,7 +2,7 @@
 
 Route index for the Domino 6.1 Public API, as published in the Domino 6.1 Platform API
 reference (https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/).
-Your deployment's own `/docs` page is authoritative
+Domino 6.1 serves no per-deployment `/docs` reference
 ([API-SPECS.md](../domino-api-intro/API-SPECS.md)). Request bodies with their required
 fields live in the per-area files; this file is the map.
 
@@ -148,7 +148,7 @@ returns `metadata.nextPageToken`. Details: [LIMITS.md](../domino-api-intro/LIMIT
 | `/api/<service>/v1`, `/v2` | Stable Public API |
 | `/api/<service>/beta` | Public API, beta: responses carry `metadata.notices` and fields may change |
 | `/remotefs/v1`, `/datasetrw`, `/model-monitor` | Public API served by separate services |
-| `/v4/...`, `/v1/projects/...` | Domino Internal API. Not in the published specs; documented per deployment under `https://<domino-domain>/docs/openapi/openapi-internal.json`. Label any use `(non-public route; may change in a future Domino version)`; see [domino-api-intro](../domino-api-intro/SKILL.md#route-types). |
+| `/v4/...`, `/v1/projects/...` | Domino Internal API. Not in the Public API reference; Domino 6.1 publishes no reference for them. Label any use `(non-public route; may change in a future Domino version)`; see [domino-api-intro](../domino-api-intro/SKILL.md#route-types). |
 
 Field names differ between surfaces: `POST /api/jobs/v1/jobs` takes `runCommand` and
 `hardwareTier`; python-domino `job_start` takes `command` and `hardware_tier_id`; the
@@ -159,4 +159,4 @@ in [API-SPECS.md](../domino-api-intro/API-SPECS.md).
 
 - https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/
 - https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authentication/
-- [API-SPECS.md](../domino-api-intro/API-SPECS.md) for the spec files and per-deployment `/docs`
+- [API-SPECS.md](../domino-api-intro/API-SPECS.md) for the 6.1 reference and route discovery

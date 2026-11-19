@@ -1,9 +1,8 @@
 # Domino Apps API (beta catalog)
 
 Catalog of the `/api/apps/beta/apps` routes, the only Public Apps API on Domino 6.1. App
-lifecycle and publishing: [domino-apps/API-APPS.md](../domino-apps/API-APPS.md). Bodies can
-differ by deployment: confirm them in your deployment's `/docs`
-([API-SPECS.md](../domino-api-intro/API-SPECS.md)).
+lifecycle and publishing: [domino-apps/API-APPS.md](../domino-apps/API-APPS.md). Schemas:
+the 6.1 Platform API reference ([API-SPECS.md](../domino-api-intro/API-SPECS.md)).
 
 ## Authentication
 
@@ -18,11 +17,13 @@ GET /api/apps/beta/apps
 
 | Parameter | Notes |
 |-----------|-------|
-| `projectId`, `ownerId`, `publisherId`, `name` | Filters |
-| `status` | Most recent instance status: `Queued`, `Scheduled`, `Pending`, `Preparing`, `Building`, `Pulling`, `Running`, `Serving`, `StopRequested`, `StopAndDiscardRequested`, `Stopping`, `Finishing`, `Stopped`, `Succeeded`, `Failed`, `Error` |
+| `projectId`, `name` | The only filters; `name` is a substring match |
 | `includeTemplateApps` | Default false |
-| `sortField` (`name`, `lastUpdated`, `status`, `views`, `lastViewed`), `sortOrder` (`asc`, `desc`) | |
+| `sortField` (`name`, `lastUpdated`, `status`, `views`), `sortOrder` (`asc`, `desc`) | |
 | `limit`, `offset` | `limit` defaults to no limit |
+
+There is no status, owner or publisher filter (unknown parameters are ignored, so every App
+comes back): filter on `currentVersion.currentInstance.status` in the response.
 
 Response: `{"items": [...], "metadata": {...}}`. Each item has `id`, `name`, `description`,
 `project` (`id`, `name`, `ownerUsername`, `projectType`), `publisher`, `entryPoint`, `url`,
@@ -45,15 +46,15 @@ POST /api/apps/beta/apps
 
 Required: `name`, `projectId`, `visibility` (`AUTHENTICATED`, `GRANT_BASED`,
 `GRANT_BASED_STRICT`, `PUBLIC`), `version`. Optional: `description`, `entryPoint`,
-`discoverable`, `mountDatasets`, `renderIFrame`, `sendNotifications`, `accessStatuses[]`
+`discoverable`, `mountDatasets`, `renderIFrame`, `accessStatuses[]`
 (`userId`, `status` `ALLOWED` / `DENIED` / `PENDING`).
 
-`version` fields (none required by the schema): `hardwareTierId`, `environmentId`,
-`environmentRevisionId`, `description`, `entryScript` (inline script that overrides the
-entry point), `gitRef` (`{"type": "head" | "commitId" | "branches" | "tags" | "custom", "value": "..."}`),
-`dfsCommitId`, `externalVolumeMountIds`, `netAppVolumeIds`, `dataPlaneId` (auto-filled from
-the hardware tier; 422 if both are given and disagree), `vanityUrl`, `tags`
-(`[{"key", "value"}]`).
+`version` fields (`AppVersionCreationRequest`, none required): `hardwareTierId`,
+`environmentId`, `environmentRevisionId`, `gitRef`
+(`{"type": "head" | "commitId" | "branches" | "tags" | "custom", "value": "..."}`; Git-based
+Projects), `externalVolumeMountIds`, `netAppVolumeIds`, `vanityUrl`. `dfsCommitId` is in the
+schema but ignored: a DFS Project's version runs its latest commit. There is no version
+`description`.
 
 ```python
 app = requests.post(f"{base_url}/api/apps/beta/apps", headers=headers, json={
@@ -81,18 +82,19 @@ DELETE /api/apps/beta/apps/{appId}
 
 ```
 GET   /api/apps/beta/apps/{appId}/versions
-POST  /api/apps/beta/apps/{appId}/versions                       body: the version object above
+POST  /api/apps/beta/apps/{appId}/versions                       body: the version object above; starts the App
 GET   /api/apps/beta/apps/{appId}/versions/{versionId}
-PATCH /api/apps/beta/apps/{appId}/versions/{versionId}
+PATCH /api/apps/beta/apps/{appId}/versions/{versionId}            body: {"vanityUrl": "..."}
 ```
 
-The Public API has no route to start a version. Start (publish) the App from the UI or with
-python-domino `app_publish(app_id=...)`, then poll the version until `Running`; stop it by
-deleting its running instance (below) or with `app_unpublish(app_id=...)`. Both
-python-domino methods call `/v4/modelProducts/{appId}/start` and `/stop` (non-public route;
-may change in a future Domino version). A version record carries `currentInstance`
-(`id`, `status`, `createdAt`, `dfsCommitId`, `gitCommitId`). Instance statuses include:
-`Queued`, `Pending`, `Preparing`, `Running`, `Stopped`.
+`POST .../versions` is the start and restart route: it creates the version and starts an
+instance of it, so do not create a version only for bookkeeping. Stop the running instance
+first (below), then poll the new version until `Running`. A version record carries
+`currentInstance` (`id`, `status`, `createdAt`, `dfsCommitId`, `gitCommitId`). Instance
+statuses include: `Queued`, `Pending`, `Preparing`, `Running`, `Stopped`. Do not start Apps
+with python-domino `app_publish`: it calls the Domino Internal API (non-public route; may
+change in a future Domino version), and the `dominodatalab` 1.4.4 in the Domino 6.1 image
+takes neither an App ID nor a commit.
 
 ## Instances and logs
 
@@ -129,21 +131,32 @@ There is no Public roles route. App access is managed through the
 `app_*` methods use the same family): bodies and responses in
 [domino-apps/API-APPS.md](../domino-apps/API-APPS.md).
 
-## Workflow: create, start, wait, read logs, stop
+## Workflow: create, restart, wait, stop
 
 ```python
 import time
-from domino import Domino
 
-app = requests.post(f"{base_url}/api/apps/beta/apps", headers=headers, json={
+apps_url = f"{base_url}/api/apps/beta/apps"
+app = requests.post(apps_url, headers=headers, json={
     "name": "ml-dashboard", "projectId": project_id, "visibility": "GRANT_BASED",
     "version": {"hardwareTierId": "small-k8s", "environmentId": env_id},
 }).json()
-app_id, version_id = app["id"], app["currentVersion"]["id"]
+app_id = app["id"]
 
-domino = Domino(f"{owner}/{project_name}")             # client setup: SKILL.md#authentication
-domino.app_publish(app_id=app_id, hardware_tier_id="small-k8s", environment_id=env_id,
-                   unpublish_running_apps=False)
+def stop_running(app_id):
+    current = requests.get(f"{apps_url}/{app_id}", headers=headers).json().get("currentVersion") or {}
+    instance = current.get("currentInstance") or {}
+    if instance.get("id") and instance.get("status") not in ("Stopped", "Succeeded", "Failed", "Error"):
+        requests.delete(f"{apps_url}/{app_id}/versions/{current['id']}/instances/{instance['id']}",
+                        headers=headers)
+
+# Restart on new code: stop the running instance, then create a version (this starts it)
+stop_running(app_id)
+version = requests.post(f"{apps_url}/{app_id}/versions", headers=headers, json={
+    "hardwareTierId": "small-k8s", "environmentId": env_id,
+    # Git-based Project: "gitRef": {"type": "commitId", "value": "<sha>"}
+}).json()
+version_id = version["id"]
 
 deadline = time.time() + 900
 while time.time() < deadline:
@@ -158,7 +171,7 @@ while time.time() < deadline:
 else:
     print("Timed out waiting for the app")
 
-domino.app_unpublish(app_id=app_id)
+stop_running(app_id)                                   # stop the App when done
 ```
 
 ## App requirements

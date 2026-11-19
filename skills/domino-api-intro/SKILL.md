@@ -30,8 +30,7 @@ Settings > User environment variables**) for a personal credential, injected int
 Workspace, Job and App that user starts and invisible to other users; a **Project** variable
 (**Project > Settings > Environment variables**) for a credential the Project's executions
 share. Set them in the UI or with the non-public routes below (no Public API or
-python-domino route; may change in a future Domino version; confirm the routes in
-your deployment's `/docs`). When an
+python-domino route; may change in a future Domino version). When an
 agent stores a secret for the user it writes it with these routes and confirms by
 **name only**: the `GET`s return values, so never echo them into a reply or a log. Never
 call the wipe-all `DELETE /v4/users/environmentVariables` unless the user explicitly asks
@@ -109,11 +108,11 @@ https://docs.domino.ai/cloud/reference/environment-variables). Inside a run
 
 Most Domino endpoints are stable. Public API routes (`/api/...`, plus `/remotefs/v1` and
 `/model-monitor`) are versioned and documented in the published specs. Non-public routes,
-meaning the internal API (`/v4/...`, documented per deployment at `https://<domino-domain>/docs`)
+meaning the internal API (`/v4/...`, with no published reference on Domino 6.1)
 and web UI routes, also work, but can change in a future version of Domino. Use a public route
 when one exists; where none does, the skills label the call `(non-public route; may change in a
-future Domino version)` at the point of use. If a non-public call fails after an upgrade, check
-the route in your deployment's `/docs`. Dataset file routes: [HOSTS.md](./HOSTS.md).
+future Domino version)` at the point of use. If a non-public call returns 404, or 400 for the
+body a skill gives, use the UI steps that skill names. Dataset file routes: [HOSTS.md](./HOSTS.md).
 Discovery: [API-SPECS.md](./API-SPECS.md).
 
 ## Reference files (this skill)

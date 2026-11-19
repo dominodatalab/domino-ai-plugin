@@ -1,6 +1,6 @@
 # Workspaces over the API
 
-The Public API has one Workspace route, `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (resume a stopped Workspace; both specs). Everything else below is the Domino Internal API that the UI calls: **non-public route; may change in a future Domino version**. Confirm the bodies in your deployment's `/docs` (`openapi-internal.json`). python-domino has no Workspace methods.
+The Public API has one Workspace route, `POST /api/projects/v1/projects/{projectId}/workspaces/{workspaceId}/sessions` (resume a stopped Workspace; both specs). Everything else below is the Domino Internal API that the UI calls: **non-public route; may change in a future Domino version**. python-domino has no Workspace methods.
 
 Authentication: [domino-api-intro](../domino-api-intro/SKILL.md#authentication).
 
@@ -40,8 +40,7 @@ body = {
     "externalVolumeMounts": [],                        # required, may be empty
     "ssh": {"enabled": False},
     "persistence": {"persistPackages": False, "persistHomeDirectory": False},
-    # optional: "capacityType": "on-demand" | "spot", "overrideVolumeSizeGiB": 20, "netAppVolumeIds": [],
-    #           "datasetMountSelection": [{"datasetId": "<id>", "snapshotVersion": 3}],
+    # optional: "overrideVolumeSizeGiB": 20, "netAppVolumeIds": [],
     #           "overrideMainGitRepoRef": {"type": "branch", "value": "main"},
     #           "computeClusterConfig": {...}            # see "Attach a cluster"
 }

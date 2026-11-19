@@ -22,7 +22,7 @@ Most list routes in the Public API spec take `offset` and `limit` query paramete
 | Service | Response shape |
 |---------|----------------|
 | Platform `/api/...` lists (projects, jobs, users, environments, datasets, hardware tiers) | `{"<items-key>": [...], "metadata": {"requestId", "notices", "offset", "limit", "totalCount"}}`. The items key is the resource name (`projects`, `jobs`, `users`, `environments`, `datasets`, `hardwareTiers`). `totalCount` is optional in the schema. |
-| NetApp `/remotefs/v1` lists | `{"items": [...], "totalCount": N}`; confirm the shape in your deployment's `/docs` |
+| NetApp `/remotefs/v1` lists | `{"data": [...], "meta": {...}}` |
 | Model serving, apps | `{"items": [...], "metadata": {...}}` with `offset` / `limit` (apps: `limit` defaults to no limit) |
 | Registered models `/api/registeredmodels/v1` | `{"items": [...], "metadata": {"nextPageToken"}}`; page with `pageToken` / `maxResults` (default 25), not offset |
 

@@ -50,8 +50,7 @@ predictions that need request/response semantics: an **asynchronous endpoint**
 
 Every `/v4/models/...` call in this skill, the five below and the NVIDIA and Snowflake exports,
 is a **non-public route; may change in a future Domino version**. Docs:
-https://docs.dominodatalab.com/en/6.1/user_guide/ba503b/integrated-deployment-to-ci-cd-workflows/
-and each cluster's `https://<domino-domain>/docs`.
+https://docs.dominodatalab.com/en/6.1/user_guide/ba503b/integrated-deployment-to-ci-cd-workflows/.
 
 ```text
 POST /v4/models/buildModelImage                                   -> {modelId, modelVersionId}

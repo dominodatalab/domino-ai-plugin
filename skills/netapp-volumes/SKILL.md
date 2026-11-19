@@ -15,9 +15,8 @@ https://docs.dominodatalab.com/en/6.1/user_guide/06da1b/work-with-netapp-volumes
 Auth: [domino-api-intro](../domino-api-intro/SKILL.md#authentication); in a run the
 volume routes answer on `DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT` with a bearer
 ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#authentication-and-base-urls)). The API base
-path is `/remotefs/v1` or `/domino-netapp-volumes/v1` depending on the deployment; confirm it
-and the request bodies in the deployment's `/docs` (`/docs/openapi/openapi-public.json`)
-before scripting ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#base-path)). Routes below are
+path is `/remotefs/v1`, and its request and response shapes differ from the 6.1 API page; script
+from [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#base-path-and-shapes). Routes below are
 relative to that base.
 
 ## NetApp Volumes or Domino Datasets?
@@ -86,10 +85,10 @@ changes its mount path. Details: [DATA-ACCESS.md](./DATA-ACCESS.md).
 Owners and Editors snapshot the whole volume: **Data > NetApp Volumes**, click the volume,
 **Take Snapshot** near the top of the Details view. Expand the **Latest data** menu to list
 snapshots. Owners and Editors delete a snapshot permanently (**Delete Snapshot**); Readers can
-only **Mark Snapshot for Deletion**. Snapshots carry no tags or commit messages on Domino 6.1,
-and an execution cannot be pinned to one snapshot at launch.
+only **Mark Snapshot for Deletion**. Snapshots carry no tags on Domino 6.1, and an execution
+cannot be pinned to one snapshot at launch.
 
-REST: `POST /snapshots` (`volumeId`, `name`), `PUT /snapshots/{id}` (rename),
+REST: `POST /snapshots` (`volumeId`, `description`), `PUT /snapshots/{id}` (`description`),
 `/rpc/restore-snapshot`, `/rpc/delete-snapshot`
 ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#snapshots)). To snapshot at the end of a
 job, call `POST /snapshots` from the job's last step.
@@ -103,8 +102,8 @@ job, call `POST /snapshots` from the job's last step.
 | Owner | Editor plus change who has access and their roles (grants), request volume deletion |
 
 Edit permissions: three-dot menu on the volume, **Edit permissions**. REST:
-`PUT /volumes/{id}/grants`; copy the grant field values from `GET /volumes/{id}/grants`
-([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#grants)).
+`PUT /volumes/{id}/grants` with an array of `{"targetId", "targetRole"}` (`VolumeOwner`,
+`VolumeEditor`, `VolumeReader`) ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#grants)).
 
 ## Volumes in Jobs
 
@@ -121,4 +120,4 @@ Edit permissions: three-dot menu on the volume, **Edit permissions**. REST:
 - https://docs.dominodatalab.com/en/6.1/user_guide/06da1b/work-with-netapp-volumes/ (overview, create, add/remove, view/edit)
 - https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/
 - https://docs.domino.ai/cloud/admin/data-administration/netapp-volumes (administrator setup)
-- Specs: [API-SPECS.md](../domino-api-intro/API-SPECS.md); per-deployment service document `/docs/openapi/data_remotefs_service-swagger.json`
+- Specs: [API-SPECS.md](../domino-api-intro/API-SPECS.md)

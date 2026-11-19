@@ -78,9 +78,9 @@ that form returns 404.
   `POST /api/datasetrw/v1/datasets/{datasetId}/snapshots` with `{"relativeFilePaths": ["*"]}`.
   `status` starts `pending` and becomes `active`; poll `GET /api/datasetrw/v1/snapshots/{id}`.
 - **Read**: later executions mount it at `.../snapshots/<name>/<n>` or `/<tag>`. From the run
-  that took it, use the route above (`path` is relative, no leading slash; list with
-  `.../files/recursive?path=`, empty for the root), `DatasetClient` with
-  `DatasetConfig(snapshot_id=...)`, or a new Job. Examples: [API.md](./API.md). Pinning a
+  that took it, use the route above (`path` is relative, no leading slash; Domino 6.1 has no
+  route that lists a snapshot's files), `DatasetClient` with
+  `DatasetConfig(snapshot_id=...)` (which also lists them), or a new Job. Examples: [API.md](./API.md). Pinning a
   snapshot at launch mounts it read-only at the live path.
 - **Iterate**: **Copy to New Dataset**, `POST .../datasets` with `snapshotId`, or
   `domino create-dataset-from-snapshot`.

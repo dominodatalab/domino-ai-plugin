@@ -33,7 +33,7 @@ curl -sS -X POST "$BASE/api/jobs/v1/jobs" -H "$AUTH" -H "Content-Type: applicati
 | `mainRepoGitRef` | no | `{"refType": "head" \| "commitId" \| "tags" \| "branches", "value": ...}` for Git-based projects; `value` only where the type needs one |
 | `computeCluster` | no | `{"clusterType": "spark" \| "ray" \| "dask" \| "mpi", "computeEnvironmentId", "workerCount", "workerHardwareTier", "masterHardwareTierId"?, "maxWorkerCount"?, "workerStorageMB"?}`; cluster environments (Spark, Ray, Dask, MPI): [domino-distributed-computing](../domino-distributed-computing/SKILL.md) |
 | `externalVolumeMountIds`, `netAppVolumeIds` | no | volumes to mount |
-| `snapshotDatasetsOnCompletion`, `snapshotNetAppVolumesOnCompletion` | no | snapshot mounted storage when the Job ends |
+| `snapshotDatasetsOnCompletion` | no | snapshot mounted Datasets when the Job ends |
 
 Response: `{"job": {"id": ..., "status": {...}, ...}}`. Keep `job.id`.
 

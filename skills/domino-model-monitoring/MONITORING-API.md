@@ -1,6 +1,6 @@
 # Model Monitoring API
 
-Routes: the Model Monitor service under `/model-monitor/...` and custom metrics under `/api/metricValues/v1` and `/api/metricAlerts/v1`. Response shapes are in the public API spec ([API-SPECS.md](../domino-api-intro/API-SPECS.md)); your deployment's `/docs` has the Model Monitor document.
+Routes: the Model Monitor service under `/model-monitor/...` and custom metrics under `/api/metricValues/v1` and `/api/metricAlerts/v1`. Response shapes are in the public API spec ([API-SPECS.md](../domino-api-intro/API-SPECS.md)).
 
 ## Authentication
 

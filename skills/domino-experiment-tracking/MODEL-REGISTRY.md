@@ -28,7 +28,7 @@ Or register an existing run's model: `mlflow.register_model("runs:/<run_id>/mode
 
 ### By REST (Domino)
 
-`POST /api/registeredmodels/v1` creates a registered model from an experiment run; `POST /api/registeredmodels/v1/{modelName}/versions` adds a version from a run (`description`, `experimentRunId`, `artifact`). The public spec lists `modelName`, `experimentRunId`, `discoverable` (required), `description` and `tags` for the create body; confirm the request schemas in your deployment's `/docs` (`/docs/openapi/openapi-public.json`) before scripting them. Registering with the MLflow client (above) needs no Domino route. Worked example: [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md).
+`POST /api/registeredmodels/v1` creates a registered model from an experiment run; `POST /api/registeredmodels/v1/{modelName}/versions` adds a version from a run (`description`, `experimentRunId`, `artifact`). The public spec lists `modelName`, `experimentRunId`, `discoverable` (required), `description` and `tags` for the create body; check the request schemas in the [6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/) before scripting them. Registering with the MLflow client (above) needs no Domino route. Worked example: [LIFECYCLE.md](../domino-model-serving/LIFECYCLE.md).
 
 ## Versions, aliases and tags
 

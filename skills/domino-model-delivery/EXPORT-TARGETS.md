@@ -1,8 +1,7 @@
 # Export targets: NVIDIA Fleet Command, Snowflake, SageMaker, the Exports page
 
 **Every `/v4/...` route in this file is a non-public route; it may change in a future Domino version** ([route types](../domino-api-intro/SKILL.md#route-types)).
-They are documented on the product pages cited below and in each deployment's
-`https://<domino-domain>/docs` (`openapi-internal.json`). Auth: [SKILL.md](./SKILL.md#authentication).
+They are documented on the product pages cited below. Auth: [SKILL.md](./SKILL.md#authentication).
 
 ## NVIDIA Fleet Command (edge)
 

@@ -12,8 +12,8 @@ graders:
 - name: monitoring-answer
   type: llm
   criteria: |
-    PASS if the reply points the user at the endpoint's own monitoring in Domino (the endpoint page's performance metrics, status codes, health checks and logs, which every user can see) and, for detailed dashboards and alerting, says that the Grafana dashboards and alert configuration are for Domino administrators (so a non-admin works with their admin or IT team on alert thresholds).
-    FAIL if it only gives REST deployment automation, tells a non-admin to build Grafana alerts themselves without noting the admin requirement, or invents Kubernetes autoscaling as the fix.
+    PASS if the reply says the latency, error-rate and resource graphs are in the platform's Grafana, which administrators reach (Admin > Reports > Grafana), so a non-admin asks an administrator for that data and for alerts; and points the user at what they can check themselves on the endpoint (version status, instance logs, the Tester tab, health-check settings).
+    FAIL if it only gives REST deployment automation, tells the user to read performance or status-code charts on the endpoint page, tells a non-admin to build Grafana alerts themselves without noting the admin requirement, or invents Kubernetes autoscaling as the fix.
 - name: not-model-serving
   type: tool_used
   tool: Skill

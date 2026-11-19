@@ -393,7 +393,7 @@ Apps with a build step (Vite, Rust) build in a Workspace or Job, never in `app.s
 - **One folder per build, named by its UTC date.** `2026.10.15`; a later build that day adds `.2`, `.3` past the highest suffix in use, so a label is never reused and `sort -V` orders builds by time. Next to each folder, `<label>.stamp`: line 1 is a hash over every committed build input, then `build=`, `commit=` and the toolchain (plus `arch=` for native binaries).
 - **Keep the previous build.** After a build, delete an older build of the same sources, then keep the two newest (`KEEP_BUILDS`).
 - **`app.sh` runs the build that matches the code.** It hashes the App's committed inputs and starts the newest build whose stamp matches; when none does it exits with a message to run the build. It exports the label as `APP_BUILD` and logs it; `/healthz` reports it.
-- **Name the build.** `/healthz` and the App log report the label. Where the App page shows a version's Version Notes, put the label there too (a version's `description` on the `/api/apps/beta` versions routes; check the body in your deployment's `/docs`).
+- **Name the build.** `/healthz` and the App log report the label. App versions on Domino 6.1 have no notes field, so those two are where the label shows.
 
 Starting an earlier App version (rollback) is not available on Domino 6.1. To go back:
 

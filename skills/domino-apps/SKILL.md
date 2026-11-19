@@ -36,7 +36,7 @@ Vite: `base: './'` and `HashRouter`; `BrowserRouter` breaks nested routes.
 
 Publishing is one step: in the project, **Deployments > Apps > Publish Domino App**, choose the launch file, Compute Environment, hardware tier and sharing, and publish; the App starts. To ship a change, sync it and publish the App again. Rolling back to an earlier version and autoscaling are not available on Domino 6.1: to go back, revert the code and publish again. Test behind the real proxy by publishing; a run in the Workspace checks only the build and the start command.
 
-Check three things before publishing. **Builds**: Vite and Rust Apps start a build made once in a Workspace or Job, named by date, with the previous build kept and the label in Version Notes ([details](./FRAMEWORKS.md#build-once-and-version-builds)). **Files**: the App runs the project's committed files, so sync first (DFS Workspace: **File Changes > Sync to Domino**; Git-based: commit and push) or the start fails with `entry script 'app.sh' not found`. **Packages**: the App uses the project's Compute Environment, not what you `pip install` in a Workspace (`streamlit: not found`, exit 127); check with `python -c "import <framework>"` and fix it as [FRAMEWORKS.md](./FRAMEWORKS.md#dependencies) shows.
+Check three things before publishing. **Builds**: Vite and Rust Apps start a build made once in a Workspace or Job, named by date, with the previous build kept and the label in the App log ([details](./FRAMEWORKS.md#build-once-and-version-builds)). **Files**: the App runs the project's committed files, so sync first (DFS Workspace: **File Changes > Sync to Domino**; Git-based: commit and push) or the start fails with `entry script 'app.sh' not found`. **Packages**: the App uses the project's Compute Environment, not what you `pip install` in a Workspace (`streamlit: not found`, exit 127); check with `python -c "import <framework>"` and fix it as [FRAMEWORKS.md](./FRAMEWORKS.md#dependencies) shows.
 
 ## Environment variables and headers
 
@@ -52,7 +52,7 @@ Auth: https://docs.dominodatalab.com/en/6.1/user_guide/40b91f/domino-api-authent
 
 ## REST automation
 
-`/api/apps/beta` for create, versions, reads, instance logs and stop (`DELETE .../instances/{instanceId}`). Starting an App: the UI, or python-domino `app_publish`. Routes and logs: [API-APPS.md](./API-APPS.md). CI/CD with GitHub Actions and a service account: [REACT-CICD.md](./REACT-CICD.md).
+`/api/apps/beta` for create, reads, instance logs and stop (`DELETE .../instances/{instanceId}`). Starting or restarting an App: the UI, or `POST /api/apps/beta/apps/{appId}/versions`, which creates a version and starts it. Routes and logs: [API-APPS.md](./API-APPS.md). CI/CD with GitHub Actions and a service account: [REACT-CICD.md](./REACT-CICD.md).
 
 ## Reference files
 

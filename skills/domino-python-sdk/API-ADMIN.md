@@ -43,8 +43,7 @@ Users have no Public API deactivate route. For a service account, invalidate its
 ([Service accounts](#service-accounts)). Administrators do it in the admin UI or
 with the Domino Internal API `PATCH /v4/admin/user-management/users/{targetUserIdpId}`,
 body `{"enabled": false}` (`UpdateUserRequest`: optional `roles`, `enabled`,
-`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only. Confirm it in your
-deployment's `/docs` first.
+`isDominoEmployee`; `idpId` from `GET /api/users/v1/users`). non-public route; may change in a future Domino version; admin-only.
 
 ## Organizations
 
@@ -74,7 +73,7 @@ POST   /v4/serviceAccounts/{serviceAccountIdpId}/tokens/{tokenName}/invalidate
 DELETE /v4/serviceAccounts/{serviceAccountIdpId}/tokens/{tokenName}
 ```
 
-Create returns `{"id", "userName", "email", "idpId"}`; the email must be valid and unique.
+Create returns `{"id", "username", "email", "idpId"}`; the email must be valid and unique.
 Token routes are keyed by **`idpId`**, not `id`. `POST .../tokens` returns `name`,
 `serviceAccountIdpId`, `isValid`, `createdAt`, `expiresAt` and `token` (the value). The list
 returns the same fields without `token`, so store the value when it is created. Tokens
@@ -208,6 +207,5 @@ Response: `{"events": [{"timestamp", "actor": {"id", "name"}, "action": {"eventN
 
 These are non-public routes; they may change in a future Domino version, and are not in either
 published spec: `/v4/users?listOnlyUsers=true`, `/v4/admin/centralConfigSettings`,
-`/v4/auth/principal`, `/v4/datasetrw/dataset-cost`, `/v4/domino-cost/budgets`. Confirm
-each in your deployment's `/docs/openapi/openapi-internal.json` before using it, and
-prefer the public routes above.
+`/v4/auth/principal`, `/v4/datasetrw/dataset-cost`, `/v4/domino-cost/budgets`. Prefer the
+public routes above.

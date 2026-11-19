@@ -17,7 +17,7 @@ and https://docs.dominodatalab.com/en/6.1/user_guide/dbdbff/version-data-with-sn
 | Snapshot storage | None at creation (redirect-on-write) | Duplicates the captured data |
 | New asset from a snapshot | No | Yes, a new Dataset |
 | Admin prerequisite | Registered ONTAP filesystem | None |
-| REST API | `/remotefs/v1` or `/domino-netapp-volumes/v1` ([base path](./API-NETAPP-VOLUMES.md#base-path)) | `/api/datasetrw/v1` and `/v2` |
+| REST API | `/remotefs/v1` ([base path](./API-NETAPP-VOLUMES.md#base-path-and-shapes)) | `/api/datasetrw/v1` and `/v2` |
 
 ## Mount paths
 
@@ -94,7 +94,7 @@ Writes need the Editor or Owner role; snapshot paths are read-only.
 
 ```python
 requests.post(f"{nv}/snapshots", headers=remotefs_headers,
-              json={"volumeId": volume_id, "name": "pre-processing-2026-01"})
+              json={"volumeId": volume_id, "description": "pre-processing-2026-01"})
 process_data()
 ```
 

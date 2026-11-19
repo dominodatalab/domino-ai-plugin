@@ -149,7 +149,7 @@ r = requests.put(f"{base}/api/modelServing/v1/modelApis/{model_api_id}", headers
 r.raise_for_status()
 ```
 
-The PUT returns 200 at once, but a scale change takes effect only when the version restarts. The public API has no restart route: restart from the endpoint page in the UI, or stop and start the active version with the Domino Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); confirm the routes in your deployment's `/docs`):
+The PUT returns 200 at once, but a scale change takes effect only when the version restarts. The public API has no restart route: restart from the endpoint page in the UI, or stop and start the active version with the Domino Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)):
 
 ```python
 v = f"{base}/v4/models/{model_api_id}/{api['activeVersion']['id']}"       # non-public route; may change in a future Domino version
@@ -173,7 +173,7 @@ for _ in range(30):
 The spec describes `DELETE /api/modelServing/v1/modelApis/{modelApiId}` as "archives a Model API"; what it does:
 
 - `DELETE` while a version is running returns `500 "Model API with id <id> is running"`. Stop the running version first.
-- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (non-public route; may change in a future Domino version; confirm it in your deployment's `/docs`); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `startModelDeployment` brings the version back (restart snippet above).
+- The public API has no stop route. Stop from the UI (**Versions** > **Actions**), or with the Domino Internal API route `POST /v4/models/{modelApiId}/{modelApiVersionId}/stopModelDeployment` with body `{}` (non-public route; may change in a future Domino version); it returns `{"status": "not_running"}` and `activeVersion.deployment` disappears from the public view. `startModelDeployment` brings the version back (restart snippet above).
 - After a successful `DELETE` (200, empty body) the endpoint is gone from the caller's view: `GET` returns `404 No model API found` and it no longer appears in list results, with or without filters. Do not expect to read it back with `isArchived: true`; export the logs and settings you need before deleting.
 
 ```python
@@ -226,7 +226,7 @@ requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}", hea
 requests.get(f"{base}/api/registeredmodels/v1/churn-gbm/versions/{version}/modelapis", headers=headers).json()
 ```
 
-The request bodies above follow the public spec schemas `NewRegisteredModelV1` and `NewRegisteredModelVersionV1`; if a POST returns 400, compare the body with your deployment's `/docs` (`/docs/openapi/openapi-public.json`). The list is token-paginated: pass the response's `metadata.nextPageToken` as `pageToken` until it is absent.
+The request bodies above follow the public spec schemas `NewRegisteredModelV1` and `NewRegisteredModelVersionV1`; if a POST returns 400, compare the body with the [6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/). The list is token-paginated: pass the response's `metadata.nextPageToken` as `pageToken` until it is absent.
 
 `PATCH` with `description` and `discoverable` returns 200 and the description persists, but `GET /api/registeredmodels/v1/{modelName}` returns neither `discoverable` nor aliases; its keys are `name`, `description`, `latestVersion`, `project`, `tags`, `ownerUsername`, `createdAt`, `updatedAt`, `requestingUserAccess`. Aliases live in MLflow: read them with `GET /api/2.0/mlflow/registered-models/get?name=...` (`aliases`) on the deployment URL with the same bearer token, or with the MLflow client (see `domino-experiment-tracking`).
 

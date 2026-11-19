@@ -32,7 +32,7 @@ There is **no OpenAI-compatible base URL** for the gateway and no `/api/aigatewa
 
 Endpoints are addressed by **name**, which must be unique on the deployment.
 
-Create body (required: `endpointName`, `endpointType`, `endpointPermissions`, `modelProvider`, `modelName`, `modelConfig`); if the call answers 400, confirm the body in your deployment's `/docs`:
+Create body (required: `endpointName`, `endpointType`, `endpointPermissions`, `modelProvider`, `modelName`, `modelConfig`); if the call answers 400, compare the body with the [6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/):
 
 ```python
 import os

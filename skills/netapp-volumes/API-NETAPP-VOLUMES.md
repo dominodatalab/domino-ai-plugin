@@ -3,14 +3,12 @@
 The API page: https://docs.dominodatalab.com/en/6.1/api_guide/b3b2a1/domino-netapp-volumes-api/. Mount paths and
 in-run file access: [DATA-ACCESS.md](./DATA-ACCESS.md).
 
-## Base path
+## Base path and shapes
 
-The service is served under `/remotefs/v1` or `/domino-netapp-volumes/v1` depending on the
-deployment. Confirm which one yours serves, and the request bodies, in its own reference at
-`https://<domino-domain>/docs` (`/docs/openapi/openapi-public.json`, or the service document
-`/docs/openapi/data_remotefs_service-swagger.json`). A quick probe: `GET <base>/filesystems`
-returns 200 on the right base and 404 on the other. The examples below set `nv` once; change it
-if your deployment uses the other path. The route lists write the path relative to that base.
+The service answers on `/remotefs/v1`; the route lists below are relative to it. The 6.1 API
+page gives `/domino-netapp-volumes/v1` as the base path and shows request and response shapes
+the service does not use (`items` and `totalCount` lists, a `{"volumeId", "grants"}` grants
+body, a snapshot `name`). Use the shapes on this page.
 
 ## Authentication and base URLs
 
@@ -44,12 +42,12 @@ if os.environ.get("DOMINO_RUN_ID"):                    # inside a run: hostport 
 else:                                                  # outside Domino: deployment URL + service-account token or API key
     remotefs_url, remotefs_headers = base_url, headers
 
-nv = f"{remotefs_url}/remotefs/v1"                     # or /domino-netapp-volumes/v1; see "Base path"
+nv = f"{remotefs_url}/remotefs/v1"
 ```
 
 Error bodies from this service are `{"message": "..."}`, optionally with `status`,
 `errorCode` and `details`. The access token is short-lived; re-read it for long-running scripts.
-List routes return `{"items": [...], "totalCount": n}`.
+List routes return `{"data": [...], "meta": {...}}`.
 
 ## Filesystems
 
@@ -61,7 +59,7 @@ PUT, DELETE /filesystems/{id}
 ```
 
 ```python
-filesystems = requests.get(f"{nv}/filesystems", headers=remotefs_headers).json()["items"]
+filesystems = requests.get(f"{nv}/filesystems", headers=remotefs_headers).json()["data"]
 for fs in filesystems:
     print(fs["id"], fs["name"], fs["dataPlaneId"])
 ```
@@ -72,23 +70,29 @@ setup: https://docs.domino.ai/cloud/admin/data-administration/netapp-volumes.
 ## Create a volume
 
 ```
-POST /volumes            body: name, filesystemId, capacity (integer, bytes); optional projectId (attach on creation)
+POST /volumes
 ```
 
+Required: `name`, `filesystemId`, `capacity` (integer, bytes) and `grants`
+(`[{"targetId": "<user-id>", "targetRole": "VolumeOwner"}]`; without it the call returns 400).
+Optional: `projectId` (attach on creation).
+
 ```python
+user_id = requests.get(f"{base_url}/api/users/v1/self", headers=headers).json()["user"]["id"]
+
 volume = requests.post(f"{nv}/volumes", headers=remotefs_headers, json={
     "name": "large-training-data",
     "filesystemId": filesystems[0]["id"],
     "capacity": 5_000_000_000_000,            # 5 TB in bytes
+    "grants": [{"targetId": user_id, "targetRole": "VolumeOwner"}],
     "projectId": os.environ.get("DOMINO_PROJECT_ID"),
 }).json()
 print(volume["id"], volume["name"], volume["status"])
 ```
 
-Set roles with the grants route below. The volume record: `id`, `name`, `capacity`, `dataPlaneId`, `filesystemId`, `projectId`, `status`
+The volume record: `id`, `name`, `capacity`, `dataPlaneId`, `filesystemId`, `status`
 (`Active`, `Deleted`, `Pending`, `Failed`), `grants[]`, `createdAt`, `createdBy`, `updatedAt`,
-`updatedBy`, `deletedAt`. If the deployment returns 400 for this body, read the
-`CreateVolumeRequest` schema in its `/docs`.
+`updatedBy`, `deletedAt`.
 
 ## Edit, attach, detach, delete
 
@@ -112,23 +116,17 @@ requests.post(f"{nv}/rpc/attach-volume-to-project", headers=remotefs_headers,
 
 ```
 GET /volumes/{id}/grants
-PUT /volumes/{id}/grants      body: {"volumeId": "...", "grants": [{"entityId", "entityType", "accessLevel"}]} (replaces the grant list)
+PUT /volumes/{id}/grants      body: a JSON array of {"targetId", "targetRole"} (replaces the grant list)
 ```
 
-The body replaces every grant, so keep an owner in the list. Read `GET /volumes/{id}/grants`
-on an existing volume first and copy the `entityType` and `accessLevel` values it returns; the
-UI roles are Reader, Editor and Owner.
+`targetRole` is `VolumeOwner`, `VolumeEditor` or `VolumeReader` (the UI's Owner, Editor and
+Reader). The body replaces every grant, so keep an owner in the list.
 
 ```python
-user_id = requests.get(f"{base_url}/api/users/v1/self", headers=headers).json()["user"]["id"]
-current = requests.get(f"{nv}/volumes/{volume_id}/grants", headers=remotefs_headers).json()
-print(current)                                   # copy the field values from here
-requests.put(f"{nv}/volumes/{volume_id}/grants", headers=remotefs_headers, json={
-    "volumeId": volume_id,
-    "grants": [
-        {"entityId": user_id, "entityType": "<as returned>", "accessLevel": "<as returned>"},
-    ],
-})
+requests.put(f"{nv}/volumes/{volume_id}/grants", headers=remotefs_headers, json=[
+    {"targetId": user_id, "targetRole": "VolumeOwner"},
+    {"targetId": "<other-user-id>", "targetRole": "VolumeEditor"},
+])
 ```
 
 ## Snapshots
@@ -136,25 +134,25 @@ requests.put(f"{nv}/volumes/{volume_id}/grants", headers=remotefs_headers, json=
 ```
 GET  /snapshots?volume_id=<id>&project_id=&limit=&offset=&order=&sort_by=&search=
 GET  /snapshots/{id}
-PUT  /snapshots/{id}                     body: {"name": "..."}
-POST /snapshots                          body: {"volumeId": "...", "name": "..."}
+PUT  /snapshots/{id}                     body: {"description": "..."} (required)
+POST /snapshots                          body: {"volumeId": "...", "description": "..."}
 POST /rpc/restore-snapshot               body: {"snapshotId": "..."}
 POST /rpc/delete-snapshot                body: {"snapshotId": "..."}   -> 204
 ```
 
-Query filters on the snapshot list are snake_case (`volume_id`), unlike the Nucleus routes.
+Snapshots take a `description`, not a `name`. Query filters on the snapshot list are
+snake_case (`volume_id`), unlike the Nucleus routes.
 
 ```python
 snapshot = requests.post(f"{nv}/snapshots", headers=remotefs_headers, json={
     "volumeId": volume_id,
-    "name": "q4-customer-records",
+    "description": "Q4 customer records",
 }).json()
 print(snapshot["id"], snapshot.get("version"))
 ```
 
-Snapshot record: `id`, `name`, `volumeId`, `projectId`, `createdAt`, `createdBy`,
-`updatedAt`, `deletedAt`, and on most deployments `version`, the `<number>` in
-`snapshots/<name>/<number>` mount paths.
+Snapshot record: `id`, `volumeId`, `description`, `createdAt`, `createdBy`, and on most
+deployments `version`, the `<number>` in `snapshots/<name>/<number>` mount paths.
 
 ## List volumes
 
@@ -166,9 +164,9 @@ GET /volumes/{id}
 ```python
 volumes = requests.get(f"{nv}/volumes", headers=remotefs_headers,
                        params={"project_id": project_id, "limit": 50}).json()
-for v in volumes["items"]:
+for v in volumes["data"]:
     print(f"{v['name']}  {v['capacity'] / 1e12:.1f} TB  id={v['id']}")
-print(volumes["totalCount"])
+print(volumes["meta"])
 ```
 
 ## Mount volumes in a job
@@ -187,8 +185,9 @@ requests.post(f"{base_url}/api/jobs/v1/jobs", headers=headers, json={
 
 The job mounts the volume read-write at `/domino/netapp-volumes/<name>` (DFS project)
 with snapshots under `/domino/netapp-volumes/snapshots/<name>`. If the deployment rejects
-`netAppVolumeIds`, confirm the Jobs request body in its `/docs`. To snapshot at the end of a
-job, call `POST <base>/snapshots` from the job's last step.
+`netAppVolumeIds`, check the Jobs request body in the
+[6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/).
+To snapshot at the end of a job, call `POST <base>/snapshots` from the job's last step.
 
 Only `projectId` and `runCommand` are required; `environmentId` is optional. Full body:
 [API-JOBS.md](../domino-python-sdk/API-JOBS.md#start-a-job). Workspace sessions take the
@@ -198,11 +197,6 @@ same ids as `netAppVolumeMounts` on
 ## Other routes
 
 `POST /downloads` and `GET /downloads/{id}?volume_id=` (archive a set of volume paths),
-`POST /rpc/check-is-over-limit` and the `/account/authz/...` permission checks are in the
-deployment's `/docs`; pull their schemas from there when needed.
-
-## Spec discovery
-
-Published specs: [API-SPECS.md](../domino-api-intro/API-SPECS.md). Your deployment's copy of
-this service's document is `https://<domino-domain>/docs/openapi/data_remotefs_service-swagger.json`
-(unauthenticated); the deployment reference at `https://<domino-domain>/docs` lists the base path.
+`POST /rpc/check-is-over-limit` and the `/account/authz/...` permission checks are listed on
+the 6.1 API page above; send a minimal body and read the `{"message"}` of a 400 for the
+fields it needs.

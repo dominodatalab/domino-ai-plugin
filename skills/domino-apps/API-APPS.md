@@ -21,14 +21,14 @@ The examples below use the in-run form; outside a run add the credential header 
 
 ## Routes
 
-The Apps API on Domino 6.1 is `/api/apps/beta`. It has no draft, publish or start routes. Request and response bodies are in your deployment's API reference at `https://<domino-domain>/docs`; check them there before sending a create or version body. If a route returns 404, confirm it in the same reference.
+The Apps API on Domino 6.1 is `/api/apps/beta`. It has no draft or publish routes and no start route on a version: creating a version starts it. Request and response bodies are in the [6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/) (Apps, AppVersions, AppInstances).
 
 | Use | Route |
 |---|---|
-| List Apps | `GET /api/apps/beta/apps` (filters `projectId`, `name`, `ownerId`, `status`, `publisherId`; `limit`, `offset`, `sortField`, `sortOrder`) |
+| List Apps | `GET /api/apps/beta/apps` (`projectId`, `name`, `includeTemplateApps`, `sortField`, `sortOrder`, `limit`, `offset`; no status or owner filter, so read `currentVersion.currentInstance.status` from each item) |
 | Create an App | `POST /api/apps/beta/apps` |
 | Read, update, delete an App | `GET`, `PATCH`, `DELETE /api/apps/beta/apps/{appId}` |
-| Versions | `GET`, `POST /api/apps/beta/apps/{appId}/versions`; `GET`, `PATCH .../versions/{versionId}` |
+| Versions | `GET /api/apps/beta/apps/{appId}/versions`; `POST` the same path **creates a version and starts the App on it** (see [Start and stop](#start-and-stop)); `GET`, `PATCH .../versions/{versionId}` (`PATCH` takes only `vanityUrl`) |
 | Instances of a version | `GET /api/apps/beta/apps/{appId}/versions/{versionId}/instances`; `GET .../instances/{instanceId}` |
 | Stop a running instance | `DELETE /api/apps/beta/apps/{appId}/versions/{versionId}/instances/{instanceId}` |
 | Logs | `GET .../instances/{instanceId}/logs`, `GET .../instances/{instanceId}/realTimeLogs` |
@@ -39,30 +39,29 @@ The Apps API on Domino 6.1 is `/api/apps/beta`. It has no draft, publish or star
 - `visibility` values: `AUTHENTICATED` ("Anyone in Domino"), `GRANT_BASED` ("Restricted": listed users plus project collaborators), `GRANT_BASED_STRICT`, `PUBLIC` (anonymous viewers; also needs the admin setting on the app-configuration-settings page).
 - IDs: `GET /api/environments/beta/environments` and `GET /api/hardwaretiers/v1/hardwaretiers` (both paginated with `limit`/`offset`).
 - The App runs the project's **committed** files, so sync first: in a DFS Workspace **File Changes > Sync to Domino** (or the bundled MCP server's upload tool); in a Git-based project commit and push. A missing entry point fails the start with `entry script 'app.sh' not found in the root directory of your project`.
-- A version's `description` is what the App page shows as Version Notes. For an App that starts a prebuilt build, put the build label there ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)).
+- A version has no description or notes field on Domino 6.1; record a build label in the App log and `/healthz` ([FRAMEWORKS.md](./FRAMEWORKS.md#build-once-and-version-builds)).
 
 ## Start and stop
 
-- **Start**: publish from the UI (**Deployments > Apps > Publish Domino App**, or the App's page), or call python-domino `app_publish`. It wraps the Domino Internal API (`POST /v4/modelProducts/{appId}/start`; non-public route; may change in a future Domino version) and by default stops a running App first:
+- **Start or restart**: publish from the UI (**Deployments > Apps > Publish Domino App**, or the App's page), or `POST /api/apps/beta/apps/{appId}/versions`. That call creates a version and starts an instance of it, so never create a version only to record one. Body fields (all optional): `hardwareTierId`, `environmentId`, `environmentRevisionId`, `gitRef` (`{"type": "head" | "commitId" | "branches" | "tags" | "custom", "value": "..."}`), `netAppVolumeIds`, `externalVolumeMountIds`, `vanityUrl`. In a Git-based Project, `gitRef` picks the code. In a DFS Project the version runs the Project's latest commit, and `dfsCommitId` is ignored, so sync before you call it. Stop the running instance first (below) so two do not serve at once:
 
-```python
-from domino import Domino
-
-d = Domino("<owner>/<project>")   # in a run it reads the run's credentials; outside: auth_token= or api_key=, host=
-d.app_publish(app_id="<appId>", hardware_tier_id="<tierId>", environment_id="<environmentId>",
-              commit_id="<git commit sha>")   # or branch="main"; omit both for the default
-print(d.app_get_status("<appId>"))   # Running, Stopped, Failed, ...
+```bash
+# in a run; outside, add the credential header and use the deployment URL
+curl -s -X POST "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions" \
+  -H "Content-Type: application/json" \
+  -d "{\"hardwareTierId\": \"$TIER_ID\", \"environmentId\": \"$ENV_ID\", \"gitRef\": {\"type\": \"commitId\", \"value\": \"$GIT_SHA\"}}"
+# the response is the new version: read its id, then poll it for currentInstance.status
 ```
 
-  Without `app_id`, `app_publish` uses the project's first App and creates one when the project has none. `app_unpublish(app_id=...)` stops it.
-- **Stop over the public API**: list the instances of the running version and `DELETE` the running one:
+- **Stop**: list the instances of the running version and `DELETE` the running one:
 
 ```bash
 curl -s "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances"
 curl -s -X DELETE "$DOMINO_API_PROXY/api/apps/beta/apps/$APP_ID/versions/$VERSION_ID/instances/$INSTANCE_ID"
 ```
 
-- **Status**: `GET /api/apps/beta/apps/{appId}/versions/{versionId}` and read `currentInstance.status` (`Running` is the serving state; `Succeeded` means the entry point exited; `Failed` and `Error` mean the start failed), or `app_get_status`.
+- **Status**: `GET /api/apps/beta/apps/{appId}/versions/{versionId}` and read `currentInstance.status` (`Running` is the serving state; `Succeeded` means the entry point exited; `Failed` and `Error` mean the start failed).
+- python-domino's `app_publish` calls the Domino Internal API (non-public route; may change in a future Domino version), and its arguments differ between releases (the `dominodatalab` 1.4.4 in the Domino 6.1 image takes no App or commit). Use the versions route above instead.
 - Rolling back to an earlier version is not available on Domino 6.1: revert the code and publish again.
 
 ## Logs
@@ -86,7 +85,7 @@ Management calls go to the platform API base above. Viewers open the `url` field
 |---|---|
 | 401 | Missing or expired credential. In a run, call `$DOMINO_API_PROXY` with no header instead of sending your own |
 | 403 | No edit permission on the project |
-| 404 | The route or the ID does not exist on this deployment; confirm the route in `https://<domino-domain>/docs` |
-| 422 on create or `versions` | A required field is missing or an environment or hardware tier ID is unknown; compare the body with the schema in `/docs` |
+| 404 | The route or the ID does not exist on this deployment; check the route in the 6.1 Platform API reference |
+| 422 on create or `versions` | A required field is missing or an environment or hardware tier ID is unknown; compare the body with `AppCreationRequest` or `AppVersionCreationRequest` in the 6.1 Platform API reference |
 
 Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/publish

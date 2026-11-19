@@ -84,7 +84,7 @@ Endpoint environment variables: on the endpoint, **Settings** > **Environment va
 
 ## Publish with the API
 
-`POST /api/modelServing/v1/modelApis` creates the endpoint and its first version in one call. Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`, `environmentVariables` (may be `[]`) and `version` with `projectId`, `source`, `logHttpRequestResponse`, `monitoringEnabled`. Optional: `hardwareTierId`, `replicas`, `resourceQuotaId`, `bundleId`. Pass `hardwareTierId` explicitly: a create without it does not land on the default endpoint tier ([SCALING.md](./SCALING.md)).
+`POST /api/modelServing/v1/modelApis` creates the endpoint and its first version in one call. Required: `name`, `description`, `environmentId`, `isAsync`, `strictNodeAntiAffinity`, `environmentVariables` (may be `[]`) and `version` with `projectId`, `source`, `logHttpRequestResponse`, `monitoringEnabled`. Optional: `hardwareTierId`, `replicas`, `resourceQuotaId`. Pass `hardwareTierId` explicitly: a create without it does not land on the default endpoint tier ([SCALING.md](./SCALING.md)).
 
 ```bash
 TOKEN=$(curl -s http://localhost:8899/access-token)   # in a run; outside Domino use a service-account token (or X-Domino-Api-Key with a user API key)

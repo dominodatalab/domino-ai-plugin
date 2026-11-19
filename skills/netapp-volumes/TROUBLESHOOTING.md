@@ -7,7 +7,7 @@ filesystems and slow reads. Mount path rules: [DATA-ACCESS.md](./DATA-ACCESS.md)
 
 - Confirm the volume is attached to the project (**Data > NetApp Volumes** in the project,
   or `GET <base>/volumes?project_id=<id>`; base path in
-  [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#base-path)).
+  [API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#base-path-and-shapes)).
 - Confirm it was selected for this execution: volumes are chosen at launch. Start a new
   Workspace or Job, or restart the Workspace, after attaching a volume.
 - Check the project type: DFS projects mount under `/domino/netapp-volumes/`, Git-based
@@ -33,17 +33,19 @@ for your data plane; ask your Domino administrator
 
 ## 404 or `{"message": ...}` from the API
 
-- Check the base path: the service answers on `/remotefs/v1` or `/domino-netapp-volumes/v1`
-  depending on the deployment, and the other one returns 404. Confirm it in the deployment's
-  `/docs` ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#base-path)).
+- Check the base path: the service answers on `/remotefs/v1`, not the
+  `/domino-netapp-volumes/v1` the 6.1 API page lists
+  ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md#base-path-and-shapes)).
 - Inside a run, volume, filesystem and snapshot operations work on
   `DOMINO_REMOTE_FILE_SYSTEM_HOSTPORT` with the `localhost:8899` access token as a
   bearer; `$DOMINO_API_PROXY` and the in-run `$DOMINO_API_HOST` can return 404 for them, and
   the hostport without the header returns 401. Outside Domino use the deployment URL with a
   service-account token (or a user API key in `X-Domino-Api-Key`).
 - Snapshot list filters are snake_case (`volume_id`).
-- A 400 on create or on grants usually means a body shape the deployment does not accept;
-  read the schema in its `/docs`.
+- A 400 on create, grants or snapshots usually means a body taken from the 6.1 API page:
+  create needs `grants`, the grants `PUT` takes a bare array of `{"targetId", "targetRole"}`,
+  and snapshots take `description`, not `name`
+  ([API-NETAPP-VOLUMES.md](./API-NETAPP-VOLUMES.md)).
 
 ## Slow reads
 

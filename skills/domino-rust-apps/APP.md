@@ -13,7 +13,7 @@ The template in `assets/app/` is a small server-rendered App: axum 0.8 for routi
 | `templates/*.html` | askama templates; a field typo fails `cargo build` |
 | `static/` | CSS and JavaScript served at `static/...` |
 
-Routes: `/` (page), `healthz`, `api/whoami`, `api/me` and `api/projects` (Domino API; `?as=publisher` on Domino 6.1), `api/db` (Postgres check), `api/predict` (model endpoint), `refresh` (relative redirect). Delete the ones the App does not need, with their tests.
+Routes: `/` (page), `healthz`, `api/whoami`, `api/me` and `api/projects` (Domino API as the publisher), `api/db` (Postgres check), `api/predict` (model endpoint), `refresh` (relative redirect). Delete the ones the App does not need, with their tests.
 
 Add routes in `app()` with `/{id}` path parameters and a leading `/` (`.route("/items/{id}", get(item))`). The axum 0.7 forms `/:id` and `/*rest`, and a path without a leading `/`, panic when the router is built, so the App never reaches Running. The template's tests build the router, which catches this.
 
@@ -48,10 +48,10 @@ Acting for viewers is not available on Domino 6.1: the viewer's token identifies
 
 | Identity | How the template calls | Use on Domino 6.1 |
 |---|---|---|
-| Publisher (`?as=publisher`) | `$DOMINO_API_PROXY` with no `Authorization` header; the proxy adds the publisher's token | Every Domino API call. Where data is per viewer, filter it in the App by the viewer's username |
-| Viewer (the template's default) | `$DOMINO_API_HOST` + the viewer's bearer token | Rejected by Domino; the template passes Domino's status through and turns a missing token into a 401 |
+| Publisher (the template's default) | `$DOMINO_API_PROXY` with no `Authorization` header; the proxy adds the publisher's token | Every Domino API call. Where data is per viewer, filter it in the App by the viewer's username |
+| Viewer (`?as=viewer`) | `$DOMINO_API_HOST` + the viewer's bearer token | Rejected by Domino; the template passes Domino's status through and turns a missing token into a 401 |
 
-`/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) answer with `?as=publisher`. Make publisher calls the default in an App you build from the template.
+`/api/me` (`GET /api/users/v1/self`) and `/api/projects` (`GET /api/projects/beta/projects`) call as the publisher. `?as=viewer` remains for testing and gets Domino's rejection back.
 
 `DOMINO_API_HOST` runs a request that has no `Authorization` header as the publisher. Never build links for the browser from `DOMINO_API_HOST` or `DOMINO_USER_HOST`; either can be an address inside the pod. `localhost:8899` is the default behind `DOMINO_API_PROXY`, not a fixed address: use the variable. A request to the App without browser credentials gets a 302 to the sign-in page. Never log or return a token; `TraceLayer` does not log headers. Docs: https://docs.domino.ai/cloud/platform-capabilities/core-concepts/apps/identity
 

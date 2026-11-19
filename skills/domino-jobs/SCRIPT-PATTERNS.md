@@ -71,7 +71,7 @@ joblib.dump(model, out / "model.joblib")
 - `email.html`: body of the success email; `<head><title>...</title></head>` sets the subject; inline CSS; image paths relative to the Project root.
 - `.dominoresults`: one path or glob per line (`*.pdf`, `results/*.png`, `**/*.txt`) selecting what the results view shows and the email attaches; if you use it, list `email.html` in it. `.dominoignore` patterns are excluded from the new file revision altogether (the files are not saved), so use it for scratch output, never to hide a result you still want.
 - MLflow is the recommended place for metrics ([domino-experiment-tracking](../domino-experiment-tracking/SKILL.md)); `dominostats.json` is the lightweight dashboard option.
-- Who gets the emails is a per-collaborator preference: Project **Settings > Access and Sharing**, or the Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types); confirm in your deployment's `/docs`). Read the current values with `GET /v4/projects/{projectId}/projectSettingsCollaborators` (`[{collaborator: {id, ...}, role, participantNotificationSettings}]`) and set one with `PATCH /v4/projects/{projectId}/notificationPreference` `{"collaboratorId": "<user id>", "notificationPreference": "AllRuns" | "RunsStartedByUser" | "Never"}`. Failure emails are always sent.
+- Who gets the emails is a per-collaborator preference: Project **Settings > Access and Sharing**, or the Internal API (non-public route; may change in a future Domino version, see [route types](../domino-api-intro/SKILL.md#route-types)). Read the current values with `GET /v4/projects/{projectId}/projectSettingsCollaborators` (`[{collaborator: {id, ...}, role, participantNotificationSettings}]`) and set one with `PATCH /v4/projects/{projectId}/notificationPreference` `{"collaboratorId": "<user id>", "notificationPreference": "AllRuns" | "RunsStartedByUser" | "Never"}`. Failure emails are always sent.
 
 ## Pin the commit after an upload
 
@@ -104,7 +104,7 @@ job = requests.post(f"{base}/api/jobs/v1/jobs", json={
 assert job["commitDetails"]["inputCommitId"] == commit
 ```
 
-`commits_list()` wraps the legacy `/v1/projects/{owner}/{project}/commits` route. If the files route returns 404, confirm it in your deployment's `/docs`. If the file existed before the upload, the 200 check cannot tell old content from new: compare the returned bytes with what you uploaded, or use the `commitId` the upload returned. Git-based Projects do not take `commitId`; pin code with `mainRepoGitRef` (`{"refType": "commitId", "value": "<sha>"}`) after pushing.
+`commits_list()` wraps the legacy `/v1/projects/{owner}/{project}/commits` route. If the files route returns 404, check it in the [6.1 Platform API reference](https://docs.dominodatalab.com/en/6.1/api_guide/8c929e/domino-platform-api-reference/). If the file existed before the upload, the 200 check cannot tell old content from new: compare the returned bytes with what you uploaded, or use the `commitId` the upload returned. Git-based Projects do not take `commitId`; pin code with `mainRepoGitRef` (`{"refType": "commitId", "value": "<sha>"}`) after pushing.
 
 ## Logs
 

@@ -1,6 +1,6 @@
 schema_version: '1.1'
 name: apps-cicd-github-actions
-description: 'Disambiguation: app CI/CD loads domino-apps and automates with /api/apps/beta or python-domino app_publish and a service-account token or user API key secret.'
+description: 'Disambiguation: app CI/CD loads domino-apps and restarts the App with POST /api/apps/beta/apps/{appId}/versions and a service-account token or user API key secret.'
 tags: [trigger, domino-apps, apps, disambiguation]
 execution:
   max_turns: 15
@@ -13,7 +13,7 @@ graders:
 - name: apps-beta-or-sdk
   type: regex
   target: {source: file, path: .github/workflows/publish-domino-app.yml}
-  pattern: /api/apps/beta|app_publish|deploy_app\.py
+  pattern: /api/apps/beta|deploy_app\.py
 - name: no-apps-v1
   type: regex
   target: {source: file, path: .github/workflows/publish-domino-app.yml}
@@ -23,8 +23,8 @@ graders:
   type: llm
   focus: {source: file, path: .github/workflows/publish-domino-app.yml}
   criteria: |
-    PASS if the workflow reads a Domino service-account token (sent as `Authorization: Bearer`) or a user API key (sent as `X-Domino-Api-Key`) from a GitHub secret, targets the deployment's public URL, and publishes the existing App on the new commit through python-domino `app_publish` (directly or in a script the workflow runs) or `/api/apps/beta` routes.
-    FAIL if it uses `/api/apps/v1` routes, relies on `DOMINO_API_PROXY` or `localhost:8899` from GitHub Actions, hard-codes the credential, or leaves the deployment step as a placeholder that prints success without calling the API.
+    PASS if the workflow reads a Domino service-account token (sent as `Authorization: Bearer`) or a user API key (sent as `X-Domino-Api-Key`) from a GitHub secret, targets the deployment's public URL, and starts the existing App on the new commit by creating a version with `POST /api/apps/beta/apps/{appId}/versions` (directly or in a script the workflow runs).
+    FAIL if it uses `/api/apps/v1` routes, starts the App with python-domino `app_publish` or a `/v4/modelProducts` route, relies on `DOMINO_API_PROXY` or `localhost:8899` from GitHub Actions, hard-codes the credential, or leaves the deployment step as a placeholder that prints success without calling the API.
 - name: not-app-init
   type: tool_used
   tool: Skill

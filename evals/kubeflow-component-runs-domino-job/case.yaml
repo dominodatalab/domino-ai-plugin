@@ -1,6 +1,6 @@
 schema_version: '1.1'
 name: kubeflow-component-runs-domino-job
-description: 'Kubeflow Pipelines: a KFP component starts a Domino Job over REST with a bearer token from a secret and polls it.'
+description: 'Kubeflow Pipelines: a KFP component starts a Domino Job over REST with a service-account token or user API key from a secret and polls it.'
 tags: [trigger, domino-airflow-kubeflow, orchestration]
 execution:
   max_turns: 12
@@ -18,7 +18,7 @@ graders:
 - name: kfp-component
   type: llm
   criteria: |
-    PASS if the component (a `@dsl.component` using `requests`) posts to `/api/jobs/v1/jobs` with `projectId` and `runCommand`, polls `GET /api/jobs/beta/jobs/{jobId}` until `status.isCompleted` or a terminal `executionStatus`, and reads a Domino service-account token (sent as `Authorization: Bearer`) or a user API key (sent as `X-Domino-Api-Key`) from a Kubernetes Secret injected as an environment variable, sent as `Authorization: Bearer` to the deployment URL.
+    PASS if the component (a `@dsl.component` using `requests`) posts to `/api/jobs/v1/jobs` with `projectId` and `runCommand`, polls `GET /api/jobs/beta/jobs/{jobId}` until `status.isCompleted` or a terminal `executionStatus`, and reads a Domino service-account token (sent as `Authorization: Bearer`) or a user API key (sent as `X-Domino-Api-Key`) from a Kubernetes Secret injected as an environment variable, and sends it to the deployment URL.
     FAIL if it hard-codes the token in the pipeline source, or relies on `DOMINO_API_PROXY` or `localhost:8899` inside the component.
 - name: kfp
   type: regex

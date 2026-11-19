@@ -30,7 +30,7 @@ Instructions assume a Git-based Project (code in `/mnt/code`). DFS differences a
 - **Never commit `target/`**: one Workspace build holds hundreds of MB to GBs. `.gitignore` excludes it.
 - **Secrets** come from Project environment variables read by the server (`DATABASE_URL`, `MODEL_API_URL`, `MODEL_API_TOKEN` in the template), never from files in the repository.
 - **Anticipate custom root CAs and a TLS-inspecting proxy.** Outbound code trusts the OS certificate store, honours `HTTPS_PROXY`/`NO_PROXY` and keeps in-cluster calls off the proxy ([APP.md](./APP.md#outbound-tls-and-http-proxies)).
-- **Call Domino as the publisher.** Acting for viewers is not available on Domino 6.1, so Domino rejects the viewer's token. `src/domino.rs` calls as the publisher through `DOMINO_API_PROXY` (`?as=publisher` on the template's routes); scope per-viewer data by the viewer's username ([APP.md](./APP.md#identity-and-domino-api-calls)).
+- **Call Domino as the publisher.** Acting for viewers is not available on Domino 6.1, so Domino rejects the viewer's token. The template's Domino API routes call as the publisher through `DOMINO_API_PROXY` by default; scope per-viewer data by the viewer's username ([APP.md](./APP.md#identity-and-domino-api-calls)).
 
 ## Project defaults (from `assets/app/`)
 

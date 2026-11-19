@@ -128,7 +128,7 @@ a PVC with the same name in another Data Plane shows up as an addition).
 
 The Public API has no EDV routes. The Domino Internal API has the full set; every route here is
 a **non-public route; may change in a future Domino version**. If a call answers 404 or 400,
-confirm the route and body in your deployment's `/docs`. Registration, update and unregistration
+use the admin UI instead. Registration, update and unregistration
 are admin operations: document them, never run them from a user context.
 
 | Call (non-public route; may change in a future Domino version) | Notes |
